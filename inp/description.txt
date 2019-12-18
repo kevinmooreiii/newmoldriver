@@ -1,0 +1,83 @@
+AutoMechanic Input File Structure:
+
+1.	Run.dat
+
+Synopsis: Outlines all of the calculations that AutoMech codes will perform
+Broadly, the user describes a set of reactions or species to investigate, and set of "procedures" that are used to generate the required data.
+
+Sections:
+    run section [required]:
+        This section is a list of species or reactions that the code will operate on
+
+        - input section (gives some input info for the reactions and species (mech specific)) 
+            ids: set what ids are used, either just the input, or our sorted speices
+            rxn: give a mechanism file type
+            spc: give the species file type
+        - three reactions:
+            pes: perform calculations on all species of desired channels and PESs
+            ts: perform calculations on a transition state of a desired channels and PESs
+            wells: perform calculations on the entrance and exit channel wells of desired channel and PES
+          one species            
+            spc: perform calculations on a set of species
+          one of the above is required (require maybe just one)
+
+            In each of these sections indices are given describing what things to look at
+
+    proc section [one required]
+        - jobs section:
+            Lists out all of the jobs to be done
+        - model:
+            user-input model used to calculate rates/thermo and can also help set the electronic structure tasks
+        - es_tsks:
+            set what electronic structure calculations are to be done in the run, including the order
+                (a) 'models': use the models to schedule the tasks (no control) 
+                (b) 'input': the tasks are done as prescribed by the user
+        - options:
+            set special options for the run
+
+
+2.	Model.dat
+
+Synopsis: Describes the kinetics and thermochemistry models that are used to compute rates/thermos.
+
+    Here the user specifies one or more model sections that set out how partition functions are calculated
+
+    model model_string_id
+        pf(
+            *list of pf models
+        )
+        eslvl(
+            *list of information with the level of electronic structure theory
+        )
+    end 
+
+
+3.	Theory.dat
+
+Synopsis: Describes the electronic structure methods used for the calculations
+    
+Here the user specifies one or more model sections that set out how partition functions are calculated
+    
+    model theory_string_id
+            *list of parameters for running electronic structure calculations
+    end 
+
+
+
+4.	Species.dat
+
+Synopsis: Lists of species with accompanying mechanism  
+
+Can either use a .csv file for simple input
+
+Use a format similar to amech for describing more minor information. This is used
+
+Both formats have to use a species name as well as a chemical identifier.
+
+
+5.	Reactions.dat
+
+Synopsis: List of reactions in a mechanism
+
+Mechanism file that 
+

@@ -1,0 +1,53 @@
+input
+    ids = input
+    mech = chemkin
+    spc = csv
+end
+
+obj
+    pes = (
+        1-2;   1-10;  libamech-rates1 
+        3-5;   1-12;  rates1
+    )
+#    ts = (
+#        1; 1-11; 1;    thermo1
+#    wells = (
+#        1; 1-11; 1;    wells1
+#    )
+#    spc = (
+#        1-100;         thermo1
+#    )
+end
+
+proc rates1
+    jobs = (
+        es 
+        thermo 
+        rates
+        fits
+        poly
+    )
+    model = libamech-model1
+    es_tsks = (
+        models
+    )
+    options = (
+        overwrite = False
+    )
+end 
+
+proc thermo1
+    jobs = (
+        es
+        thermo
+        poly
+    )
+    model = 2
+    es_tsks = (
+        find_geom  1  2  False
+        conf_hess  1  2  False
+    )
+    options = (
+        overwrite = False
+    )
+end

@@ -1,0 +1,33 @@
+model 1
+     pf = (
+        ene = sp, composite
+        rot = geo_eq
+        vib = harm
+        tors = rigid
+        sym = sampling
+        ts_barrierless = pst
+        ts_sadpt = fixed
+        tunneling = none, eckart, sct
+        wells = fake
+    )
+    es = (
+        geo = 1
+        ene = 2 
+        tors = 1,2
+        anh = 1
+        mr_scan = 3,4
+    )
+    etransfer = (
+        alpha = 10.0
+        n = 0.875
+        sig1 = 1
+        sig2 = 1
+        eps1 = 1
+        eps2 = 1
+    ) 
+end
+
+# model 2
+#     vib = (harm, 1, 2)
+#     tors = (1dhr, (3, 2), 1)
+# end
