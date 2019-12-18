@@ -7,10 +7,17 @@ import scripts.es
 import thermo.heatform
 import esdriver
 import autofile.fs
+import moldr
 
 # Calling the new libs
 from lib.phydat import phycon
 from lib.filesystem import build as fbuild
+from lib.submission import substr
+from lib.runner import therm as thmrunner
+from lib.mess import pf as messpf
+from lib.outpt import chemkin as cout
+from lib.calc import therm as calctherm
+from lib.calc import zpe as calczpe
 
 
 REF_CALLS = {"basic": "get_basic",
@@ -66,7 +73,7 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
         # Get PF input header
         temp_step = 100.
         ntemps = 30
-        global_pf_str = scripts.thermo.get_pf_header(temp_step, ntemps)
+        global_pf_str = messpf.get_pf_header(temp_step, ntemps)
 
         # Gather PF model and theory level info
         spc_model = ['RIGID', 'HARM', '']
@@ -131,11 +138,25 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
             spc_save_fs.leaf.create(spc_info)
             spc_save_path = spc_save_fs.leaf.path(spc_info)
 
-            zpe, zpe_str = scripts.thermo.get_zpe(
+            zpe, zpe_str = calczpe.get_zpe(
                 spc, spcdct[spc], spc_save_path, pf_levels, spc_model)
-            spc_str = scripts.thermo.get_spc_input(
-                spc, spcdct[spc], spc_info, spc_save_path,
-                pf_levels, spc_model)
+
+            # Set up species information
+            ich = spc_info[0]
+            smi = automol.inchi.smiles(ich)
+            print("smiles: {}".format(smi), "inchi: {}".format(ich))
+
+            # Generate the partition function
+            spc_block = moldr.pf.species_block(
+                spc=spc,
+                spc_dct_i=spcdct[spc],
+                spc_info=spc_info,
+                spc_model=spc_model,
+                pf_levels=pf_levels,
+                projrot_script_str=substr.PROJROT,
+                save_prefix=spc_save_path,
+                )
+            spc_str = spc_block[0]
 
             spcdct[spc]['spc_info'] = spc_info
             spcdct[spc]['spc_save_path'] = spc_save_path
@@ -151,16 +172,16 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
             spc_str = spcdct[spc]['spc_str']
             zpe_str = spcdct[spc]['zpe_str']
             spc_info = spcdct[spc]['spc_info']
-            pf_input = scripts.thermo.get_pf_input(
+            pf_input = messpf.get_pf_input(
                 spc, spc_str, global_pf_str, zpe_str)
 
-            pf_path, nasa_path = scripts.thermo.get_thermo_paths(
+            pf_path, nasa_path = thmrunner.get_thermo_paths(
                 spc_save_path, spc_info, harm_thy_info)
             spcdct[spc]['pf_path'] = pf_path
             spcdct[spc]['nasa_path'] = nasa_path
 
-            scripts.thermo.write_pf_input(pf_input, pf_path)
-            scripts.thermo.run_pf(pf_path)
+            messpf.write_pf_input(pf_input, pf_path)
+            thmrunner.run_pf(pf_path)
 
         # Compute Hf0K
         ene_strl = []
@@ -184,8 +205,12 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
 
                 for spc in full_queue:
                     spc_info = spcdct[spc]['spc_info']
-                    ene = scripts.thermo.get_electronic_energy(
-                        spc_info, geo_thy_info, ene_thy_info, save_prefix)
+                    ene = moldr.pf.get_high_level_energy(
+                        spc_info=spc_info,
+                        thy_low_level=geo_thy_info,
+                        thy_high_level=sp_thy_info,
+                        save_prefix=save_prefix,
+                        saddle=False)
                     print('ene test:', ene, ene_coeff[ene_idx], ene_idx)
                     spcdct[spc]['ene'] += ene*ene_coeff[ene_idx]
                 ene_idx += 1
@@ -201,37 +226,37 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
         for spc in spc_queue:
             if calc_bas:
                 spc_bas, clist = get_ref(spc, spcdct, reference_function)
-            hf0k = scripts.thermo.get_hf0k(spc, spcdct, spc_bas, clist)
+            hf0k = calctherm.get_hf0k(spc, spcdct, spc_bas, clist)
             spcdct[spc]['Hfs'] = [hf0k]
 
-        chemkin_header_str = scripts.thermo.run_ckin_header(
+        chemkin_header_str = cout.run_ckin_header(
             pf_levels, ref_levels, spc_model)
         chemkin_set_str = chemkin_header_str
         for spc in spc_queue:
             pf_path = spcdct[spc]['pf_path']
             nasa_path = spcdct[spc]['nasa_path']
-            starting_path = scripts.thermo.go_to_path(nasa_path)
+            starting_path = thmrunner.go_to_path(nasa_path)
             # Change back to starting dir after running thermp and pac99
             # or rest of code is confused
-            scripts.thermo.write_thermp_inp(spcdct[spc])
+            thmrunner.write_thermp_inp(spcdct[spc])
             # run thermp creats thermo and also passed back the 298 K Hf
             if spcdct[spc]['ene'] == 0.0 or spcdct[spc]['spc_str'] == '':
                 print('Cannot generate thermo for species',
                       '{} '.format(spcdct[spc]['ich']),
                       'because information is still missing:')
                 continue
-            hf298k = scripts.thermo.run_thermp(pf_path, nasa_path)
+            hf298k = thmrunner.run_thermp(pf_path, nasa_path)
             spcdct[spc]['Hfs'].append(hf298k)
-            pac99_poly_str = scripts.thermo.run_pac(spcdct[spc], nasa_path)
-            chemkin_poly_str = scripts.thermo.run_ckin_poly(
+            pac99_poly_str = thmrunner.run_pac(spcdct[spc], nasa_path)
+            chemkin_poly_str = cout.run_ckin_poly(
                 spc, spcdct[spc], pac99_poly_str)
             chemkin_spc_str = chemkin_header_str + chemkin_poly_str
             chemkin_set_str += chemkin_poly_str
-            scripts.thermo.go_to_path(starting_path)
-            ckin_path = scripts.thermo.prepare_path(starting_path, 'ckin')
+            thmrunner.go_to_path(starting_path)
+            ckin_path = thmrunner.prepare_path(starting_path, 'ckin')
             if not os.path.exists(ckin_path):
                 os.makedirs(ckin_path)
-            scripts.thermo.write_nasa_file(
+            cout.write_nasa_file(
                 spcdct[spc], ckin_path, nasa_path, chemkin_spc_str)
 
         with open(os.path.join(ckin_path, 'automech.ckin'), 'w') as nasa_file:

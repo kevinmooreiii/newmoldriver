@@ -9,10 +9,14 @@ import chemkin_io
 import scripts.es
 import esdriver
 import autofile.fs
+import moldr
 
 # Calling the new libs
+from lib.phydat import phycon
 from lib.submission import substr
 from lib.filesystem import build as fbuild
+from lib.outpt import chemkin as cout
+from lib.calc import zpe as calczpe
 
 
 TEMPS = [500., 550., 600., 650., 700., 750., 800., 850., 900., 950., 1000., 1050., 1100., 1150., 1200., 1250., 1300., 1350., 1400., 1450., 1500., 1550., 1600., 1650., 1700., 1750., 1800., 1850., 1900., 1950., 2000.]
@@ -255,7 +259,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                 spc_save_path = spc_save_fs.leaf.path(spc_info)
                 saddle = False
                 save_path = save_prefix
-            zpe, _ = scripts.thermo.get_zpe(
+            zpe, _ = calczpe.get_zpe(
                 spc, spc_dct[spc], spc_save_path, pf_levels, ts_model)
             spc_dct[spc]['zpe'] = zpe
             ene_strl = []
@@ -278,8 +282,12 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                     ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
                         ene_coeff[ene_idx], ene_thy_info[3], ene_thy_info[1], ene_thy_info[2],
                         ene_ref_thy_info[3], ene_ref_thy_info[1], ene_ref_thy_info[2]))
-                    ene = scripts.thermo.get_electronic_energy(
-                        spc_info, ene_ref_thy_info, ene_thy_info, save_path, saddle)
+                    ene = moldr.pf.get_high_level_energy(
+                        spc_info=spc_info,
+                        thy_low_level=ene_ref_thy_info,
+                        thy_high_level=ene_thy_info,
+                        save_prefix=save_path,
+                        saddle=saddle)
                     # print('ene test:', ene_idx, ene_coeff[ene_idx], ene)
                     spc_dct[spc]['ene'] += ene*ene_coeff[ene_idx]
                     ene_idx += 1
@@ -329,7 +337,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
         # Fit rate output to modified Arrhenius forms, print in ChemKin format
         pf_levels.append(ene_str)
         chemkin_header_str = ''
-        chemkin_header_str = scripts.thermo.run_ckin_header(
+        chemkin_header_str = cout.run_ckin_header(
             pf_levels, ref_levels, ts_model)
         chemkin_header_str += '\n'
         chemkin_poly_str = chemkin_header_str
@@ -353,11 +361,11 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                         ene = 0.
                         if lab_i != lab_j:
                             for spc in name_i.split('+'):
-                                ene += scripts.thermo.spc_energy(
-                                    spc_dct[spc]['ene'], spc_dct[spc]['zpe'])
+                                ene += (spc_dct[spc]['ene'] +
+                                        spc_dct[spc]['zpe'] / phycon.EH2KCAL)
                             for spc in name_j.split('+'):
-                                ene -= scripts.thermo.spc_energy(
-                                    spc_dct[spc]['ene'], spc_dct[spc]['zpe'])
+                                ene -= (spc_dct[spc]['ene'] +
+                                        spc_dct[spc]['zpe'] / phycon.EH2KCAL)
                             if ene:
                                 reaction = name_i + '=' + name_j
 

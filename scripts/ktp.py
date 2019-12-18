@@ -141,7 +141,9 @@ def make_channel_pfs(
     for reac in rxn['reacs']:
         spc_label.append(automol.inchi.smiles(spc_dct[reac]['ich']))
         well_data.append(species_data[reac])
-        reac_ene += scripts.thermo.spc_energy(spc_dct[reac]['ene'], spc_dct[reac]['zpe']) * phycon.EH2KCAL
+        reac_ene += (
+            (spc_dct[reac]['ene'] + spc_dct[reac]['zpe']/phycon.EH2KCAL) *
+            phycon.EH2KCAL)
     well_dct_key1 = '+'.join(rxn['reacs'])
     well_dct_key2 = '+'.join(rxn['reacs'][::-1])
     if not well_dct_key1 in idx_dct:
@@ -181,7 +183,9 @@ def make_channel_pfs(
     for prod in rxn['prods']:
         spc_label.append(automol.inchi.smiles(spc_dct[prod]['ich']))
         well_data.append(species_data[prod])
-        prod_ene += scripts.thermo.spc_energy(spc_dct[prod]['ene'], spc_dct[prod]['zpe']) * phycon.EH2KCAL
+        prod_ene += (
+            (spc_dct[prod]['ene'] + spc_dct[prod]['zpe']/phycon.EH2KCAL) *
+            phycon.EH2KCAL)
     zero_energy = prod_ene - reac_ene
     well_dct_key1 = '+'.join(rxn['prods'])
     well_dct_key2 = '+'.join(rxn['prods'][::-1])
@@ -209,7 +213,9 @@ def make_channel_pfs(
 
     # for abstraction first make fake wells and PST TSs
     # then for tight TS's make ts_str
-    ts_ene = scripts.thermo.spc_energy(spc_dct[tsname]['ene'], spc_dct[tsname]['zpe']) * phycon.EH2KCAL
+    ts_ene = (
+        (spc_dct[tsname]['ene'] + spc_dct[tsname]['zpe']/phycon.EH2KCAL) *
+        phycon.EH2KCAL)
     zero_energy = ts_ene - first_ground_ene
     ts_label = 'B' + str(int(tsname.replace('ts_', ''))+1)
     imag_freq = 0
