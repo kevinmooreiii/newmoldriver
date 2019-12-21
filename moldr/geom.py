@@ -11,6 +11,7 @@ import projrot_io
 
 # New Libs
 from lib.phydat import phycon
+from lib.reaction import wells as lwells
 
 
 def reference_geometry(
@@ -131,7 +132,7 @@ def reference_geometry(
                 scripts.es.run_single_conformer(spc_info, thy_level, fs, overwrite)
             else:
                 print("Cannot create zmatrix for disconnected species")
-                scripts.es.fake_conf(thy_level, fs, inf)
+                lwells.fake_conf(thy_level, fs, inf)
 
 
         if geo:

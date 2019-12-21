@@ -7,7 +7,7 @@ from lib.phydat import phycon
 from lib.phydat import bnd
 
 
-def find_max_1D():
+def find_max_1D(typ, grid, ts_zma, dist_name, scn_save_fs):
     """ Find the maxmimum of the grid along one dimension
     """
     locs_list = []
@@ -20,7 +20,7 @@ def find_max_1D():
             enes.append(scn_save_fs.leaf.file.energy.read(locs))
             locs_lst.append(locs)
     max_ene = max(enes)
-    max_idx = enes.index(max(enes))
+    max_idx = enes.index(max_ene)
     if 'migration' in typ:
         max_grid_val = grid[max_idx]
         max_zma = automol.zmatrix.set_values(
@@ -29,10 +29,10 @@ def find_max_1D():
         max_locs = locs_lst[max_idx]
         max_zma = scn_save_fs.leaf.file.zmatrix.read(max_locs)
 
-    return max_zma
+    return max_zma, max_ene
 
 
-def find_max_2D():
+def find_max_2D(grid1, grid2, dist_name, brk_name, scn_save_fs):
     """ Find the maxmimum of the grid along two dimensions
     """
     enes_lst = []
@@ -41,7 +41,7 @@ def find_max_2D():
         locs_list = []
         for grid_val_i in grid1:
             locs_list.append([[dist_name, brk_name], [grid_val_i, grid_val_j]])
-        print('locs_lst', locs_list)    
+        print('locs_lst', locs_list)
         enes = []
         locs_lst = []
         for locs in locs_list:
@@ -51,8 +51,8 @@ def find_max_2D():
                 locs_lst.append(locs)
         locs_lst_lst.append(locs_lst)
         enes_lst.append(enes)
-        print('enes_lst', enes_lst)    
-    max_enes = []  
+        print('enes_lst', enes_lst)
+    max_enes = []
     max_locs = []
     for idx_j, enes in enumerate(enes_lst):
         max_ene = -10000.
@@ -61,10 +61,10 @@ def find_max_2D():
             if ene > max_ene:
                 max_ene = ene
                 max_loc = locs_lst_lst[idx_j][idx_i]
-                print('new max', max_ene, max_loc)    
+                print('new max', max_ene, max_loc)
         max_enes.append(max_ene)
         max_locs.append(max_loc)
-    min_ene = 10000.    
+    min_ene = 10000.
     locs = []
     for idx_j, ene in enumerate(max_enes):
         if ene < min_ene:
@@ -76,36 +76,50 @@ def find_max_2D():
     print('min max loc', scn_save_fs.leaf.path(max_locs))
     max_zma = scn_save_fs.leaf.file.zmatrix.read(max_locs)
 
-    return max_zma
+    return max_zma, max_ene
 
-def build_grid(rtype, spin, ts_bnd_len, ts_zma, dist_name, npoints=None):
+
+def build_grid(rtype, rbktype, ts_bnd_len, ts_zma, dist_name, npoints=None):
     """ Set the grid for a transition state search
     """
-    if spin == 'high':
-        if rtype == 'beta_scission':
-            grid, update_guess = beta_scission_grid(npoints, ts_bnd_len)
-        elif rtype == 'addition':
-            grid, update_guess = addition_grid(npoints, ts_bnd_len)
-        elif rtype == 'hydrogen_migration':
-            grid, update_guess = hydrogen_migration_grid(npoints, ts_bnd_len)
-        elif rtype == 'unimolecular elimination':
-            grid, update_guess = unimolecular_elimination_grid(npoints, ts_bnd_len, ts_zma, dist_name)
-        elif rtype == 'hydrogen abstraction':
-            grid, update_guess = hydrogen_abstraction(npoints, ts_bnd_len)
-        elif rtype == 'substitution':
-            grid, update_guess = substitution(npoints, ts_bnd_len)
-        elif rtype == 'insertion':
-            grid, update_guess = insertion(npoints, ts_bnd_len)
-    elif spin == 'low':
-        if rtype == 'radrad addition':
-            grid, update_guess = radrad_addition_grid(npoints, ts_bnd_len)
-        elif rtype == 'radrad hydrogen abstraction':
-            grid, update_guess = radrad_hydrogen_abstraction(npoints, ts_bnd_len)
+
+    # Set up the backup type
+    if 'beta_scission' in rbktype:
+        bkp_grid, bkp_update_guess = beta_scission_bkp_grid(
+            npoints, ts_bnd_len)
+    elif 'addition' in rtype:
+        bkp_grid, bkp_update_guess = addition_bkp_grid(
+            npoints, ts_bnd_len)
+    else:
+        bkp_grid = []
+        bkp_update_guess = False
+
+    # Set the main type
+    # if spin == 'high':
+    if 'beta_scission' in rtype:
+        grid, update_guess = beta_scission_grid(npoints, ts_bnd_len)
+    elif 'addition' in rtype:
+        grid, update_guess = addition_grid(npoints, ts_bnd_len)
+    elif 'hydrogen_migration' in rtype:
+        grid, update_guess = hydrogen_migration_grid(npoints, ts_bnd_len)
+    elif 'unimolecular elimination' in rtype:
+        grid, update_guess = unimolecular_elimination_grid(npoints, ts_bnd_len,
+                                                           ts_zma, dist_name)
+    elif 'hydrogen abstraction' in rtype:
+        grid, update_guess = hydrogen_abstraction(npoints, ts_bnd_len)
+    elif 'substitution' in rtype:
+        grid, update_guess = substitution(npoints, ts_bnd_len)
+    elif 'insertion' in rtype:
+        grid, update_guess = insertion(npoints, ts_bnd_len)
+    # elif spin == 'low':
+    elif 'radrad addition' in rtype:
+        grid, update_guess = radrad_addition_grid(npoints, ts_bnd_len)
+    elif 'radrad hydrogen abstraction' in rtype:
+        grid, update_guess = radrad_hydrogen_abstraction(npoints, ts_bnd_len)
     else:
         raise NotImplementedError
-    #     grid, update_guess = beta_scission_bkp_grid(npoints, ts_bnd_len)
-    #     grid, update_guess = addition_bkp_grid(npoints, ts_bnd_len)
-    return grid, update_guess
+
+    return grid, update_guess, bkp_grid, bkp_update_guess
 
 
 # Tight TS grid
@@ -276,7 +290,6 @@ def radrad_hydrogen_abstraction(npoints, ts_bnd_len):
 
 
 # Backup Grid
-
 def beta_scission_bkp_grid(npoints, ts_bnd_len):
     """ Build backward 1D grid for a beta scission reaction
     """
@@ -290,7 +303,7 @@ def beta_scission_bkp_grid(npoints, ts_bnd_len):
     bkp_grid = numpy.linspace(rmin, rmax, npoints)
     bkp_update_guess = False
 
-    return grid, update_guess
+    return bkp_grid, bkp_update_guess
 
 
 def addition_bkp_grid(npoints, ts_bnd_len):
@@ -306,7 +319,7 @@ def addition_bkp_grid(npoints, ts_bnd_len):
     bkp_grid = numpy.linspace(rmin, rmax, npoints)
     bkp_update_guess = False
 
-    return grid, update_guess
+    return bkp_grid, bkp_update_guess
 
 
 # Special grid progressions

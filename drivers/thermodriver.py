@@ -12,6 +12,7 @@ import moldr
 # Calling the new libs
 from lib.phydat import phycon
 from lib.filesystem import build as fbuild
+from lib.filesystem import inf as finf
 from lib.submission import substr
 from lib.runner import therm as thmrunner
 from lib.mess import pf as messpf
@@ -115,18 +116,18 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
                     spc_model[2] = 'SAMPLING'
                 if '1DHR' in tsk[0]:
                     spc_model[2] = '1DHR'
-        geo_thy_info = get_thy_info(es_dct, geo_lvl)
-        harm_thy_info = get_thy_info(es_dct, harm_lvl)
-        tors_thy_info = get_thy_info(es_dct, tors_lvl)
-        anharm_thy_info = get_thy_info(es_dct, anharm_lvl)
-        sym_thy_info = get_thy_info(es_dct, sym_lvl)
+        geo_thy_info = finf.get_thy_info(geo_lvl)
+        harm_thy_info = finf.get_thy_info(harm_lvl)
+        tors_thy_info = finf.get_thy_info(tors_lvl)
+        anharm_thy_info = finf.get_thy_info(anharm_lvl)
+        sym_thy_info = finf.get_thy_info(sym_lvl)
         pf_levels = [harm_thy_info, tors_thy_info,
                      anharm_thy_info, sym_thy_info]
 
-        harm_ref_thy_info = get_thy_info(es_dct, harm_lvl_ref)
-        tors_ref_thy_info = get_thy_info(es_dct, tors_lvl_ref)
-        anharm_ref_thy_info = get_thy_info(es_dct, anharm_lvl_ref)
-        sym_ref_thy_info = get_thy_info(es_dct, sym_lvl_ref)
+        harm_ref_thy_info = finf.get_thy_info(harm_lvl_ref)
+        tors_ref_thy_info = finf.get_thy_info(tors_lvl_ref)
+        anharm_ref_thy_info = finf.get_thy_info(anharm_lvl_ref)
+        sym_ref_thy_info = finf.get_thy_info(sym_lvl_ref)
         ref_levels = [harm_ref_thy_info, tors_ref_thy_info,
                       anharm_ref_thy_info, sym_ref_thy_info]
 
@@ -196,8 +197,8 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
                     break
                 ene_lvl = tsk[1]
                 geo_lvl = tsk[2]
-                geo_thy_info = scripts.es.get_thy_info(es_dct[geo_lvl])
-                ene_thy_info = scripts.es.get_thy_info(es_dct[ene_lvl])
+                geo_thy_info = finf.get_thy_info(geo_lvl)
+                ene_thy_info = finf.get_thy_info(ene_lvl)
                 ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
                     ene_coeff[ene_idx], ene_thy_info[3],
                     ene_thy_info[1], ene_thy_info[2],
@@ -352,15 +353,6 @@ def create_spec(val, charge=0,
     spec['mc_nsamp'] = mc_nsamp
     spec['hind_inc'] = hind_inc * phycon.DEG2RAD
     return spec
-
-
-def get_thy_info(es_dct, key):
-    """ setup theory info file from es dictionary
-    """
-    ret = []
-    if key:
-        ret = scripts.es.get_thy_info(es_dct[key])
-    return ret
 
 
 def fix(tsk_info_lst):

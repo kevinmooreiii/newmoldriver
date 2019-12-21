@@ -10,6 +10,8 @@ import scripts.es
 # Calling the new libs
 from lib.submission import substr
 from lib.filesystem import build as fbuild
+from lib.filesystem import inf as finf
+from lib.reaction import wells as lwells
 
 
 KICKOFF_SIZE = 0.1
@@ -49,10 +51,8 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
         es_run_key = tsk_info[1]
         overwrite = tsk_info[3]
         #Theory information
-        # ini_thy_info = scripts.es.get_thy_info(es_dct[es_ini_key])
-        # thy_info = scripts.es.get_thy_info(es_dct[es_run_key])
-        ini_thy_info = get_es_info(es_dct, es_ini_key)
-        thy_info = get_es_info(es_dct, es_run_key)
+        ini_thy_info = finf.get_es_info(es_ini_key)
+        thy_info = finf.get_es_info(es_run_key)
 
         #If task is to find the transition state, find all TSs for your reactionlist
         if tsk in ('find_ts', 'find_vdw'):
@@ -118,7 +118,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                             spc_queue.append(ts)
                             ts_found.append(ts)
                     elif 'vdw' in tsk:
-                        vdws = scripts.es.find_vdw(
+                        vdws = lwells.find_vdw(
                             ts, spc_dct, thy_info, ini_thy_info, ts_info, vdw_params,
                             es_dct[es_run_key]['mc_nsamp'], run_prefix,
                             save_prefix, KICKOFF_SIZE, KICKOFF_BACKWARD,
@@ -133,13 +133,13 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 print('\nTask {} \t {}//{} \t Species {}'.format(
                     tsk, '/'.join(thy_info), '/'.join(ini_thy_info), spc))
                 spc_run_fs, spc_save_fs, spc_run_path, spc_save_path = spc_dct[spc]['rxn_fs']
-                spc_info = scripts.es.get_spc_info(spc_dct[spc])
+                spc_info = finf.get_spc_info(spc_dct[spc])
 
             else:
                 print('\nTask {} \t {}//{} \t Species {}: {}'.format(
                     tsk, '/'.join(thy_info), '/'.join(ini_thy_info), spc,
                     automol.inchi.smiles(spc_dct[spc]['ich'])))
-                spc_info = scripts.es.get_spc_info(spc_dct[spc])
+                spc_info = finf.get_spc_info(spc_dct[spc])
                 spc_run_fs = autofile.fs.species(run_prefix)
                 spc_run_fs.leaf.create(spc_info)
                 spc_run_path = spc_run_fs.leaf.path(spc_info)
@@ -296,7 +296,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                                 tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
                                 fs, spc_info, overwrite)
                         else:
-                            scripts.es.fake_geo_gen(
+                            lwells.fake_geo_gen(
                                 tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
                                 fs, spc_info, overwrite)
                 else:
@@ -341,14 +341,3 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                         tsk, thy_level, ini_fs,
                         selection, spc_info, overwrite)
     return ts_found
-
-
-def get_es_info(es_dct, key):
-    """
-    Turn es dictionary in theory info array
-    """
-    if key == 'input':
-        ret = ['input_geom', None, None, None]
-    else:
-        ret = scripts.es.get_thy_info(es_dct[key])
-    return ret

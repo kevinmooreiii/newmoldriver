@@ -1,6 +1,5 @@
 """
-Build paths and file systesm given species and theory
-'info' objects
+Build paths for spc and thy file systems
 """
 
 import autofile
@@ -65,31 +64,25 @@ def get_thy_save_path(save_prefix, spc_info, thy_info):
     return thy_save_path
 
 
-def get_thy_info(lvldic):
-    """ convert theory level dictionary to theory information array
+def get_rxn_fs(run_prefix, save_prefix, ts):
+    """ get filesystems for a reaction
     """
-    err_msg = ''
-    info = ['program', 'method', 'basis', 'orb_res']
-    for i, inf in enumerate(info):
-        if inf in lvldic:
-            info[i] = lvldic[inf]
-        else:
-            err_msg = inf
-    if err_msg:
-        print('ERROR: No {} found'.format(err_msg))
-    return info
+    rxn_ichs = ts['rxn_ichs']
+    rxn_chgs = ts['rxn_chgs']
+    rxn_muls = ts['rxn_muls']
+    ts_mul = ts['mul']
 
+    rxn_run_fs = autofile.fs.reaction(run_prefix)
+    rxn_run_fs.leaf.create([rxn_ichs, rxn_chgs, rxn_muls, ts_mul])
+    rxn_run_path = rxn_run_fs.leaf.path(
+        [rxn_ichs, rxn_chgs, rxn_muls, ts_mul])
 
-def get_spc_info(spc_dct_i):
-    """ convert species dictionary to species_info array
-    """
-    err_msg = ''
-    props = ['ich', 'chg', 'mul']
-    for i, prop in enumerate(props):
-        if prop in spc_dct_i:
-            props[i] = spc_dct_i[prop]
-        else:
-            err_msg = prop
-    if err_msg:
-        print('ERROR: No {} found'.format(err_msg))
-    return props
+    rxn_ichs = tuple(map(tuple, rxn_ichs))
+    rxn_chgs = tuple(map(tuple, rxn_chgs))
+    rxn_muls = tuple(map(tuple, rxn_muls))
+    rxn_save_fs = autofile.fs.reaction(save_prefix)
+    rxn_save_fs.leaf.create([rxn_ichs, rxn_chgs, rxn_muls, ts_mul])
+    rxn_save_path = rxn_save_fs.leaf.path(
+        [rxn_ichs, rxn_chgs, rxn_muls, ts_mul])
+
+    return rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path

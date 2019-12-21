@@ -1,21 +1,19 @@
 """ driver for rate constant evaluations
 """
 
-import os
-import numpy
 import automol.inchi
 import automol.geom
-import chemkin_io
 import scripts.es
 import esdriver
 import autofile.fs
 import moldr
 
 # Calling the new libs
-from lib.phydat import phycon
 from lib.submission import substr
 from lib.filesystem import build as fbuild
-from lib.outpt import chemkin as cout
+from lib.filesystem import inf as finf
+from lib.filesystem import path as fpath
+from lib.filesystem import read as fread
 from lib.calc import zpe as calczpe
 from lib.mess import rates as messrates
 from lib.runner import rates as raterunner
@@ -95,10 +93,10 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                 # tsk_info
                 es_ini_key = ts_tsk_lst[0][2]
                 es_run_key = ts_tsk_lst[0][1]
-                ini_thy_info = esdriver.get_es_info(es_dct, es_ini_key)
-                thy_info = esdriver.get_es_info(es_dct, es_run_key)
+                ini_thy_info = finf.get_es_info(es_ini_key)
+                thy_info = finf.get_es_info(es_run_key)
                 # generate rxn data, reorder if necessary, and put in spc_dct for given ts
-                rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = scripts.es.rxn_info(
+                rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
                     run_prefix, save_prefix, ts, spc_dct, thy_info, ini_thy_info)
                 spc_dct[ts]['rxn_ichs'] = rxn_ichs
                 spc_dct[ts]['rxn_chgs'] = rxn_chgs
@@ -106,11 +104,11 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                 spc_dct[ts]['low_mul'] = low_mul
                 spc_dct[ts]['high_mul'] = high_mul
                 # generate rxn_fs from rxn_info stored in spc_dct
-                rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = scripts.es.get_rxn_fs(
+                rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
                     run_prefix, save_prefix, spc_dct[ts])
                 spc_dct[ts]['rxn_fs'] = [rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path]
 
-                rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = scripts.es.get_zmas(
+                rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
                     spc_dct[ts]['reacs'], spc_dct[ts]['prods'], spc_dct,
                     ini_thy_info, save_prefix, run_prefix, KICKOFF_SIZE,
                     KICKOFF_BACKWARD, substr.PROJROT)
@@ -210,8 +208,8 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                 if '1DHR' in tsk[0]:
                     ts_model[2] = '1DHR'
 
-        geo_thy_info_ref = get_thy_info(es_dct, geo_lvl_ref)
-        harm_thy_info = get_thy_info(es_dct, harm_lvl)
+        geo_thy_info_ref = finf.get_thy_info(geo_lvl_ref)
+        harm_thy_info = finf.get_thy_info(harm_lvl)
         tors_thy_info = None
         anharm_thy_info = None
         sym_thy_info = None
@@ -220,19 +218,19 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
         anharm_ref_thy_info = None
         sym_ref_thy_info = None
         if tors_lvl:
-            tors_thy_info = get_thy_info(es_dct, tors_lvl)
+            tors_thy_info = finf.get_thy_info(tors_lvl)
         if anharm_lvl:
-            anharm_thy_info = get_thy_info(es_dct, anharm_lvl)
+            anharm_thy_info = finf.get_thy_info(anharm_lvl)
         if sym_lvl:
-            sym_thy_info = get_thy_info(es_dct, sym_lvl)
+            sym_thy_info = finf.get_thy_info(sym_lvl)
         if harm_lvl_ref:
-            harm_ref_thy_info = get_thy_info(es_dct, harm_lvl_ref)
+            harm_ref_thy_info = finf.get_thy_info(harm_lvl_ref)
         if tors_lvl_ref:
-            tors_ref_thy_info = get_thy_info(es_dct, tors_lvl_ref)
+            tors_ref_thy_info = finf.get_thy_info(tors_lvl_ref)
         if anharm_lvl_ref:
-            anharm_ref_thy_info = get_thy_info(es_dct, anharm_lvl_ref)
+            anharm_ref_thy_info = finf.get_thy_info(anharm_lvl_ref)
         if sym_lvl_ref:
-            sym_ref_thy_info = get_thy_info(es_dct, sym_lvl_ref)
+            sym_ref_thy_info = finf.get_thy_info(sym_lvl_ref)
         pf_levels = [
             harm_thy_info, tors_thy_info,
             anharm_thy_info, sym_thy_info]
@@ -276,9 +274,8 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                         break
                     ene_lvl = tsk[1]
                     ene_lvl_ref = tsk[2]
-                    ene_ref_thy_info = scripts.es.get_thy_info(
-                        es_dct[ene_lvl_ref])
-                    ene_thy_info = scripts.es.get_thy_info(es_dct[ene_lvl])
+                    ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref)
+                    ene_thy_info = finf.get_thy_info(ene_lvl)
                     ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
                         ene_coeff[ene_idx], ene_thy_info[3], ene_thy_info[1], ene_thy_info[2],
                         ene_ref_thy_info[3], ene_ref_thy_info[1], ene_ref_thy_info[2]))
@@ -340,12 +337,3 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
         fit_rates(spc_dct, pes_formula, idx_dct,
                   pf_levels, ref_levels, ts_model,
                   ene_str, mess_path)
-
-
-def get_thy_info(es_dct, key):
-    """ setup theory info file from es dictionary
-    """
-    ret = []
-    if key:
-        ret = scripts.es.get_thy_info(es_dct[key])
-    return ret

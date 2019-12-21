@@ -10,6 +10,8 @@ from lib import outpt
 from lib import runner
 from lib import calc
 from lib.fit import fit_rates
+from lib import reaction
+
 
 __all__ = [
     'mess',
@@ -19,5 +21,6 @@ __all__ = [
     'outpt',
     'runner',
     'calc',
-    'fit_rates'
+    'fit_rates',
+    'reaction'
 ]

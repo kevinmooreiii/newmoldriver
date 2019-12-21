@@ -488,7 +488,7 @@ def ts_class(rct_zmas, prd_zmas, rad_rad, ts_mul, low_mul, high_mul, rct_cnf_sav
     syms = automol.zmatrix.symbols(ts_zma)
     bnd_len_key = tuple(sorted(map(syms.__getitem__, dist_coo)))
 
-    grid, update_guess = lrxn.grid.build_grid(
+    grid, update_guess = reactn.grid.build_grid(
         rtype, spin, ts_bnd_len, ts_zma, dist_name, npoints=None)
 
     if typ:

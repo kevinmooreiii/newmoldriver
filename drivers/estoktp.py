@@ -4,6 +4,7 @@ import os
 import sys
 import collections
 import json
+import copy
 import numpy
 import chemkin_io
 import automol
@@ -13,7 +14,7 @@ import ktpdriver
 
 # Calling the new libs
 from lib.phydat import phycon, eleclvl, symm
-from lib.submission import read_dat
+from lib.submission import read_dat, theolvls
 
 
 # Set mechanism and type to be read based on user input
@@ -460,108 +461,15 @@ for spc in SPC_DCT:
     SPC_DCT[spc]['hind_inc'] = PARAMS.HIND_INC * phycon.DEG2RAD
 
 # Electronic structure parameters; code, method, basis, convergence control
-ES_DCT = {
-    'lvl_wbs': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'wb97xd',
-        'basis': '6-31g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_wbm': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'wb97xd',
-        'basis': '6-31+g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_wbt': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'wb97xd',
-        'basis': 'cc-pvtz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_m06s': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'm062x',
-        'basis': '6-31g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_m06m': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'm062x',
-        'basis': '6-31+g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_m06t': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'm062x',
-        'basis': 'cc-pvtz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_b2d': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'b2plypd3',
-        'basis': 'cc-pvdz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_b2t': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'b2plypd3',
-        'basis': 'cc-pvtz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_b2q': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'b2plypd3',
-        'basis': 'cc-pvqz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_b3s': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'b3lyp',
-        'basis': '6-31g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'lvl_b3t': {
-        'orb_res': 'RU', 'program': 'gaussian09', 'method': 'b3lyp',
-        'basis': '6-31g*',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_d': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)',
-        'basis': 'cc-pvdz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_t': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)',
-        'basis': 'cc-pvtz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_q': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)',
-        'basis': 'cc-pvqz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_df': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)-f12',
-        'basis': 'cc-pvdz-f12',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_tf': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)-f12',
-        'basis': 'cc-pvtz-f12',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'cc_lvl_qf': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'ccsd(t)-f12',
-        'basis': 'cc-pvqz-f12',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'mlvl_cas_dz': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'caspt2',
-        'basis': 'cc-pvdz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        },
-    'mlvl_cas_tz': {
-        'orb_res': 'RR', 'program': 'molpro2015', 'method': 'caspt2',
-        'basis': 'cc-pvtz',
-        'mc_nsamp': PARAMS.MC_NSAMP0
-        }
-}
+es_dct = copy.deepcopy(theolvls.ES_DCT)
+for key in es_dct:
+    es_dct[key]['mc_nsamp'] = PARAMS.MC_NSAMP0
 
+# Run Thermo or Rates depending on input
 if PARAMS.RUN_THERMO:
     SPC_QUEUE = list(SPC_NAMES)
     thermodriver.driver.run(
-        PARAMS.TSK_INFO_LST, ES_DCT, SPC_DCT, SPC_QUEUE, PARAMS.REF_MOLS,
+        PARAMS.TSK_INFO_LST, es_dct, SPC_DCT, SPC_QUEUE, PARAMS.REF_MOLS,
         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
 
@@ -716,7 +624,7 @@ if PARAMS.RUN_RATES:
 
                     print('RUNNING WITH MESS')
                     ktpdriver.run(
-                        PARAMS.TSK_INFO_LST, ES_DCT, SPC_DCT,
+                        PARAMS.TSK_INFO_LST, es_dct, SPC_DCT,
                         RCT_NAMES_LST, PRD_NAMES_LST,
                         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
                         ene_coeff=PARAMS.ENE_COEFF,

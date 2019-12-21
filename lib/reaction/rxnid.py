@@ -2,10 +2,11 @@
 """
 
 import automol
+import moldr
 from lib.phydat import phycon
 
 
-def convert_termolec_to_bimolec(rct_zmas, prd_zmas):
+def conv_termol_to_bimol(rct_zmas, prd_zmas):
     """ Convert termolecular reaction to a bimolecular reaction
     """
     # Force a trimolecular reaction to behave like a bimolecular.
@@ -34,24 +35,29 @@ def convert_termolec_to_bimolec(rct_zmas, prd_zmas):
 
 
 def determine_reaction_type(rct_zmas, prd_zmas,
+                            ts_mul, high_mul, low_mul,
                             rct_cnf_save_fs_lst, prd_cnf_save_fs_lst,
-                            rct_tors_names):
+                            rct_tors_names,
+                            given_class, rad_rad):
     """ Determine forward-reverse reaction for given rcts and prds
     """
     typ = None
     bkp_typ = ''
+    bkp_ts_zma = ()
+    bkp_tors_names = []
+    bkp_dist_name = []
     brk_name = []
     frm_bnd_key = []
     brk_bnd_key = []
 
-    # cycle through each of the possible reaction types checking if the reaction is in that class
+    # Cycle through each possible reaction type checking if it is in the class
     # Check both orders of reactants and products
     for direction in ('forward', 'reverse'):
 
         print('direction')
         print(direction)
 
-        # Set proper cnf filesystem and flip reactants and products for second check
+        # Set cnf filesystem and flip reactants and products for second check
         if direction == 'forward':
             cnf_save_fs_lst = rct_cnf_save_fs_lst
         elif direction == 'reverse':
@@ -65,7 +71,7 @@ def determine_reaction_type(rct_zmas, prd_zmas,
             typ = 'addition'
             ts_zma, dist_name, tors_names = ret
             typ += set_ts_spin(ts_mul, high_mul, low_mul)
-            # set up beta scission as a fall back option for failed addition TS search
+            # Set up beta sci as fall back option for failed addn TS search
             ret2 = automol.zmatrix.ts.beta_scission(rct_zmas, prd_zmas)
             if ret2:
                 bkp_typ = 'beta scission'
@@ -77,7 +83,8 @@ def determine_reaction_type(rct_zmas, prd_zmas,
             if ret and (not given_class or given_class == 'betascission'):
                 typ = 'beta scission'
                 ts_zma, dist_name, tors_names = ret
-                ret2 = automol.zmatrix.ts.addition(prd_zmas, rct_zmas, rct_tors_names)
+                ret2 = automol.zmatrix.ts.addition(
+                    prd_zmas, rct_zmas, rct_tors_names)
                 if ret2:
                     bkp_typ = 'addition'
                     bkp_ts_zma, bkp_dist_name, bkp_tors_names = ret2
@@ -94,16 +101,16 @@ def determine_reaction_type(rct_zmas, prd_zmas,
 
         # Check for hydrogen abstraction
         if typ is None:
-            ret = automol.zmatrix.ts.hydrogen_abstraction(rct_zmas, prd_zmas, sigma=False)
-            #print('abstraction ret test in ts_class:', ret)
+            ret = automol.zmatrix.ts.hydrogen_abstraction(
+                rct_zmas, prd_zmas, sigma=False)
             if ret and (not given_class or given_class == 'hydrogenabstraction'):
                 typ = 'hydrogen abstraction'
                 ts_zma, dist_name, frm_bnd_key, brk_bnd_key, tors_names = ret
                 typ += set_ts_spin(ts_mul, high_mul, low_mul)
-            #print('key test in ts_class:', frm_bnd_key, brk_bnd_key)
-                    
-        # Need special cases for (i) hydrogen abstraction where the radical is a sigma radical
-        # and (ii) for abstraction of a heavy atom rather than a hydrogen atom. 
+
+        # Need cases for
+        # (i) hydrogen abstraction where the radical is a sigma radical
+        # (ii) for abstraction of a heavy atom rather than a hydrogen atom.
 
         # Check for insertion
         if typ is None:
@@ -123,10 +130,13 @@ def determine_reaction_type(rct_zmas, prd_zmas,
 
         # Check for elimination
         if typ is None:
-            orig_dist = automol.zmatrix.ts.min_unimolecular_elimination_dist(rct_zmas, prd_zmas)
+            orig_dist = automol.zmatrix.ts.min_unimolecular_elimination_dist(
+                rct_zmas, prd_zmas)
             if orig_dist:
-                rct_zmas = moldr.util.min_dist_conformer_zma_geo(orig_dist, cnf_save_fs_lst[0])
-                ret = automol.zmatrix.ts.concerted_unimolecular_elimination(rct_zmas, prd_zmas)
+                rct_zmas = moldr.util.min_dist_conformer_zma_geo(
+                    orig_dist, cnf_save_fs_lst[0])
+                ret = automol.zmatrix.ts.concerted_unimolecular_elimination(
+                    rct_zmas, prd_zmas)
                 if ret and (not given_class or given_class == 'elimination'):
                     typ = 'elimination'
                     ts_zma, dist_name, brk_name, frm_bnd_key, tors_names = ret
@@ -149,7 +159,15 @@ def determine_reaction_type(rct_zmas, prd_zmas,
         if rad_rad:
             bkp_typ = 'radical radical ' + bkp_typ
 
-    return brk_name, frm_bnd_key, brk_bnd_key
+    # Set big list to return stuff
+    ret = [
+        typ, bkp_typ,
+        ts_zma, bkp_ts_zma,
+        tors_names, bkp_tors_names,
+        dist_name, bkp_dist_name, brk_name,
+        frm_bnd_key, brk_bnd_key]
+
+    return ret
 
 
 def set_rxn_molecularity(rct_zmas, prd_zmas):
