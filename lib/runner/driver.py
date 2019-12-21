@@ -1,9 +1,11 @@
 """ Centralized job runners and readers for electronic structure calcualtions
 """
+
 import functools
 import elstruct
 import autofile
-from moldr import runner
+from lib.runner import _run as jobrunner
+
 
 JOB_ERROR_DCT = {
     elstruct.Job.ENERGY: elstruct.Error.SCF_NOCONV,
@@ -25,16 +27,16 @@ JOB_SUCCESS_DCT = {
 
 JOB_RUNNER_DCT = {
     elstruct.Job.ENERGY: functools.partial(
-        runner.options_matrix_run, elstruct.writer.energy),
+        jobrunner.options_matrix_run, elstruct.writer.energy),
     elstruct.Job.GRADIENT: functools.partial(
-        runner.options_matrix_run, elstruct.writer.gradient),
+        jobrunner.options_matrix_run, elstruct.writer.gradient),
     elstruct.Job.HESSIAN: functools.partial(
-        runner.options_matrix_run, elstruct.writer.hessian),
+        jobrunner.options_matrix_run, elstruct.writer.hessian),
     elstruct.Job.VPT2: functools.partial(
-        runner.options_matrix_run, elstruct.writer.vpt2),
-    elstruct.Job.OPTIMIZATION: runner.options_matrix_optimization,
+        jobrunner.options_matrix_run, elstruct.writer.vpt2),
+    elstruct.Job.OPTIMIZATION: jobrunner.options_matrix_optimization,
     elstruct.Job.IRC: functools.partial(
-        runner.options_matrix_run, elstruct.writer.irc),
+        jobrunner.options_matrix_run, elstruct.writer.irc),
 }
 
 
@@ -162,11 +164,9 @@ def is_successful_output(out_str, job, prog):
     success = JOB_SUCCESS_DCT[job]
 
     ret = False
-    #print('job output test:', job, prog, error, success)
     if elstruct.reader.has_normal_exit_message(prog, out_str):
         message = elstruct.reader.check_convergence_messages(prog, error,
                                                       success, out_str)
-        #print('message in is_successful:', message)
         if elstruct.reader.check_convergence_messages(prog, error,
                                                       success, out_str):
             ret = True

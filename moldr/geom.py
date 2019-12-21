@@ -12,6 +12,7 @@ import projrot_io
 # New Libs
 from lib.phydat import phycon
 from lib.reaction import wells as lwells
+from lib.runner import driver
 
 
 def reference_geometry(
@@ -166,7 +167,7 @@ def run_initial_geometry_opt(
         geom = geo_init
     run_fs = autofile.fs.run(thy_run_path)
     print('thy_run_path')
-    moldr.driver.run_job(
+    driver.run_job(
         job=elstruct.Job.OPTIMIZATION,
         script_str=script_str,
         run_fs=run_fs,
@@ -176,7 +177,7 @@ def run_initial_geometry_opt(
         overwrite=overwrite,
         **kwargs,
     )
-    ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+    ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
     geo = None
     inf = None
     if ret:
@@ -245,7 +246,7 @@ def run_check_imaginary(
     if automol.geom.is_atom(geo):
         hess = ((), ())
     else:
-        moldr.driver.run_job(
+        driver.run_job(
             job=elstruct.Job.HESSIAN,
             spc_info=spc_info,
             thy_level=thy_level,
@@ -255,7 +256,7 @@ def run_check_imaginary(
             overwrite=overwrite,
             **kwargs,
             )
-        ret = moldr.driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
+        ret = driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
         if ret:
             inf_obj, _, out_str = ret
             prog = inf_obj.prog
@@ -299,7 +300,7 @@ def run_kickoff_saddle(
         geom = geo
     else:
         geom = automol.geom.zmatrix(geo)
-    moldr.driver.run_job(
+    driver.run_job(
         job=elstruct.Job.OPTIMIZATION,
         script_str=opt_script_str,
         run_fs=run_fs,
@@ -309,7 +310,7 @@ def run_kickoff_saddle(
         overwrite=True,
         **kwargs,
     )
-    ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+    ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
     if ret:
         inf_obj, _, out_str = ret
         prog = inf_obj.prog
@@ -328,7 +329,7 @@ def save_initial_geometry(
     thy_save_fs.leaf.create(thy_level[1:4])
     thy_save_path = thy_save_fs.leaf.path(thy_level[1:4])
 
-    ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+    ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
     if ret:
         print('Saving reference geometry')
         print(" - Save path: {}".format(thy_save_path))

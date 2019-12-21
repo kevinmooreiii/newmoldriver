@@ -5,6 +5,9 @@ import elstruct
 import autofile
 import moldr
 
+# New libs
+from lib.runner import driver
+
 
 def run_energy(
         spc_info, thy_level, geo_run_fs, geo_save_fs, locs,
@@ -24,7 +27,7 @@ def run_energy(
     sp_save_path = sp_save_fs.leaf.path(thy_level[1:4])
     run_fs = autofile.fs.run(sp_run_path)
 
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='energy',
         run_fs=run_fs,
     )
@@ -50,7 +53,7 @@ def run_energy(
             errors = ()
             options_mat = ()
 
-        moldr.driver.run_job(
+        driver.run_job(
             job='energy',
             script_str=script_str,
             run_fs=run_fs,
@@ -63,7 +66,7 @@ def run_energy(
             **kwargs,
         )
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='energy',
             run_fs=run_fs,
         )
@@ -91,7 +94,7 @@ def run_gradient(
     geo = geo_save_fs.leaf.file.geometry.read(locs)
     run_fs = autofile.fs.run(geo_run_path)
 
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='gradient',
         run_fs=run_fs,
     )
@@ -113,7 +116,7 @@ def run_gradient(
 
     if not geo_save_fs.leaf.file.gradient.exists(locs) or overwrite:
         print('Running gradient')
-        moldr.driver.run_job(
+        driver.run_job(
             job='gradient',
             script_str=script_str,
             run_fs=run_fs,
@@ -124,7 +127,7 @@ def run_gradient(
             **kwargs,
         )
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='gradient',
             run_fs=run_fs,
         )
@@ -156,7 +159,7 @@ def run_hessian(
     geo = geo_save_fs.leaf.file.geometry.read(locs)
     run_fs = autofile.fs.run(geo_run_path)
 
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='hessian',
         run_fs=run_fs,
     )
@@ -181,7 +184,7 @@ def run_hessian(
 
     if not geo_save_fs.leaf.file.hessian.exists(locs) or overwrite:
         print('Running hessian')
-        moldr.driver.run_job(
+        driver.run_job(
             job='hessian',
             script_str=script_str,
             run_fs=run_fs,
@@ -192,7 +195,7 @@ def run_hessian(
             **kwargs,
         )
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='hessian',
             run_fs=run_fs,
         )
@@ -227,7 +230,7 @@ def run_vpt2(
     geo = geo_save_fs.leaf.file.geometry.read(locs)
     run_fs = autofile.fs.run(geo_run_path)
 
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='vpt2',
         run_fs=run_fs,
     )
@@ -259,7 +262,7 @@ def run_vpt2(
     if not geo_save_fs.leaf.file.anharmnicity_matrix.exists(locs) or overwrite:
 
         print('Running vpt2')
-        moldr.driver.run_job(
+        driver.run_job(
             job='vpt2',
             script_str=script_str,
             run_fs=run_fs,
@@ -269,7 +272,7 @@ def run_vpt2(
             overwrite=overwrite,
             **kwargs,
         )
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='vpt2',
             run_fs=run_fs,
         )

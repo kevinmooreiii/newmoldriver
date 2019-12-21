@@ -9,6 +9,7 @@ import moldr
 
 # New Libs
 from lib.phydat import phycon
+from lib.runner import driver
 
 
 def tau_sampling(
@@ -98,7 +99,7 @@ def run_tau(
 
             idx += 1
             print("Run {}/{}".format(idx, nsamp0))
-            moldr.driver.run_job(
+            driver.run_job(
                 job=elstruct.Job.OPTIMIZATION,
                 script_str=script_str,
                 run_fs=tau_run_fs,
@@ -132,7 +133,7 @@ def save_tau(tau_run_fs, tau_save_fs):
 
             print("Reading from tau run at {}".format(run_path))
 
-            ret = moldr.driver.read_job(
+            ret = driver.read_job(
                 job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
             if ret:
                 inf_obj, inp_str, out_str = ret

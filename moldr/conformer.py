@@ -9,6 +9,7 @@ import moldr
 
 # New libs
 from lib.phydat import phycon
+from lib.runner import driver
 
 
 def conformer_sampling(
@@ -145,7 +146,7 @@ def run_conformers(
             tors_names = list(tors_range_dct.keys())
             if two_stage and len(tors_names) > 0:
                 print('Stage one beginning, holding the coordinates constant', tors_names, samp_zma)
-                moldr.driver.run_job(
+                driver.run_job(
                     job=elstruct.Job.OPTIMIZATION,
                     script_str=script_str,
                     run_fs=run_fs,
@@ -158,13 +159,13 @@ def run_conformers(
                     **kwargs
                 )
                 print('Stage one success, reading for stage 2')
-                ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+                ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
                 if ret:
                     sinf_obj, inp_str, out_str = ret
                     prog = sinf_obj.prog
                     samp_zma = elstruct.reader.opt_zmatrix(prog, out_str)
                     print('Stage one success beginning stage two on', samp_zma)
-                    moldr.driver.run_job(
+                    driver.run_job(
                         job=elstruct.Job.OPTIMIZATION,
                         script_str=script_str,
                         run_fs=run_fs,
@@ -176,7 +177,7 @@ def run_conformers(
                         **kwargs
                     )
             else:
-                moldr.driver.run_job(
+                driver.run_job(
                     job=elstruct.Job.OPTIMIZATION,
                     script_str=script_str,
                     run_fs=run_fs,
@@ -187,7 +188,7 @@ def run_conformers(
                     saddle=saddle,
                     **kwargs
                 )
-            #moldr.driver.run_job(
+            #driver.run_job(
             #    job=elstruct.Job.OPTIMIZATION,
             #    script_str=script_str,
             #    run_fs=run_fs,
@@ -228,7 +229,7 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
             run_fs = autofile.fs.run(cnf_run_path)
             print("Reading from conformer run at {}".format(cnf_run_path))
 
-            ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+            ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
             if ret:
                 inf_obj, inp_str, out_str = ret
                 prog = inf_obj.prog

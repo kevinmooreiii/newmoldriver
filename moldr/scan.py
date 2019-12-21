@@ -7,6 +7,8 @@ import autofile
 import moldr
 from elstruct.reader._molpro2015.molecule import hess_geometry
 
+from lib.runner import driver
+
 
 def hindered_rotor_scans(
         spc_info, thy_level, cnf_run_fs, cnf_save_fs, script_str, overwrite,
@@ -310,7 +312,7 @@ def _run_1d_scan(
         run_fs = autofile.fs.run(run_prefix)
 
         if not scn_save_fs.leaf.file.geometry.exists([[coo_name], [grid_val]]) or overwrite:
-            moldr.driver.run_job(
+            driver.run_job(
                 job=elstruct.Job.OPTIMIZATION,
                 script_str=script_str,
                 run_fs=run_fs,
@@ -326,7 +328,7 @@ def _run_1d_scan(
                 **kwargs
             )
 
-            ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+            ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
             if ret is not None:
                 inf_obj, _, out_str = ret
                 prog = inf_obj.prog
@@ -335,7 +337,7 @@ def _run_1d_scan(
                     guess_zma = opt_zma
 
                 if gradient:
-                    moldr.driver.run_job(
+                    driver.run_job(
                         job=elstruct.Job.GRADIENT,
                         script_str=script_str,
                         run_fs=run_fs,
@@ -350,10 +352,10 @@ def _run_1d_scan(
                         **kwargs
                     )
 
-                    ret = moldr.driver.read_job(job=elstruct.Job.GRADIENT, run_fs=run_fs)
+                    ret = driver.read_job(job=elstruct.Job.GRADIENT, run_fs=run_fs)
 
                 if hessian:
-                    moldr.driver.run_job(
+                    driver.run_job(
                         job=elstruct.Job.HESSIAN,
                         script_str=script_str,
                         run_fs=run_fs,
@@ -368,7 +370,7 @@ def _run_1d_scan(
                         **kwargs
                     )
 
-                    ret = moldr.driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
+                    ret = driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
 
 
 def _run_2d_scan(
@@ -394,7 +396,7 @@ def _run_2d_scan(
 
             if not scn_save_fs.leaf.file.geometry.exists(
                     [coo_names, [grid_val_i, grid_val_j]]) or overwrite:
-                moldr.driver.run_job(
+                driver.run_job(
                     job=elstruct.Job.OPTIMIZATION,
                     script_str=script_str,
                     run_fs=run_fs,
@@ -410,7 +412,7 @@ def _run_2d_scan(
                     **kwargs
                 )
 
-                ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+                ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
                 if update_guess and ret is not None:
                     inf_obj, _, out_str = ret
                     prog = inf_obj.prog
@@ -431,7 +433,7 @@ def save_scan(scn_run_fs, scn_save_fs, coo_names, gradient=False, hessian=False)
             run_fs = autofile.fs.run(run_path)
             print("Reading from scan run at {}".format(run_path))
 
-            ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+            ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
             if ret:
                 inf_obj, inp_str, out_str = ret
                 prog = inf_obj.prog
@@ -454,7 +456,7 @@ def save_scan(scn_run_fs, scn_save_fs, coo_names, gradient=False, hessian=False)
                 locs_lst.append(locs)
 
                 if gradient:
-                    ret = moldr.driver.read_job(job=elstruct.Job.GRADIENT, run_fs=run_fs)
+                    ret = driver.read_job(job=elstruct.Job.GRADIENT, run_fs=run_fs)
                     if ret:
                         inf_obj, inp_str, out_str = ret
                         prog = inf_obj.prog
@@ -463,7 +465,7 @@ def save_scan(scn_run_fs, scn_save_fs, coo_names, gradient=False, hessian=False)
                         scn_save_fs.leaf.file.gradient.write(grad, locs)
 
                 if hessian:
-                    ret = moldr.driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
+                    ret = driver.read_job(job=elstruct.Job.HESSIAN, run_fs=run_fs)
                     if ret:
                         inf_obj, inp_str, out_str = ret
                         prog = inf_obj.prog
@@ -543,7 +545,7 @@ def infinite_separation_energy(
 #    mr_kwargs['mol_options'] = ['nosym']
 #    mr_kwargs['gen_lines'] = {1: guess_lines}
 
-#    ret = moldr.driver.read_job(
+#    ret = driver.read_job(
 #        job='energy',
 #        run_fs=run_mr_fs,
 #    )
@@ -557,7 +559,7 @@ def infinite_separation_energy(
 #
 #    if not sp_save_fs.leaf.file.energy.exists(multi_lvl[1:4]) or overwrite:
 #        print(" - Running low spin multi reference energy ...")
-#        moldr.driver.run_job(
+#        driver.run_job(
 #            job='energy',
 #            script_str=mr_script_str,
 #            run_fs=run_mr_fs,
@@ -568,7 +570,7 @@ def infinite_separation_energy(
 #            **mr_kwargs,
 #        )
 #
-#        ret = moldr.driver.read_job(
+#        ret = driver.read_job(
 #            job='energy',
 #            run_fs=run_mr_fs,
 #        )
@@ -626,7 +628,7 @@ def infinite_separation_energy(
     mr_kwargs['mol_options'] = ['nosym']
     mr_kwargs['gen_lines'] = {1: guess_lines}
 
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='energy',
         run_fs=run_mr_fs,
     )
@@ -640,7 +642,7 @@ def infinite_separation_energy(
 
     if not hs_save_fs.leaf.file.energy.exists(multi_lvl[1:4]) or overwrite:
         print(" - Running high spin multi reference energy ...")
-        moldr.driver.run_job(
+        driver.run_job(
             job='energy',
             script_str=mr_script_str,
             run_fs=run_mr_fs,
@@ -651,7 +653,7 @@ def infinite_separation_energy(
             **mr_kwargs,
         )
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='energy',
             run_fs=run_mr_fs,
         )
@@ -691,7 +693,7 @@ def infinite_separation_energy(
     run_sr_fs = autofile.fs.run(hs_sr_run_path)
 
     sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_lvl[0:2])
-    ret = moldr.driver.read_job(
+    ret = driver.read_job(
         job='energy',
         run_fs=run_sr_fs,
     )
@@ -708,7 +710,7 @@ def infinite_separation_energy(
 
         errors, options_mat = moldr.util.set_molpro_options_mat(hs_info, geo)
 
-        moldr.driver.run_job(
+        driver.run_job(
             job='energy',
             script_str=sp_script_str,
             run_fs=run_sr_fs,
@@ -721,7 +723,7 @@ def infinite_separation_energy(
             **kwargs,
         )
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='energy',
             run_fs=run_sr_fs,
         )
@@ -798,7 +800,7 @@ def infinite_separation_energy(
 
         # get the single reference energy for the high spin state for the reference point on the scan
 
-        ret = moldr.driver.read_job(
+        ret = driver.read_job(
             job='energy',
             run_fs=run_sr_fs,
         )
@@ -812,7 +814,7 @@ def infinite_separation_energy(
 
         if not sp_save_fs.leaf.file.energy.exists(thy_lvl[1:4]) or overwrite:
             print(" - Running single reference energy for {} from output...".format(spc_info[0]))
-            moldr.driver.run_job(
+            driver.run_job(
                 job='energy',
                 script_str=sp_script_str,
                 run_fs=run_sr_fs,
@@ -823,7 +825,7 @@ def infinite_separation_energy(
                 **kwargs,
             )
 
-            ret = moldr.driver.read_job(
+            ret = driver.read_job(
                 job='energy',
                 run_fs=run_sr_fs,
             )

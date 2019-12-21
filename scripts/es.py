@@ -13,6 +13,7 @@ import moldr
 from lib.phydat import phycon
 from lib.reaction import grid as rxngrid
 from lib.reaction import rxnid
+from lib.runner import driver
 
 
 ES_TSKS = {
@@ -566,7 +567,7 @@ def find_ts(
 
             # Optimize the saddle point using the max structure
             print('optimizing ts')
-            moldr.driver.run_job(
+            driver.run_job(
                 job='optimization',
                 script_str=opt_script_str,
                 run_fs=run_fs,

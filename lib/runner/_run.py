@@ -4,9 +4,11 @@ import warnings
 import automol
 import elstruct
 import autofile
-import moldr.optsmat
 from autoparse import pattern as app
 from autoparse import find as apf
+
+# New libs
+from lib.runner import optsmat
 
 
 def options_matrix_optimization(script_str, prefix,
@@ -23,7 +25,6 @@ def options_matrix_optimization(script_str, prefix,
     """
     assert len(errors) == len(options_mat)
 
-#    prog = theory_level[0]
     subrun_fs = autofile.fs.subrun(prefix)
     max_macro_idx, _ = max(subrun_fs.leaf.existing(), default=(-1, -1))
     macro_idx = max_macro_idx + 1
@@ -67,12 +68,12 @@ def options_matrix_optimization(script_str, prefix,
         if not any(error_vals):
             # success
             break
-        elif not moldr.optsmat.is_exhausted(options_mat):
+        elif not optsmat.is_exhausted(options_mat):
             # try again
             micro_idx += 1
             error_row_idx = error_vals.index(True)
-            kwargs_ = moldr.optsmat.updated_kwargs(kwargs, options_mat)
-            options_mat = moldr.optsmat.advance(error_row_idx, options_mat)
+            kwargs_ = optsmat.updated_kwargs(kwargs, options_mat)
+            options_mat = optsmat.advance(error_row_idx, options_mat)
             if feedback:
                 geom = read_geom_(out_str)
         else:
@@ -122,12 +123,12 @@ def options_matrix_run(input_writer, script_str, prefix,
         if not any(error_vals):
             # success
             break
-        elif not moldr.optsmat.is_exhausted(options_mat):
+        elif not optsmat.is_exhausted(options_mat):
             # try again
             micro_idx += 1
             error_row_idx = error_vals.index(True)
-            kwargs_ = moldr.optsmat.updated_kwargs(kwargs, options_mat)
-            options_mat = moldr.optsmat.advance(error_row_idx, options_mat)
+            kwargs_ = optsmat.updated_kwargs(kwargs, options_mat)
+            options_mat = optsmat.advance(error_row_idx, options_mat)
         else:
             # failure
             warnings.resetwarnings()
