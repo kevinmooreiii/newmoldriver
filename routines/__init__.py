@@ -1,55 +1,55 @@
 """ routines modules
 """
 
-from lib.routines.conformer import conformer_sampling
-from lib.routines.conformer import run_conformers
-from lib.routines.conformer import save_conformers
-from lib.routines.conformer import int_sym_num_from_sampling
-from lib.routines.conformer import symmetry_factor
-from lib.routines.conformer import is_unique_stereo_dist_mat_energy
-from lib.routines.conformer import are_torsions_same
-from lib.routines.conformer import is_unique_tors_dist_mat_energy
-from lib.routines.geom import reference_geometry
-from lib.routines.geom import run_initial_geometry_opt
-from lib.routines.geom import remove_imag
-from lib.routines.geom import run_check_imaginary
-from lib.routines.geom import run_kickoff_saddle
-from lib.routines.geom import save_initial_geometry
-from lib.routines.geom import projrot_frequencies
-from lib.routines.scan import hindered_rotor_scans
-from lib.routines.scan import run_scan
-from lib.routines.scan import run_multiref_rscan
-from lib.routines.scan import _run_1d_scan
-from lib.routines.scan import _run_2d_scan
-from lib.routines.scan import save_scan
-from lib.routines.scan import infinite_separation_energy
-from lib.routines.sp import run_energy
-from lib.routines.sp import run_gradient
-from lib.routines.sp import run_hessian
-from lib.routines.sp import run_vpt2
-from lib.routines.tau import tau_sampling
-from lib.routines.tau import run_tau
-from lib.routines.tau import save_tau
-from lib.routines.tau import tau_pf_write
-from lib.routines.ts import reference_geometry
-from lib.routines.ts import cas_options_1
-from lib.routines.ts import cas_options_2
-from lib.routines.ts import multiref_wavefunction_guess
-from lib.routines.ts import _run_irc
-from lib.routines.util import run_qchem_par
-from lib.routines.util import set_molpro_options_mat
-from lib.routines.util import orbital_restriction
-from lib.routines.util import geometry_dictionary
-from lib.routines.util import min_energy_conformer_locators
-from lib.routines.util import min_dist_conformer_zma
-from lib.routines.util import min_dist_conformer_zma_geo
-from lib.routines.util import locs_sort
-from lib.routines.util import traj_sort
-from lib.routines.util import nsamp_init
-from lib.routines.util import reaction_energy
-from lib.routines.util import reagent_energies
-from lib.routines.util import ts_mul_from_reaction_muls
-from lib.routines.util import run_script
+from routines.conformer import conformer_sampling
+from routines.conformer import run_conformers
+from routines.conformer import save_conformers
+from routines.conformer import int_sym_num_from_sampling
+from routines.conformer import symmetry_factor
+from routines.conformer import is_unique_stereo_dist_mat_energy
+from routines.conformer import are_torsions_same
+from routines.conformer import is_unique_tors_dist_mat_energy
+from routines.geom import reference_geometry
+from routines.geom import run_initial_geometry_opt
+from routines.geom import remove_imag
+from routines.geom import run_check_imaginary
+from routines.geom import run_kickoff_saddle
+from routines.geom import save_initial_geometry
+from routines.geom import projrot_frequencies
+from routines.scan import hindered_rotor_scans
+from routines.scan import run_scan
+from routines.scan import run_multiref_rscan
+from routines.scan import _run_1d_scan
+from routines.scan import _run_2d_scan
+from routines.scan import save_scan
+from routines.scan import infinite_separation_energy
+from routines.sp import run_energy
+from routines.sp import run_gradient
+from routines.sp import run_hessian
+from routines.sp import run_vpt2
+from routines.tau import tau_sampling
+from routines.tau import run_tau
+from routines.tau import save_tau
+from routines.tau import tau_pf_write
+from routines.ts import reference_geometry
+from routines.ts import cas_options_1
+from routines.ts import cas_options_2
+from routines.ts import multiref_wavefunction_guess
+from routines.ts import _run_irc
+from routines.util import run_qchem_par
+from routines.util import set_molpro_options_mat
+from routines.util import orbital_restriction
+from routines.util import geometry_dictionary
+from routines.util import min_energy_conformer_locators
+from routines.util import min_dist_conformer_zma
+from routines.util import min_dist_conformer_zma_geo
+from routines.util import locs_sort
+from routines.util import traj_sort
+from routines.util import nsamp_init
+from routines.util import reaction_energy
+from routines.util import reagent_energies
+from routines.util import ts_mul_from_reaction_muls
+from routines.util import run_script
 
 __all__ = [
     'conformer_sampling',
@@ -246,35 +246,35 @@ def ts_geometry_generation(tsk, spcdic, es_dct, thy_level, fs,
         spc_dct[spc], thy_level, ini_thy_level, fs, ini_fs,
         spc_dct[spc]['dist_info'], overwrite)
     if geo:
-    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(
-        *thy_level[0:2], saddle=True)
-    print('tsk test in ts_geometry_generation:', tsk)
-    params = {'spc_info': spc_info,
-              'thy_level': thy_level,
-              'script_str': opt_script_str,
-              'saddle':  True,
-              'tors_names': spcdic['tors_names'],
-              'overwrite': overwrite}
+        _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(
+            *thy_level[0:2], saddle=True)
+        print('tsk test in ts_geometry_generation:', tsk)
+        params = {'spc_info': spc_info,
+                  'thy_level': thy_level,
+                  'script_str': opt_script_str,
+                  'saddle':  True,
+                  'tors_names': spcdic['tors_names'],
+                  'overwrite': overwrite}
 
-    if tsk in ['conf_samp', 'tau_samp']:
-        params['nsamp_par'] = es_dct['mc_nsamp']
-        params['dist_info'] = spcdic['dist_info']
-        params['two_stage'] = True
-    if tsk in ['conf_samp']:
-        params['rxn_class'] = spcdic['class']
-    elif tsk in ['hr_scan']:
-        if 'hind_inc' in spcdic:
-            params['scan_increment'] = spcdic['hind_inc']
-        else:
-            params['scan_increment'] = 30. * phycon.DEG2RAD
-        params['frm_bnd_key'] = spcdic['frm_bnd_key']
-        params['brk_bnd_key'] = spcdic['brk_bnd_key']
-        print('key test in ts_geom gen:',
-              params['frm_bnd_key'],
-              params['brk_bnd_key'])
+        if tsk in ['conf_samp', 'tau_samp']:
+            params['nsamp_par'] = es_dct['mc_nsamp']
+            params['dist_info'] = spcdic['dist_info']
+            params['two_stage'] = True
+        if tsk in ['conf_samp']:
+            params['rxn_class'] = spcdic['class']
+        elif tsk in ['hr_scan']:
+            if 'hind_inc' in spcdic:
+                params['scan_increment'] = spcdic['hind_inc']
+            else:
+                params['scan_increment'] = 30. * phycon.DEG2RAD
+            params['frm_bnd_key'] = spcdic['frm_bnd_key']
+            params['brk_bnd_key'] = spcdic['brk_bnd_key']
+            print('key test in ts_geom gen:',
+                  params['frm_bnd_key'],
+                  params['brk_bnd_key'])
 
-    if tsk in ES_TSKS:
-        eval(ES_TSKS[tsk])(fs, params, opt_kwargs)
+        if tsk in ES_TSKS:
+            eval(ES_TSKS[tsk])(fs, params, opt_kwargs)
 
 
 def geometry_analysis(tsk, thy_level, ini_fs, selection,
@@ -373,6 +373,3 @@ def ts_geometry_analysis(tsk, thy_level, ini_fs, selection,
             else:
                 print('No initial geometry available for {} on {}'.format(
                     spc_info[0], '/'.join(thy_level[1:3])))
-
-
-
