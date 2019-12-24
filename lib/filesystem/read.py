@@ -4,7 +4,7 @@
 
 import automol
 import autofile
-import moldr
+from lib import moldr
 
 def get_zmas(
         reacs, prods, spc_dct, ini_thy_info, save_prefix, run_prefix,

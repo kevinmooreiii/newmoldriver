@@ -5,10 +5,10 @@ Build paths and file systesm given species and theory
 
 import automol
 import autofile
-import moldr
 
 from lib.phydat import phycon
 from lib.submission import theolvls
+from lib import moldr
 
 
 def get_thy_info(method):

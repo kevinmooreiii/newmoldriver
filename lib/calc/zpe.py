@@ -2,10 +2,10 @@
   ZPE Calculations
 """
 
-import moldr
 
 # New
 from lib.submission import substr
+from lib import moldr
 
 
 def get_zpe(spc, spc_info, spc_save_path, pf_levels, spc_model):

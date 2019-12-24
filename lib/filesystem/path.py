@@ -3,7 +3,7 @@ Build paths for spc and thy file systems
 """
 
 import autofile
-import moldr
+from lib import moldr
 
 
 def get_spc_run_path(run_prefix, spc_info):

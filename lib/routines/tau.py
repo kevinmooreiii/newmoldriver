@@ -5,11 +5,11 @@ import numpy
 import automol
 import elstruct
 import autofile
-import moldr
 
 # New Libs
 from lib.phydat import phycon
 from lib.runner import driver
+from lib import moldr
 
 
 def tau_sampling(

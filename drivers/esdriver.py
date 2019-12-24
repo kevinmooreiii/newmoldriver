@@ -1,9 +1,8 @@
 """ electronic structure drivers
 """
-import os
+
 import automol.inchi
 import automol.geom
-import moldr
 import autofile.fs
 import scripts.es
 
@@ -12,6 +11,7 @@ from lib.submission import substr
 from lib.filesystem import build as fbuild
 from lib.filesystem import inf as finf
 from lib.reaction import wells as lwells
+from lib import moldr
 
 
 KICKOFF_SIZE = 0.1
@@ -58,9 +58,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
         if tsk in ('find_ts', 'find_vdw'):
             for ts in spc_dct:
                 if 'ts_' in ts:
-                    print('Task {} \t for {} \t {}//{} \t {} = {}'.format(
-                        tsk, ts, '/'.join(thy_info), '/'.join(ini_thy_info),
-                        '+'.join(spc_dct[ts]['reacs']), '+'.join(spc_dct[ts]['prods'])))
+                    lib.msg.ts_tsk_msg(tsk, ts, spc_dct, thy_info, ini_thy_info)
                     ts_info = (spc_dct[ts]['ich'], spc_dct[ts]['chg'], spc_dct[ts]['mul'])
                     rxn_class = spc_dct[ts]['class']
                     if not rxn_class:
@@ -68,10 +66,6 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                         continue
                     elif rad_rad_ts == 'pst':
                         print('skipping reaction because we are using PST')
-                        continue
-                    #elif 'radical radical' in rxn_class and not 'high spin' in rxn_class:
-                        #print('skipping reaction because type =', rxn_class)
-                       # continue
                     ts_zma = spc_dct[ts]['original_zma']
                     dist_info = spc_dct[ts]['dist_info']
                     grid = spc_dct[ts]['grid']
@@ -90,13 +84,9 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                         dist_name = dist_info[0]
                         if 'abstraction' in rxn_class or 'addition' in rxn_class:
                             brk_name = dist_info[3]
-                            # print('bond info', dist_name, brk_name)
                             if dist_name and brk_name:
                                 ts_bnd = automol.zmatrix.bond_idxs(ts_zma, dist_name)
                                 brk_bnd = automol.zmatrix.bond_idxs(ts_zma, brk_name)
-                                # print('ts_zma test:', ts_zma)
-                                # print('brk_bnd test:', brk_bnd)
-                                # print('ts_bnd test:', ts_bnd)
                                 ang_atms = [0, 0, 0]
                                 cent_atm = list(set(brk_bnd) & set(ts_bnd))
                                 if cent_atm:
@@ -109,9 +99,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                                             ang_atms[2] = idx
 
                                 geom = automol.zmatrix.geometry(ts_zma)
-                                # print('ang_atms before calculation:', ang_atms)
                                 angle = automol.geom.central_angle(geom, *ang_atms)
-                                # print('calculated angle for ts is:', angle)
                         spc_dct[ts]['dist_info'].append(angle)
                         if not isinstance(geo, str):
                             print('Success, transition state {} added to species queue'.format(ts))
@@ -130,14 +118,12 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
         #Loop over all species
         for spc in spc_queue:
             if 'ts_' in spc and rad_rad_ts != 'pst':
-                print('\nTask {} \t {}//{} \t Species {}'.format(
-                    tsk, '/'.join(thy_info), '/'.join(ini_thy_info), spc))
+                lib.msg.tsk_msg(tsk, thy_info, ini_thy_info, spc)
                 spc_run_fs, spc_save_fs, spc_run_path, spc_save_path = spc_dct[spc]['rxn_fs']
                 spc_info = finf.get_spc_info(spc_dct[spc])
 
             else:
-                print('\nTask {} \t {}//{} \t Species {}: {}'.format(
-                    tsk, '/'.join(thy_info), '/'.join(ini_thy_info), spc,
+                lib.msg.tsk_msg(tsk, thy_info, ini_thy_info, spc)
                     automol.inchi.smiles(spc_dct[spc]['ich'])))
                 spc_info = finf.get_spc_info(spc_dct[spc])
                 spc_run_fs = autofile.fs.species(run_prefix)
@@ -148,10 +134,8 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 spc_save_fs.leaf.create(spc_info)
                 spc_save_path = spc_save_fs.leaf.path(spc_info)
 
-            orb_restr = moldr.util.orbital_restriction(
-                spc_info, thy_info)
-            thy_level = thy_info[0:3]
-            thy_level.append(orb_restr)
+            # add orb resti
+            thy_level = filesystem.new.orb_restr(spc_info, thy_info)
 
             thy_run_fs = autofile.fs.theory(spc_run_path)
             thy_save_fs = autofile.fs.theory(spc_save_path)
@@ -185,9 +169,6 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 if min_cnf_locs:
                     min_cnf_run_path = cnf_run_fs.leaf.path(min_cnf_locs)
                     min_cnf_save_path = cnf_save_fs.leaf.path(min_cnf_locs)
-                    # print('min_cnf_paths test in esdriver')
-                    # print(min_cnf_run_path)
-                    # print(min_cnf_save_path)
                     scn_run_fs = autofile.fs.conformer(min_cnf_run_path)
                     scn_save_fs = autofile.fs.conformer(min_cnf_save_path)
                 else:
@@ -270,72 +251,49 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
 
             # Run tasks
             if 'ts_' in spc:
-                if 'samp' in tsk or 'scan' in tsk or 'geom' in tsk:
-                    geo = moldr.ts.reference_geometry(
-                        spc_dct[spc], thy_level, ini_thy_level, fs, ini_fs,
-                        spc_dct[spc]['dist_info'], overwrite)
-                    if geo:
-                        scripts.es.ts_geometry_generation(
-                            tsk, spc_dct[spc], es_dct[es_run_key],
-                            thy_level, fs, spc_info, overwrite)
+                if any(string in tsk for string in ('samp', 'scan', 'geom')):
+                    scripts.es.ts_geometry_generation(
+                        tsk, spc_dct[spc], es_dct[es_run_key],
+                        thy_level, fs, spc_info, overwrite)
                 else:
                     selection = 'min'
                     scripts.es.ts_geometry_analysis(
                         tsk, thy_level, ini_fs, selection, spc_info, spc_dct[spc], overwrite)
             else:
                 if 'samp' in tsk or 'scan' in tsk or 'geom' in tsk:
-                    geo = moldr.geom.reference_geometry(
-                        spc_dct[spc], thy_level, ini_thy_level, fs, ini_fs,
-                        kickoff_size=KICKOFF_SIZE,
-                        kickoff_backward=KICKOFF_BACKWARD,
-                        projrot_script_str=substr.PROJROT,
-                        overwrite=overwrite)
-                    if geo:
-                        if not 'vdw_' in spc:
-                            scripts.es.geometry_generation(
-                                tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
-                                fs, spc_info, overwrite)
-                        else:
-                            lwells.fake_geo_gen(
-                                tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
-                                fs, spc_info, overwrite)
+                    if 'vdw_' not in spc:
+                        scripts.es.geometry_generation(
+                            tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
+                            fs, spc_info, overwrite)
+                    else:
+                        lwells.fake_geo_gen(
+                            tsk, spc_dct[spc], es_dct[es_run_key], thy_level,
+                            fs, spc_info, overwrite)
                 else:
                     selection = 'min'
                     if 'conf' in tsk:
                         min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
                         if not min_cnf_locs:
-                            print(
-                                'Initial level of theory for conformers must be ',
-                                'run before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                         elif not ini_cnf_save_fs.leaf.file.geometry.exists(min_cnf_locs):
-                            print(
-                                'Initial level of theory for conformers must be ',
-                                'run before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                     elif 'tau' in tsk:
                         tau_locs = ini_tau_save_fs.leaf.existing()
                         if not tau_locs:
-                            print(
-                                'Initial level of theory for tau must be ', 
-                                'run before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                         elif not ini_tau_save_fs.leaf.file.geometry.exists([tau_locs[0]]):
-                            print(
-                                'Initial level of theory for tau must be ',
-                                'run before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                     elif 'scan' in tsk:
                         scn_locs = ini_scn_save_fs.leaf.existing()
                         if not scn_locs:
-                            print(
-                                'Initial level of theory for scn must be run ',
-                                'before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                         elif not ini_scn_save_fs.leaf.file.geometry.exists([scn_locs[0]]):
-                            print(
-                                'Initial level of theory for scn must be run ',
-                                'before {} '.format(tsk))
+                            lib.msg.ini_info_noavail_msg(tsk)
                             continue
                     scripts.es.geometry_analysis(
                         tsk, thy_level, ini_fs,

@@ -3,9 +3,10 @@
    launch the desired drivers
 """
 
-import lib.drivers.mech as lmechdriver
+from lib.drivers import mech as lmechdriver
+from lib.drivers.load import mechanism as loadmech
 import lib.filesystem.build as lfs
-
+from lib.submission import read_dat
 
 # Set runtime options based on user input
 INPUT = lmechdriver.get_user_input()
@@ -14,10 +15,10 @@ GEOM_DCT = lmechdriver.build_geom_dct(DATA_PATH)
 PARAMS = lmechdriver.read_params_file(MECH_PATH)
 
 # Prepare run-save filesystem for job
-lfs.build_filesystem(PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX)
+lfs.prefix_filesystem(PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX)
 
 # Read the input files
-RXN_INFO = lmechdriver.parse_mechanism_file(
+RXN_INFO = loadmech.parse_mechanism_file(
     MECH_TYPE, MECH_PATH, MECH_FILE,
     PARAMS.CHECK_STEREO, PARAMS.SORT_RXNS, PARAMS.RAD_RAD_SORT)
 SPC_DCT, RCT_NAMES, PRD_NAMES, RXN_NAME, FORM_STRS = RXN_INFO
@@ -34,7 +35,7 @@ lmechdriver.update_spc_dct(SPC_DCT, GEOM_DCT, PARAMS.HIND_INC)
 #         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
 #
 # Set the channels on the PESs to run
-PES_DCT = lmechdriver.build_pes_dct(
+PES_DCT = loadmech.build_pes_dct(
     FORM_STRS, RCT_NAMES, PRD_NAMES, RXN_NAME)
 lmechdriver.print_pes_channels(PES_DCT)
 PESNUMS = lmechdriver.set_pes_nums(

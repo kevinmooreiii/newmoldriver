@@ -8,12 +8,12 @@ import projrot_io
 import automol
 import elstruct
 import autofile
-import moldr
 import mess_io
 
 # New Libs
 from lib.phydat import phycon
 from lib.submission import substr
+from lib import moldr
 
 
 def species_block(
@@ -2315,3 +2315,4 @@ def _hrpot_spline_fitter(pot, thresh=-0.05):
     final_potential = final_potential[:-1]
 
     return final_potential
+

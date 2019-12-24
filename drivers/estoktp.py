@@ -8,13 +8,13 @@ import copy
 import numpy
 import chemkin_io
 import automol
-import moldr
 import thermodriver
 import ktpdriver
 
 # Calling the new libs
 from lib.phydat import phycon, eleclvl, symm
 from lib.submission import read_dat, theolvls
+from lib import moldr
 
 
 # Set mechanism and type to be read based on user input

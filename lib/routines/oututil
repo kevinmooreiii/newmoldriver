@@ -1,0 +1,284 @@
+./autofile/system/map_.py:8:from autofile.system._util import (is_valid_inchi_multiplicity as
+./autofile/system/map_.py:10:from autofile.system._util import short_hash as _short_hash
+./autofile/system/map_.py:11:from autofile.system._util import (random_string_identifier as
+./autofile/system/map_.py:13:from autofile.system._util import (is_random_string_identifier as
+./autofile/system/info.py:6:from autofile.system._util import utc_time as _utc_time
+./autofile/system/model.py:6:import shutil
+./autofile/system/model.py:116:                shutil.rmtree(pth)
+./drivers/estoktp.py:29:GEOM_DCT = moldr.util.geometry_dictionary(GEOM_PATH)
+./drivers/estoktp.py:606:                        ts_mul_low, ts_mul_high, rad_rad = moldr.util.ts_mul_from_reaction_muls(
+./drivers/esdriver.py:151:            orb_restr = moldr.util.orbital_restriction(
+./drivers/esdriver.py:184:                min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./drivers/esdriver.py:205:                orb_restr = moldr.util.orbital_restriction(
+./drivers/esdriver.py:237:                min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
+./drivers/esdriver.py:305:                        min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
+Binary file ./drivers/__pycache__/esdriver.cpython-37.pyc matches
+./drivers/fxns/es.py:71:                min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./drivers/fxns/es.py:104:                min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
+./drivers/fxns/es.py:172:                        min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
+./drivers/fxns/es.py:314:    orb_restr = moldr.util.orbital_restriction(
+./drivers/fxns/mech.py:15:    geom_dct = moldr.util.geometry_dictionary(geom_path)
+./lib/reaction/rxnid.py:96:                rct_zmas = moldr.util.min_dist_conformer_zma_geo(orig_dist, cnf_save_fs_lst[0])
+./lib/reaction/rxnid.py:136:                rct_zmas = moldr.util.min_dist_conformer_zma_geo(
+./lib/reaction/wells.py:12:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_info[:2])
+./lib/reaction/wells.py:30:        _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(prog, method)
+./lib/reaction/wells.py:36:            orb_restr = moldr.util.orbital_restriction(spc_info, ini_thy_info)
+./lib/reaction/wells.py:39:            orb_restr = moldr.util.orbital_restriction(spc_info, thy_info)
+./lib/reaction/wells.py:78:        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+./lib/reaction/wells.py:105:            #orb_restr = moldr.util.orbital_restriction(mul, thy_info[0:3] restrict_open_shell)
+./lib/reaction/wells.py:113:            orb_restr = moldr.util.orbital_restriction(spc_info, thy_info)
+Binary file ./lib/reaction/__pycache__/rxnid.cpython-37.pyc matches
+Binary file ./lib/reaction/__pycache__/wells.cpython-37.pyc matches
+./lib/filesystem/inf.py:79:        rxn_exo = moldr.util.reaction_energy(
+./lib/filesystem/inf.py:82:        rxn_exo = moldr.util.reaction_energy(
+./lib/filesystem/path.py:30:    orb_restr = moldr.util.orbital_restriction(
+./lib/filesystem/path.py:44:    orb_restr = moldr.util.orbital_restriction(
+./lib/filesystem/path.py:56:    orb_restr = moldr.util.orbital_restriction(
+./lib/filesystem/read.py:52:        orb_restr = moldr.util.orbital_restriction(spc_info, ini_thy_info)
+./lib/filesystem/read.py:68:        min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+Binary file ./lib/filesystem/__pycache__/read.cpython-37.pyc matches
+Binary file ./lib/filesystem/__pycache__/inf.cpython-37.pyc matches
+Binary file ./lib/filesystem/__pycache__/path.cpython-37.pyc matches
+./lib/mess/messf.py:29:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:50:    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+./lib/mess/messf.py:52:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:64:        sym_min_cnf_locs = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs)
+./lib/mess/messf.py:73:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:84:        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+./lib/mess/messf.py:89:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:101:        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+./lib/mess/messf.py:153:                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/messf.py:186:                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/messf.py:382:                        moldr.util.run_script(pf_script_str, pf_path)
+./lib/mess/messf.py:417:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:442:                    moldr.util.run_script(projrot_script_str2, path)
+./lib/mess/messf.py:473:                    # shutil.rmtree(path)
+./lib/mess/messf.py:511:                freqs = elstruct.util.harmonic_frequencies(anh_geo, hess, project=True)
+./lib/mess/messf.py:561:    orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)
+./lib/mess/messf.py:647:            moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:661:            freqs_test_0 = elstruct.util.harmonic_frequencies(geom, hess, project=False)
+./lib/mess/messf.py:764:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:769:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:779:    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
+./lib/mess/messf.py:780:    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+./lib/mess/messf.py:783:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:789:        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+./lib/mess/messf.py:790:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:796:        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+./lib/mess/messf.py:799:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:805:        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+./lib/mess/messf.py:807:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:813:        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+./lib/mess/messf.py:817:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:823:        anh_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_i)
+./lib/mess/messf.py:824:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:830:        anh_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_j)
+./lib/mess/messf.py:895:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/messf.py:902:                    freqs_j = elstruct.util.harmonic_frequencies(
+./lib/mess/messf.py:939:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/messf.py:946:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/messf.py:1067:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:1185:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:1229:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1234:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1245:    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
+./lib/mess/messf.py:1246:    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+./lib/mess/messf.py:1249:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1255:        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+./lib/mess/messf.py:1257:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1263:        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+./lib/mess/messf.py:1267:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1271:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1278:        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+./lib/mess/messf.py:1283:        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+./lib/mess/messf.py:1368:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/messf.py:1375:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/messf.py:1427:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/messf.py:1434:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/messf.py:1564:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:1682:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:1720:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1734:    min_cnf_locs = moldr.util.min_energy_conformer_locators(
+./lib/mess/messf.py:1742:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1771:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1786:    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+./lib/mess/messf.py:1795:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1808:        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+./lib/mess/messf.py:1815:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/messf.py:1827:        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+./lib/mess/messf.py:1848:        freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/messf.py:2053:                moldr.util.run_script(projrot_script_str, path)
+./lib/mess/messf.py:2065:                moldr.util.run_script(projrot_script_str2, path)
+./lib/mess/messf.py:2104:                moldr.util.run_script(pf_script_str, pf_path)
+./lib/mess/messf.py:2158:                freqs = elstruct.util.harmonic_frequencies(anh_geo, hess, project=True)
+./lib/mess/messf.py:2191:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./lib/mess/rates.py:433:        filtered_temps, filtered_ks = ratefit.fit.util.get_valid_tk(
+./lib/mess/redopf/new.py:254:            freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/redopf/new.py:307:            freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/redopf/new.py:407:            freqs = elstruct.util.harmonic_frequencies(anh_geo, hess, project=True)
+./lib/mess/redopf/new.py:450:    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/new.py:480:    moldr.util.run_script(projrot_script_str2, path)
+./lib/mess/redopf/new.py:538:    moldr.util.run_script(pf_script_str, pf_path)
+./lib/mess/redopf/new.py:655:        freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/redopf/new.py:662:        freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/redopf/new.py:734:    levelp.append(moldr.util.orbital_restriction(spc_info, level))
+./lib/mess/redopf/new.py:745:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./lib/mess/redopf/pf.py:27:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:48:    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+./lib/mess/redopf/pf.py:50:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:62:        sym_min_cnf_locs = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs)
+./lib/mess/redopf/pf.py:71:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:82:        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+./lib/mess/redopf/pf.py:87:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:99:        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+./lib/mess/redopf/pf.py:151:                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/redopf/pf.py:184:                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/redopf/pf.py:380:                        moldr.util.run_script(pf_script_str, pf_path)
+./lib/mess/redopf/pf.py:415:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:440:                    moldr.util.run_script(projrot_script_str2, path)
+./lib/mess/redopf/pf.py:471:                    # shutil.rmtree(path)
+./lib/mess/redopf/pf.py:509:                freqs = elstruct.util.harmonic_frequencies(anh_geo, hess, project=True)
+./lib/mess/redopf/pf.py:559:    orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)
+./lib/mess/redopf/pf.py:645:            moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:659:            freqs_test_0 = elstruct.util.harmonic_frequencies(geom, hess, project=False)
+./lib/mess/redopf/pf.py:762:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:767:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:777:    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:778:    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:781:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:787:        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:788:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:794:        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:797:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:803:        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:805:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:811:        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:815:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:821:        anh_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:822:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:828:        anh_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:893:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/redopf/pf.py:900:                    freqs_j = elstruct.util.harmonic_frequencies(
+./lib/mess/redopf/pf.py:937:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/redopf/pf.py:944:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/redopf/pf.py:1065:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:1183:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:1227:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1232:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1243:    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:1244:    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:1247:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1253:        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:1255:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1261:        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:1265:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1269:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1276:        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+./lib/mess/redopf/pf.py:1281:        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+./lib/mess/redopf/pf.py:1366:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/redopf/pf.py:1373:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/redopf/pf.py:1425:                    freqs_i = elstruct.util.harmonic_frequencies(har_geo_i, hess_i, project=False)
+./lib/mess/redopf/pf.py:1432:                    freqs_j = elstruct.util.harmonic_frequencies(har_geo_j, hess_j, project=False)
+./lib/mess/redopf/pf.py:1562:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:1680:                    moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:1718:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1732:    min_cnf_locs = moldr.util.min_energy_conformer_locators(
+./lib/mess/redopf/pf.py:1740:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1769:    orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1784:    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+./lib/mess/redopf/pf.py:1793:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1806:        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+./lib/mess/redopf/pf.py:1813:        orb_restr = moldr.util.orbital_restriction(
+./lib/mess/redopf/pf.py:1825:        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+./lib/mess/redopf/pf.py:1846:        freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+./lib/mess/redopf/pf.py:2051:                moldr.util.run_script(projrot_script_str, path)
+./lib/mess/redopf/pf.py:2063:                moldr.util.run_script(projrot_script_str2, path)
+./lib/mess/redopf/pf.py:2102:                moldr.util.run_script(pf_script_str, pf_path)
+./lib/mess/redopf/pf.py:2156:                freqs = elstruct.util.harmonic_frequencies(anh_geo, hess, project=True)
+./lib/mess/redopf/pf.py:2189:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+Binary file ./lib/mess/__pycache__/messf.cpython-37.pyc matches
+Binary file ./lib/mess/__pycache__/rates.cpython-37.pyc matches
+./lib/outpt/chemkin.py:46:    atom_dict = thermo.util.get_atom_counts_dict(formula)
+Binary file ./lib/outpt/__pycache__/chemkin.cpython-37.pyc matches
+./lib/routines/tau.py:35:    nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+./lib/routines/tau.py:159:        moldr.util.traj_sort(tau_save_fs)
+./lib/routines/tau.py:168:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./lib/routines/sp.py:51:            errors, options_mat = moldr.util.set_molpro_options_mat(spc_info, geo)
+./lib/routines/sp.py:175:            freqs = elstruct.util.harmonic_frequencies(
+./lib/routines/sp.py:211:                freqs = elstruct.util.harmonic_frequencies(
+./lib/routines/util.py:1:""" utilites
+./lib/routines/ts.py:55:        _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(
+./lib/routines/__init__.py:39:from lib.routines.util import run_qchem_par
+./lib/routines/__init__.py:40:from lib.routines.util import set_molpro_options_mat
+./lib/routines/__init__.py:41:from lib.routines.util import orbital_restriction
+./lib/routines/__init__.py:42:from lib.routines.util import geometry_dictionary
+./lib/routines/__init__.py:43:from lib.routines.util import min_energy_conformer_locators
+./lib/routines/__init__.py:44:from lib.routines.util import min_dist_conformer_zma
+./lib/routines/__init__.py:45:from lib.routines.util import min_dist_conformer_zma_geo
+./lib/routines/__init__.py:46:from lib.routines.util import locs_sort
+./lib/routines/__init__.py:47:from lib.routines.util import traj_sort
+./lib/routines/__init__.py:48:from lib.routines.util import nsamp_init
+./lib/routines/__init__.py:49:from lib.routines.util import reaction_energy
+./lib/routines/__init__.py:50:from lib.routines.util import reagent_energies
+./lib/routines/__init__.py:51:from lib.routines.util import ts_mul_from_reaction_muls
+./lib/routines/__init__.py:52:from lib.routines.util import run_script
+./lib/routines/geom.py:93:            _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+./lib/routines/geom.py:206:    script_str, opt_script_str, kwargs, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+./lib/routines/geom.py:277:                    norm_coos = elstruct.util.normal_coordinates(
+./lib/routines/geom.py:368:    moldr.util.run_script(projrot_script_str, projrot_path)
+./lib/routines/scan.py:19:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./lib/routines/scan.py:211:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(prog, method)
+./lib/routines/scan.py:523:#    orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)
+./lib/routines/scan.py:534:#    mr_script_str, _, mr_kwargs, _ = moldr.util.run_qchem_par(prog, method)
+./lib/routines/scan.py:601:    orb_restr = moldr.util.orbital_restriction(hs_info, multi_info)
+./lib/routines/scan.py:614:    mr_script_str, _, mr_kwargs, _ = moldr.util.run_qchem_par(prog, method)
+./lib/routines/scan.py:684:    orb_restr = moldr.util.orbital_restriction(hs_info, thy_info)
+./lib/routines/scan.py:695:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_lvl[0:2])
+./lib/routines/scan.py:711:        errors, options_mat = moldr.util.set_molpro_options_mat(hs_info, geo)
+./lib/routines/scan.py:763:        orb_restr = moldr.util.orbital_restriction(spc_info, ini_thy_info)
+./lib/routines/scan.py:767:        orb_restr = moldr.util.orbital_restriction(spc_info, thy_info)
+./lib/routines/scan.py:779:        min_cnf_locs = moldr.util.min_energy_conformer_locators(ini_cnf_save_fs)
+./lib/routines/conformer.py:39:        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+./lib/routines/conformer.py:42:        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+./lib/routines/conformer.py:75:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./lib/routines/conformer.py:402:        moldr.util.traj_sort(cnf_save_fs)
+./lib/routines/variational/setup.py:11:    orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)
+./lib/routines/variational/vrctst.py:382:    # Run the VaReCoF utility script to get the divsur.out file
+./lib/routines/variational/vrctst.py:384:    varecof_io.writer.util.divsur_frame_geom_script()
+Binary file ./lib/routines/__pycache__/tau.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/pf.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/__init__.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/vrctst.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/scan.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/util.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/sp.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/ts.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/geom.cpython-37.pyc matches
+Binary file ./lib/routines/__pycache__/conformer.cpython-37.pyc matches
+./lib/runner/rates.py:20:    orb_restr = moldr.util.orbital_restriction(ts_info, thy_info)
+./lib/runner/rates.py:42:    moldr.util.run_script(substr.MESSRATE, mess_path)
+./lib/runner/tasker.py:46:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
+./lib/runner/tasker.py:116:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+./lib/runner/tasker.py:141:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2], saddle=True)
+./lib/runner/tasker.py:194:            locs_lst = [moldr.util.min_energy_conformer_locators(save_dir)]
+./lib/runner/tasker.py:196:        locs_lst = moldr.util.geom_sort(save_dir)[0:selection]
+./lib/runner/tasker.py:200:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
+./lib/runner/tasker.py:266:            locs_lst = [moldr.util.min_energy_conformer_locators(save_dir)]
+./lib/runner/tasker.py:268:        locs_lst = moldr.util.geom_sort(save_dir)[0:selection]
+./lib/runner/tasker.py:271:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2], saddle=True)
+Binary file ./lib/runner/__pycache__/therm.cpython-37.pyc matches
+Binary file ./lib/runner/__pycache__/rates.cpython-37.pyc matches
+./lib/runner/therm.py:19:    moldr.util.run_script(pf_script_str, pf_path)
+./lib/runner/therm.py:104:    orb_restr = moldr.util.orbital_restriction(
+Binary file ./.git/index matches
+./scripts/es.py:91:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
+./scripts/es.py:156:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+./scripts/es.py:179:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(
+./scripts/es.py:232:            locs_lst = [moldr.util.min_energy_conformer_locators(save_dir)]
+./scripts/es.py:236:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
+./scripts/es.py:287:            locs_lst = [moldr.util.min_energy_conformer_locators(save_dir)]
+./scripts/es.py:290:    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(
+./scripts/es.py:371:    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(
+./scripts/es.py:374:    orb_restr = moldr.util.orbital_restriction(ts_info, thy_info)
+./scripts/es.py:409:    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+./scripts/es.py:480:            orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)

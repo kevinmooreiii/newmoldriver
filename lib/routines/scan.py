@@ -4,10 +4,10 @@ import numpy
 import automol
 import elstruct
 import autofile
-import moldr
 from elstruct.reader._molpro2015.molecule import hess_geometry
 
 from lib.runner import driver
+from lib import moldr
 
 
 def hindered_rotor_scans(

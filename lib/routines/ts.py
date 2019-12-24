@@ -4,8 +4,10 @@
 import automol
 import elstruct
 import autofile
-import moldr
 import scripts.es
+
+# New libs
+from lib import moldr
 
 
 def reference_geometry(spcdct, thy_level, ini_thy_level,

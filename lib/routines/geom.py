@@ -5,7 +5,6 @@ import numpy
 import automol
 import elstruct
 import autofile
-import moldr
 import scripts
 import projrot_io
 
@@ -13,6 +12,7 @@ import projrot_io
 from lib.phydat import phycon
 from lib.reaction import wells as lwells
 from lib.runner import driver
+from lib import moldr
 
 
 def reference_geometry(

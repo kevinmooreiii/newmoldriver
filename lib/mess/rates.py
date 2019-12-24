@@ -2,15 +2,15 @@
 Write and Read MESS files for Rates
 """
 
-import numpy
 import copy
+import numpy
 import automol
 import mess_io
 import ratefit
 import autofile
-import moldr
 
 from lib.phydat import phycon
+from lib import moldr
 
 
 # Writer

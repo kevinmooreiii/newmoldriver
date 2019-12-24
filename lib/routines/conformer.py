@@ -5,11 +5,11 @@ import numpy
 import automol
 import elstruct
 import autofile
-import moldr
 
 # New libs
 from lib.phydat import phycon
 from lib.runner import driver
+from lib import moldr
 
 
 def conformer_sampling(
@@ -85,7 +85,32 @@ def conformer_sampling(
             thy_save_fs.trunk.file.geometry.write(geo)
             thy_save_fs.trunk.file.zmatrix.write(zma)
 
-        ene = cnf_save_fs.leaf.file.energy.read(min_cnf_locs)
+
+def single_conformer(spc_info, thy_level, fs, overwrite,
+                     saddle=False, dist_info=[]):
+    """ generate single optimized geometry for
+        randomly sampled initial torsional angles
+    """
+    mc_nsamp = [False, 0, 0, 0, 0, 1]
+    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
+    thy_save_fs = fs[3]
+    two_stage = False
+    if saddle:
+        two_stage = True
+    moldr.conformer.conformer_sampling(
+        spc_info=spc_info,
+        thy_level=thy_level,
+        thy_save_fs=thy_save_fs,
+        cnf_run_fs=fs[4],
+        cnf_save_fs=fs[5],
+        script_str=sp_script_str,
+        overwrite=overwrite,
+        nsamp_par=mc_nsamp,
+        saddle=saddle,
+        dist_info=dist_info,
+        two_stage=two_stage,
+        **kwargs,
+    )
 
 
 def run_conformers(

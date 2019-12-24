@@ -11,6 +11,9 @@ from lib import runner
 from lib import calc
 from lib.fit import fit_rates
 from lib import reaction
+from lib import drivers
+from lib import routines
+# from lib import variational
 
 
 __all__ = [
@@ -22,5 +25,8 @@ __all__ = [
     'runner',
     'calc',
     'fit_rates',
-    'reaction'
+    'reaction',
+    'drivers',
+    'routines'
+    # 'variational'
 ]

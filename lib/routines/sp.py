@@ -3,10 +3,10 @@
 import automol
 import elstruct
 import autofile
-import moldr
 
 # New libs
 from lib.runner import driver
+from lib import moldr
 
 
 def run_energy(
