@@ -36,7 +36,6 @@ from routines.es.ts import sadpt_reference_geometry
 from routines.es.ts import cas_options_1
 from routines.es.ts import cas_options_2
 from routines.es.ts import multiref_wavefunction_guess
-from routines.es.ts import _run_irc
 from routines import util
 from lib.phydat import phycon
 from lib.submission import substr
@@ -77,7 +76,6 @@ __all__ = [
     'cas_options_1',
     'cas_options_2',
     'multiref_wavefunction_guess',
-    '_run_irc',
 ]
 
 
@@ -196,7 +194,7 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
     if geo:
         print('Task:', tsk)
         _, opt_script_str, _, opt_kwargs = util.run_qchem_par(
-            *thy_level[0:2], saddle=saddle)
+            *thy_level[0:2])
         params = {'spc_info': spc_info,
                   'thy_level': thy_level,
                   'script_str': opt_script_str,
@@ -260,7 +258,7 @@ def geometry_analysis(tsk, thy_level, ini_filesys, selection,
         locs_lst = selection
 
     sp_script_str, _, kwargs, _ = util.run_qchem_par(
-        *thy_level[0:2], saddle=saddle)
+        *thy_level[0:2])
     params['spc_info'] = spc_info
     params['thy_level'] = thy_level
     params['script_str'] = sp_script_str

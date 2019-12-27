@@ -6,17 +6,18 @@ import os
 import automol
 import thermo
 import autofile
-import moldr
 
 # New Libs
 from lib.submission import substr
+from lib.runner.script import run_script
+from routines import util
 
 
 # MESSPF
 def run_pf(pf_path, pf_script_str=substr.MESSPF):
     """ run messpf
     """
-    moldr.util.run_script(pf_script_str, pf_path)
+    run_script(pf_script_str, pf_path)
 
 
 # THERMP
@@ -101,7 +102,7 @@ def get_thermo_paths(spc_save_path, spc_info, har_level):
     there is no obvious place to save this information for a random
     assortment of har_level, tors_level, vpt2_level
     """
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, har_level)
     har_levelp = har_level[1:3]
     har_levelp.append(orb_restr)

@@ -5,7 +5,7 @@ import automol
 import elstruct
 
 # New libs
-from routines.es import util
+from routines import util
 from routines.es import conformer
 from lib.runner import driver
 

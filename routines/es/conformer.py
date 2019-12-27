@@ -7,7 +7,7 @@ import elstruct
 import autofile
 
 # New libs
-from routines.es import util
+from routines import util
 from lib.phydat import phycon
 from lib.runner import driver
 
@@ -597,13 +597,13 @@ def are_torsions_same(geo, geoi):
     tors_namesi = automol.geom.zmatrix_torsion_coordinate_names(geoi)
     for idx, tors_name in enumerate(tors_names):
         val = automol.zmatrix.values(zma)[tors_name]
-        vali = val - automol.zmatrix.values(zmai)[tors_namesi[idx]]
+        vali = automol.zmatrix.values(zmai)[tors_namesi[idx]]
         valip = vali+2.*numpy.pi
         valim = vali-2.*numpy.pi
         vchk1 = abs(val - vali)
         vchk2 = abs(val - valip)
         vchk3 = abs(val - valim)
-        if all(val > dtol for val in (vchk1, vchk2, vchk3)):
+        if vchk1 > dtol and vchk2 > dtol and vchk3 > dtol:
             same_dihed = False
     return same_dihed
 

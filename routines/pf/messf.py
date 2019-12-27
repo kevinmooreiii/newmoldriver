@@ -13,7 +13,9 @@ import mess_io
 # New Libs
 from lib.phydat import phycon
 from lib.submission import substr
+from lib.runner.script import run_script
 from routines import util
+from routines.es import conformer
 
 
 def species_block(
@@ -130,7 +132,7 @@ def species_block(
                 zma = tors_cnf_save_fs.leaf.file.zmatrix.read(tors_min_cnf_locs)
                 form_coords = list(automol.zmatrix.bond_idxs(zma, dist_names[0]))
                 form_coords.extend(list(dist_names[1]))
-            sym_factor = moldr.conformer.symmetry_factor(
+            sym_factor = conformer.symmetry_factor(
                 sym_geo, sym_ene, sym_cnf_save_fs, saddle, frm_bnd_key, brk_bnd_key, form_coords, tors_names)
             print('sym_factor from conformer sampling:', sym_factor)
         if sym_model == '1DHR':
@@ -379,7 +381,7 @@ def species_block(
                                          "export OMP_NUM_THREADS=10\n"
                                          "messpf pf.inp pf.out >> stdout.log &> stderr.log")
 
-                        util.run_script(pf_script_str, pf_path)
+                        run_script(pf_script_str, pf_path)
 
                         with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
                             output_string = mess_file.read()
@@ -414,7 +416,7 @@ def species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    util.run_script(projrot_script_str, path)
+                    run_script(projrot_script_str, path)
 
                     freqs = []
                     zpe_har_no_tors = 0.
@@ -439,7 +441,7 @@ def species_block(
                     # now run the other version of ProjRot
                     projrot_script_str2 = ("#!/usr/bin/env bash\n"
                     "RPHt.exe >& /dev/null")
-                    util.run_script(projrot_script_str2, path)
+                    run_script(projrot_script_str2, path)
                     zpe_har_no_tors_2 = 0.0
                     freqs_2 = []
                     if pot:
@@ -491,12 +493,12 @@ def species_block(
 
     elif vib_model == 'HARM' and tors_model == 'TAU':
         print('HARM and TAU combination is not yet implemented')
-        moldr.driver.tau_pf_write(
-            name=name,
-            save_prefix=thy_save_path,
-            run_grad=run_grad_pf,
-            run_hess=run_hess_pf,
-        )
+        # moldr.driver.tau_pf_write(
+        #     name=name,
+        #     save_prefix=thy_save_path,
+        #     run_grad=run_grad_pf,
+        #     run_hess=run_hess_pf,
+        # )
     elif vib_model == 'VPT2' and tors_model == 'RIGID':
         if anh_min_cnf_locs is not None:
             anh_geo = anh_cnf_save_fs.leaf.file.geometry.read(anh_min_cnf_locs)
@@ -536,12 +538,12 @@ def species_block(
 
     elif vib_model == 'VPT2' and tors_model == 'TAU':
         print('VPT2 and TAU combination is not yet implemented')
-        moldr.driver.tau_pf_write(
-            name=name,
-            save_prefix=thy_save_path,
-            run_grad=run_grad_pf,
-            run_hess=run_hess_pf,
-        )
+        # moldr.driver.tau_pf_write(
+        #     name=name,
+        #     save_prefix=thy_save_path,
+        #     run_grad=run_grad_pf,
+        #     run_hess=run_hess_pf,
+        # )
 
     return spc_str, imag_freq
 
@@ -644,7 +646,7 @@ def vtst_with_no_saddle_block(
             with open(proj_file_path, 'w') as proj_file:
                 proj_file.write(projrot_inp_str)
 
-            util.run_script(projrot_script_str, path)
+            run_script(projrot_script_str, path)
 
             freqs = []
             if len(pot) > 0:
@@ -866,7 +868,7 @@ def pst_block(
         if sym_model == 'SAMPLING':
             sym_geo_i = sym_cnf_save_fs_i.leaf.file.geometry.read(sym_min_cnf_locs_i)
             sym_ene_i = sym_cnf_save_fs_i.leaf.file.energy.read(sym_min_cnf_locs_i)
-            sym_factor_i = moldr.conformer.symmetry_factor(sym_geo_i, sym_ene_i, sym_cnf_save_fs_i)
+            sym_factor_i = conformer.symmetry_factor(sym_geo_i, sym_ene_i, sym_cnf_save_fs_i)
         if sym_model == '1DHR':
             # Warning: the 1DHR based symmetry number has not yet been set up
             sym_factor_i = 1
@@ -876,7 +878,7 @@ def pst_block(
         if sym_model == 'SAMPLING':
             sym_geo_j = sym_cnf_save_fs_j.leaf.file.geometry.read(sym_min_cnf_locs_j)
             sym_ene_j = sym_cnf_save_fs_j.leaf.file.energy.read(sym_min_cnf_locs_j)
-            sym_factor_j = moldr.conformer.symmetry_factor(sym_geo_j, sym_ene_j, sym_cnf_save_fs_j)
+            sym_factor_j = conformer.symmetry_factor(sym_geo_j, sym_ene_j, sym_cnf_save_fs_j)
         if sym_model == '1DHR':
             # Warning: the 1DHR based symmetry number has not yet been set up
             sym_factor_j = 1
@@ -1064,7 +1066,7 @@ def pst_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    util.run_script(projrot_script_str, path)
+                    run_script(projrot_script_str, path)
 
                     freqs_i = []
                     if pot:
@@ -1182,7 +1184,7 @@ def pst_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    util.run_script(projrot_script_str, path)
+                    run_script(projrot_script_str, path)
 
                     freqs_j = []
                     if pot:
@@ -1324,7 +1326,7 @@ def fake_species_block(
         if sym_model == 'SAMPLING':
             sym_geo_i = sym_cnf_save_fs_i.leaf.file.geometry.read(sym_min_cnf_locs_i)
             sym_ene_i = sym_cnf_save_fs_i.leaf.file.energy.read(sym_min_cnf_locs_i)
-            sym_factor_i = moldr.conformer.symmetry_factor(sym_geo_i, sym_ene_i, sym_cnf_save_fs_i)
+            sym_factor_i = conformer.symmetry_factor(sym_geo_i, sym_ene_i, sym_cnf_save_fs_i)
         if sym_model == '1DHR':
             # Warning: the 1DHR based symmetry number has not yet been set up
             sym_factor_i = 1
@@ -1334,7 +1336,7 @@ def fake_species_block(
         if sym_model == 'SAMPLING':
             sym_geo_j = sym_cnf_save_fs_j.leaf.file.geometry.read(sym_min_cnf_locs_j)
             sym_ene_j = sym_cnf_save_fs_j.leaf.file.energy.read(sym_min_cnf_locs_j)
-            sym_factor_j = moldr.conformer.symmetry_factor(sym_geo_j, sym_ene_j, sym_cnf_save_fs_j)
+            sym_factor_j = conformer.symmetry_factor(sym_geo_j, sym_ene_j, sym_cnf_save_fs_j)
         if sym_model == '1DHR':
             # Warning: the 1DHR based symmetry number has not yet been set up
             sym_factor_j = 1
@@ -1561,7 +1563,7 @@ def fake_species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    util.run_script(projrot_script_str, path)
+                    run_script(projrot_script_str, path)
 
                     freqs_i = []
                     if pot:
@@ -1679,7 +1681,7 @@ def fake_species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    util.run_script(projrot_script_str, path)
+                    run_script(projrot_script_str, path)
 
                     freqs_j = []
                     if pot:
@@ -2050,7 +2052,7 @@ def get_zero_point_energy(
                 with open(proj_file_path, 'w') as proj_file:
                     proj_file.write(projrot_inp_str)
 
-                util.run_script(projrot_script_str, path)
+                run_script(projrot_script_str, path)
 
                 zpe_har_no_tors = har_zpe
                 if pot:
@@ -2062,7 +2064,7 @@ def get_zero_point_energy(
                 # now try again with the other projrot parameters
                 projrot_script_str2 = ("#!/usr/bin/env bash\n"
                 "RPHt.exe >& /dev/null")
-                util.run_script(projrot_script_str2, path)
+                run_script(projrot_script_str2, path)
                 zpe_har_no_tors_2 = har_zpe
                 freqs_2 = []
                 if pot:
@@ -2101,7 +2103,7 @@ def get_zero_point_energy(
                 # run messpf
                 with open(os.path.join(pf_path, 'pf.inp'), 'w') as pf_file:
                     pf_file.write(pf_inp_str)
-                util.run_script(pf_script_str, pf_path)
+                run_script(pf_script_str, pf_path)
 
                 with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
                     output_string = mess_file.read()

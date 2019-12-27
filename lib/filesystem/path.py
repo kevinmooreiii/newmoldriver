@@ -3,7 +3,7 @@ Build paths for spc and thy file systems
 """
 
 import autofile
-from lib import moldr
+from routines import util
 
 
 def get_spc_run_path(run_prefix, spc_info):
@@ -27,7 +27,7 @@ def get_spc_save_path(save_prefix, spc_info):
 def get_thy_run_path(run_prefix, spc_info, thy_info):
     """ create theory run path
     """
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)
@@ -41,7 +41,7 @@ def get_thy_run_path(run_prefix, spc_info, thy_info):
 def get_thy_save_fs(save_prefix, spc_info, thy_info):
     """ create theory save filesystem
     """
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)
@@ -53,7 +53,7 @@ def get_thy_save_fs(save_prefix, spc_info, thy_info):
 def get_thy_save_path(save_prefix, spc_info, thy_info):
     """ create theory save path
     """
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)

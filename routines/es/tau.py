@@ -7,7 +7,7 @@ import elstruct
 import autofile
 
 # New Libs
-from routines.es import util
+from routines import util
 from lib.phydat import phycon
 from lib.runner import driver
 

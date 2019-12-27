@@ -18,7 +18,7 @@ def run_script(script_str, run_dir):
             os.remove('build.sh')
             with open(script_name, 'w') as script_obj:
                 script_obj.write(script_str)
-        except:
+        except IOError:
             with open(script_name, 'w') as script_obj:
                 script_obj.write(script_str)
 

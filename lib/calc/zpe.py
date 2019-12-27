@@ -5,7 +5,7 @@
 
 # New
 from lib.submission import substr
-from lib import moldr
+from routines.pf import get_zero_point_energy
 
 
 def get_zpe(spc, spc_info, spc_save_path, pf_levels, spc_model):
@@ -16,7 +16,7 @@ def get_zpe(spc, spc_info, spc_save_path, pf_levels, spc_model):
     is_atom = {}
     zero_energy_str = {}
 
-    spc_zpe, is_atom = moldr.pf.get_zero_point_energy(
+    spc_zpe, is_atom = get_zero_point_energy(
         spc, spc_info, pf_levels, spc_model,
         pf_script_str=substr.MESSPF,
         elec_levels=[[0., 1]],

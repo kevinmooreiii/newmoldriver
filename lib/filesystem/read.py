@@ -4,7 +4,8 @@
 
 import automol
 import autofile
-from lib import moldr
+from routines import util
+
 
 def get_zmas(
         reacs, prods, spc_dct, ini_thy_info, save_prefix, run_prefix,
@@ -49,7 +50,7 @@ def get_geos(
         spc_info = [spc_dct[spc]['ich'],
                     spc_dct[spc]['chg'],
                     spc_dct[spc]['mul']]
-        orb_restr = moldr.util.orbital_restriction(spc_info, ini_thy_info)
+        orb_restr = util.orbital_restriction(spc_info, ini_thy_info)
         ini_thy_level = ini_thy_info[0:3]
         ini_thy_level.append(orb_restr)
         spc_save_fs = autofile.fs.species(save_prefix)
@@ -65,7 +66,7 @@ def get_geos(
         cnf_save_fs = autofile.fs.conformer(ini_thy_save_path)
         cnf_save_fs_lst.append(cnf_save_fs)
         cnf_run_fs = autofile.fs.conformer(ini_thy_run_path)
-        min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+        min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
         if min_cnf_locs:
             geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
         else:
@@ -74,7 +75,7 @@ def get_geos(
             tmp_ini_fs = [None, ini_thy_save_fs]
             tmp_fs = [spc_save_fs, spc_run_fs, ini_thy_save_fs, ini_thy_run_fs,
                       cnf_save_fs, cnf_run_fs, run_fs]
-            geo = moldr.geom.reference_geometry(
+            geo = geom.reference_geometry(
                 spc_dct[spc], ini_thy_level, ini_thy_level, tmp_fs, tmp_ini_fs,
                 kickoff_size, kickoff_backward, projrot_script_str,
                 overwrite=False)

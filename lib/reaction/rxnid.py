@@ -2,8 +2,8 @@
 """
 
 import automol
-import moldr
 from lib.phydat import phycon
+from routines import util
 
 
 def conv_termol_to_bimol(rct_zmas, prd_zmas):
@@ -93,7 +93,7 @@ def determine_reaction_type(rct_zmas, prd_zmas,
         if typ is None:
             orig_dist = automol.zmatrix.ts.min_hyd_mig_dist(rct_zmas, prd_zmas)
             if orig_dist and (not given_class or given_class == 'hydrogenmigration'):
-                rct_zmas = moldr.util.min_dist_conformer_zma_geo(orig_dist, cnf_save_fs_lst[0])
+                rct_zmas = util.min_dist_conformer_zma_geo(orig_dist, cnf_save_fs_lst[0])
                 ret = automol.zmatrix.ts.hydrogen_migration(rct_zmas, prd_zmas)
                 if ret:
                     typ = 'hydrogen migration'
@@ -133,7 +133,7 @@ def determine_reaction_type(rct_zmas, prd_zmas,
             orig_dist = automol.zmatrix.ts.min_unimolecular_elimination_dist(
                 rct_zmas, prd_zmas)
             if orig_dist:
-                rct_zmas = moldr.util.min_dist_conformer_zma_geo(
+                rct_zmas = util.min_dist_conformer_zma_geo(
                     orig_dist, cnf_save_fs_lst[0])
                 ret = automol.zmatrix.ts.concerted_unimolecular_elimination(
                     rct_zmas, prd_zmas)

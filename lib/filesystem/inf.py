@@ -8,7 +8,7 @@ import autofile
 
 from lib.phydat import phycon
 from lib.submission import theolvls
-from lib import moldr
+from routines import util
 
 
 def get_thy_info(method):
@@ -76,10 +76,10 @@ def rxn_info(run_prefix, save_prefix, ts, spc_dct,
         rxn_muls[1].append(spc_dct[spc]['mul'])
     # check direction of reaction
     try:
-        rxn_exo = moldr.util.reaction_energy(
+        rxn_exo = util.reaction_energy(
             save_prefix, rxn_ichs, rxn_chgs, rxn_muls, thy_info)
     except:
-        rxn_exo = moldr.util.reaction_energy(
+        rxn_exo = util.reaction_energy(
             save_prefix, rxn_ichs, rxn_chgs, rxn_muls, ini_thy_info)
     print('reaction is {:.2f} endothermic'.format(rxn_exo*phycon.EH2KCAL))
     if rxn_exo > 0 and not spc_dct[ts]['given_class']:

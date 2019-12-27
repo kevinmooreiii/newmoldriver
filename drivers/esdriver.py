@@ -4,13 +4,13 @@
 import automol.inchi
 import automol.geom
 import autofile.fs
-import scripts.es
+import routines
 
 # Calling the new libs
-from lib.submission import substr
 from lib.filesystem import build as fbuild
 from lib.filesystem import inf as finf
 from lib.reaction import wells as lwells
+from lib.reaction import ts as lts
 from lib import msg
 
 
@@ -55,7 +55,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
         if tsk in ('find_ts', 'find_vdw'):
             for ts in spc_dct:
                 if 'ts_' in ts:
-                    lib.msg.ts_tsk_msg(
+                    msg.sadpt_tsk_msg(
                         tsk, ts, spc_dct, thy_info, ini_thy_info)
                     ts_info = (spc_dct[ts]['ich'],
                                spc_dct[ts]['chg'],
@@ -72,7 +72,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                     bkp_data = spc_dct[ts]['bkp_data']
                     _, _, rxn_run_path, rxn_save_path = spc_dct[ts]['rxn_fs']
                     if 'ts' in tsk:
-                        geo, _, final_dist = scripts.es.find_ts(
+                        geo, _, final_dist = lts.find_ts(
                             spc_dct, spc_dct[ts], ts_info, ts_zma, rxn_class,
                             dist_info, grid, bkp_data, ini_thy_info, thy_info,
                             run_prefix, save_prefix, rxn_run_path,
@@ -110,15 +110,15 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                             spc_queue.append(ts)
                             ts_found.append(ts)
                     elif 'vdw' in tsk:
-                        vdws = lwells.find_vdw(
-                            ts, spc_dct, thy_info, ini_thy_info, ts_info,
-                            vdw_params,
-                            es_dct[es_run_key]['mc_nsamp'], run_prefix,
-                            save_prefix, KICKOFF_SIZE, KICKOFF_BACKWARD,
-                            substr.PROJROT, overwrite)
-                        spc_queue.extend(vdws)
+                        pass
+                        # vdws = lwells.find_vdw(
+                        #     ts, spc_dct, thy_info, ini_thy_info, ts_info,
+                        #     vdw_params,
+                        #     es_dct[es_run_key]['mc_nsamp'], run_prefix,
+                        #     save_prefix, 0.1, False,
+                        #     substr.PROJROT, overwrite)
+                        # spc_queue.extend(vdws)
             continue
-
 
         # Loop over all species
         for spc in spc_queue:
@@ -139,7 +139,10 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 spc_save_path = spc_save_fs.leaf.path(spc_info)
 
             # add orb resti
-            thy_level = filesystem.new.orb_restr(spc_info, thy_info)
+            orb_restr = routines.util.orbital_restriction(
+                spc_info, thy_info)
+            thy_level = thy_info[0:3]
+            thy_level.append(orb_restr)
 
             thy_run_fs = autofile.fs.theory(spc_run_path)
             thy_save_fs = autofile.fs.theory(spc_save_path)
@@ -169,7 +172,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 cnf_save_fs = autofile.fs.conformer(thy_save_path)
                 tau_run_fs = autofile.fs.tau(thy_run_path)
                 tau_save_fs = autofile.fs.tau(thy_save_path)
-                min_cnf_locs = moldr.util.min_energy_conformer_locators(
+                min_cnf_locs = routines.util.min_energy_conformer_locators(
                     cnf_save_fs)
                 if min_cnf_locs:
                     min_cnf_run_path = cnf_run_fs.leaf.path(min_cnf_locs)
@@ -188,7 +191,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 scn_save_fs = None
 
             if ini_thy_info[0] != 'input_geom':
-                orb_restr = moldr.util.orbital_restriction(
+                orb_restr = routines.util.orbital_restriction(
                     spc_info, ini_thy_info)
                 ini_thy_level = ini_thy_info[0:3]
                 ini_thy_level.append(orb_restr)
@@ -224,7 +227,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
 
                 ini_tau_run_fs = autofile.fs.tau(ini_thy_run_path)
                 ini_tau_save_fs = autofile.fs.tau(ini_thy_save_path)
-                min_cnf_locs = moldr.util.min_energy_conformer_locators(
+                min_cnf_locs = routines.util.min_energy_conformer_locators(
                     ini_cnf_save_fs)
                 if min_cnf_locs:
                     min_cnf_run_path = ini_cnf_run_fs.leaf.path(min_cnf_locs)
@@ -267,7 +270,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                         tsk, spc_dct[spc], spc_info,
                         es_dct[es_run_key]['mc_nsamp'],
                         ini_thy_level, thy_level,
-                        ini_filesys, filesys, spc_info, overwrite,
+                        ini_filesys, filesys, overwrite,
                         saddle=saddle)
                 else:
                     selection = 'min'
@@ -282,7 +285,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                             tsk, spc_dct[spc], spc_info,
                             es_dct[es_run_key]['mc_nsamp'],
                             ini_thy_level, thy_level,
-                            ini_filesys, filesys, spc_info, overwrite,
+                            ini_filesys, filesys, overwrite,
                             saddle=saddle)
                     else:
                         lwells.fake_geo_gen(
@@ -291,7 +294,7 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                 else:
                     selection = 'min'
                     if 'conf' in tsk:
-                        min_cnf_locs = moldr.util.min_energy_conformer_locators(
+                        min_cnf_locs = routines.util.min_energy_conformer_locators(
                             ini_cnf_save_fs)
                         if not min_cnf_locs:
                             msg.ini_info_noavail_msg(tsk)
@@ -319,6 +322,6 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
                             msg.ini_info_noavail_msg(tsk)
                             continue
                     routines.es.geometry_analysis(
-                        tsk, thy_level, ini_fs,
-                        selection, spc_info, overwrite, saddle=saddle)
+                        tsk, thy_level, ini_filesys, selection,
+                        spc_info, spc_dct[spc], overwrite, saddle=saddle)
     return ts_found

@@ -3,7 +3,6 @@
 
 import automol.inchi
 import automol.geom
-import scripts.es
 import esdriver
 import autofile.fs
 
@@ -14,10 +13,11 @@ from lib.filesystem import inf as finf
 from lib.filesystem import path as fpath
 from lib.filesystem import read as fread
 from lib.calc import zpe as calczpe
-from lib.mess import rates as messrates
 from lib.runner import rates as raterunner
-from lib import fit_rates
-from lib import moldr
+from lib.reaction.ts import ts_class
+from routines.pf.fit import fit_rates
+from routines.pf import rates as messrates
+from routines.pf import get_high_level_energy
 
 
 TEMPS = [500., 550., 600., 650., 700., 750., 800., 850., 900., 950., 1000., 1050., 1100., 1150., 1200., 1250., 1300., 1350., 1400., 1450., 1500., 1550., 1600., 1650., 1700., 1750., 1800., 1850., 1900., 1950., 2000.]
@@ -112,7 +112,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                     spc_dct[ts]['reacs'], spc_dct[ts]['prods'], spc_dct,
                     ini_thy_info, save_prefix, run_prefix, KICKOFF_SIZE,
                     KICKOFF_BACKWARD, substr.PROJROT)
-                ret = scripts.es.ts_class(
+                ret = ts_class(
                     rct_zmas, prd_zmas, spc_dct[ts]['rad_rad'],
                     spc_dct[ts]['mul'], low_mul, high_mul,
                     rct_cnf_save_fs, prd_cnf_save_fs, spc_dct[ts]['given_class'])
@@ -279,7 +279,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
                     ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
                         ene_coeff[ene_idx], ene_thy_info[3], ene_thy_info[1], ene_thy_info[2],
                         ene_ref_thy_info[3], ene_ref_thy_info[1], ene_ref_thy_info[2]))
-                    ene = moldr.pf.get_high_level_energy(
+                    ene = get_high_level_energy(
                         spc_info=spc_info,
                         thy_low_level=ene_ref_thy_info,
                         thy_high_level=ene_thy_info,

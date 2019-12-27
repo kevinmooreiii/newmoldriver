@@ -12,7 +12,7 @@ import projrot_io
 from lib.phydat import phycon
 from lib.reaction import wells as lwells
 from lib.runner import driver
-from routines.es import util
+from routines import util
 
 
 def reference_geometry(

@@ -4,10 +4,11 @@
 
 import os
 import autofile
-import moldr
 
 # New Libs
 from lib.submission import substr
+from lib.runner.script import run_script
+from routines import util
 
 
 def run_rates(
@@ -17,7 +18,7 @@ def run_rates(
         and then running MESS
     """
     ts_info = (tsdct['ich'], tsdct['chg'], tsdct['mul'])
-    orb_restr = moldr.util.orbital_restriction(ts_info, thy_info)
+    orb_restr = util.orbital_restriction(ts_info, thy_info)
     ref_level = thy_info[1:3]
     ref_level.append(orb_restr)
     print('ref level test:', ref_level)
@@ -39,5 +40,5 @@ def run_rates(
     print(mess_path)
     with open(os.path.join(mess_path, 'mess.inp'), 'w') as mess_file:
         mess_file.write(mess_inp_str)
-    moldr.util.run_script(substr.MESSRATE, mess_path)
+    run_script(substr.MESSRATE, mess_path)
     return mess_path

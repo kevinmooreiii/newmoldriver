@@ -14,8 +14,8 @@ import ktpdriver
 # Calling the new libs
 from lib.phydat import phycon, eleclvl, symm
 from lib.submission import read_dat, theolvls
-from routines.es import geometry_dictionary
-from routines.es import ts_mul_from_reaction_muls
+from routines.util import geometry_dictionary
+from routines.util import ts_mul_from_reaction_muls
 
 
 # Set mechanism and type to be read based on user input
