@@ -14,7 +14,8 @@ import ktpdriver
 # Calling the new libs
 from lib.phydat import phycon, eleclvl, symm
 from lib.submission import read_dat, theolvls
-from lib import moldr
+from routines.es import geometry_dictionary
+from routines.es import ts_mul_from_reaction_muls
 
 
 # Set mechanism and type to be read based on user input
@@ -26,7 +27,7 @@ MECH_FILE = 'mech.json'
 
 # Obtain DCT containing geometries to use as input
 GEOM_PATH = os.path.join(DATA_PATH, 'data', 'geoms')
-GEOM_DCT = moldr.util.geometry_dictionary(GEOM_PATH)
+GEOM_DCT = geometry_dictionary(GEOM_PATH)
 
 # Read parameters that dictate job running options
 PARAMS = read_dat.params(os.path.join(MECH_PATH, 'params.dat'))
@@ -266,10 +267,10 @@ elif MECH_TYPE == 'json':
     UNQ_SMI_LST = []
     UNQ_LAB_LST = []
     UNQ_LAB_IDX_LST = []
-    csv_str = 'name,SMILES,mult'
-    csv_str += '\n'
-    spc_str = 'SPECIES'
-    spc_str += '\n'
+    CSV_STR = 'name,SMILES,mult'
+    CSV_STR += '\n'
+    SPC_STR = 'SPECIES'
+    SPC_STR += '\n'
     for ichs, muls, smis in zip(RCT_ICHS_LST, RCT_MULS_LST, RCT_SMIS_LST):
         for ich, mul, smi in zip(ichs, muls, smis):
             unique = True
@@ -294,10 +295,10 @@ elif MECH_TYPE == 'json':
                     label = lab
                 else:
                     label = lab + '(' + str(lab_idx) + ')'
-                csv_str += ','.join([label, smi, str(mul)])
-                csv_str += '\n'
-                spc_str += label
-                spc_str += '\n'
+                CSV_STR += ','.join([label, smi, str(mul)])
+                CSV_STR += '\n'
+                SPC_STR += label
+                SPC_STR += '\n'
     for ichs, muls, smis in zip(PRD_ICHS_LST, PRD_MULS_LST, PRD_SMIS_LST):
         for ich, mul, smi in zip(ichs, muls, smis):
             unique = True
@@ -322,18 +323,18 @@ elif MECH_TYPE == 'json':
                     label = lab
                 else:
                     label = lab + '(' + str(lab_idx) + ')'
-                csv_str += ','.join([label, smi, str(mul)])
-                csv_str += '\n'
-                spc_str += label
-                spc_str += '\n'
+                CSV_STR += ','.join([label, smi, str(mul)])
+                CSV_STR += '\n'
+                SPC_STR += label
+                SPC_STR += '\n'
 
-    spc_str += 'END'
-    spc_str += '\n'
-    spc_str += '\n'
+    SPC_STR += 'END'
+    SPC_STR += '\n'
+    SPC_STR += '\n'
 
     SORT_SMILES_PATH = os.path.join(MECH_PATH, 'smiles_sort.csv')
     with open(SORT_SMILES_PATH, 'w') as sorted_csv_file:
-        sorted_csv_file.write(csv_str)
+        sorted_csv_file.write(CSV_STR)
 
     RXN_INFO_LST = list(zip(
         FORMULA_STR_LST, RCT_NAMES_LST, PRD_NAMES_LST, RXN_NAME_LST, RXN_SENS,
@@ -396,7 +397,7 @@ elif MECH_TYPE == 'json':
         rxn_namep_str += '\n'
         RXN_NAMEP_LST.append(rxn_namep)
 
-    mech_str = spc_str + rxn_namep_str
+    mech_str = SPC_STR + rxn_namep_str
     mech_str += 'END'
     mech_str += '\n'
 
@@ -468,7 +469,7 @@ for key in es_dct:
 # Run Thermo or Rates depending on input
 if PARAMS.RUN_THERMO:
     SPC_QUEUE = list(SPC_NAMES)
-    thermodriver.driver.run(
+    thermodriver.run(
         PARAMS.TSK_INFO_LST, es_dct, SPC_DCT, SPC_QUEUE, PARAMS.REF_MOLS,
         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
@@ -587,9 +588,9 @@ if PARAMS.RUN_RATES:
                         prods = rxn['prods']
                         tsname = 'ts_{:g}'.format(ts_idx)
                         SPC_DCT[tsname] = {}
-                        if RXN_NAME_LST[idx] in CLA_DCT :
+                        if RXN_NAME_LST[idx] in CLA_DCT:
                             SPC_DCT[tsname]['given_class'] = CLA_DCT[RXN_NAME_LST[idx]]
-                        elif  '='.join(RXN_NAME_LST[idx].split('=')[::-1]) in CLA_DCT:
+                        elif '='.join(RXN_NAME_LST[idx].split('=')[::-1]) in CLA_DCT:
                             SPC_DCT[tsname]['given_class'] = CLA_DCT['='.join(RXN_NAME_LST[idx].split('=')[::-1])]
                             reacs = rxn['prods']
                             prods = rxn['reacs']
@@ -603,7 +604,7 @@ if PARAMS.RUN_RATES:
                         for rct in RCT_NAMES_LST[idx]:
                             ts_chg += SPC_DCT[rct]['chg']
                         SPC_DCT[tsname]['chg'] = ts_chg
-                        ts_mul_low, ts_mul_high, rad_rad = moldr.util.ts_mul_from_reaction_muls(
+                        ts_mul_low, ts_mul_high, rad_rad = ts_mul_from_reaction_muls(
                             RCT_NAMES_LST[idx], PRD_NAMES_LST[idx], SPC_DCT)
                         SPC_DCT[tsname]['mul'] = ts_mul_low
                         SPC_DCT[tsname]['rad_rad'] = rad_rad

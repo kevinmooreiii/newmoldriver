@@ -7,9 +7,9 @@ import elstruct
 import autofile
 
 # New Libs
+from routines.es import util
 from lib.phydat import phycon
 from lib.runner import driver
-from lib import moldr
 
 
 def tau_sampling(
@@ -32,7 +32,7 @@ def tau_sampling(
     ich = spc_info[0]
     gra = automol.inchi.graph(ich)
     ntaudof = len(automol.graph.rotational_bond_keys(gra, with_h_rotors=False))
-    nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+    nsamp = util.nsamp_init(nsamp_par, ntaudof)
 
     run_tau(
         zma=zma,
@@ -156,7 +156,7 @@ def save_tau(tau_run_fs, tau_save_fs):
                 saved_geos.append(geo)
 
         # update the tau trajectory file
-        moldr.util.traj_sort(tau_save_fs)
+        util.traj_sort(tau_save_fs)
 
 
 def tau_pf_write(
@@ -165,7 +165,7 @@ def tau_pf_write(
     """ Print out data fle for partition function evaluation
     """
     cnf_save_fs = autofile.fs.conformer(save_prefix)
-    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         ene_ref = cnf_save_fs.leaf.file.energy.read(min_cnf_locs)
         print('ene_ref')

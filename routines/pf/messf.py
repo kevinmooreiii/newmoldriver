@@ -13,7 +13,7 @@ import mess_io
 # New Libs
 from lib.phydat import phycon
 from lib.submission import substr
-from lib import moldr
+from routines import util
 
 
 def species_block(
@@ -26,7 +26,7 @@ def species_block(
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, har_level)
     har_levelp = har_level[0:3]
     har_levelp.append(orb_restr)
@@ -47,9 +47,9 @@ def species_block(
             dist_names.append(spc_dct_i['dist_info'][0])
             dist_names.append(spc_dct_i['dist_info'][3])
     har_cnf_save_fs = autofile.fs.conformer(har_save_path)
-    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+    har_min_cnf_locs = util.min_energy_conformer_locators(har_cnf_save_fs)
     if sym_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info, sym_level)
         sym_levelp = sym_level[0:3]
         sym_levelp.append(orb_restr)
@@ -61,16 +61,16 @@ def species_block(
             sym_save_path = sym_save_fs.trunk.path()
 
         sym_cnf_save_fs = autofile.fs.conformer(sym_save_path)
-        sym_min_cnf_locs = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs)
+        sym_min_cnf_locs = util.min_energy_conformer_locators(sym_cnf_save_fs)
 
-    # Set boolean to account for a radical radical reaction (not supported by vtst)
+    # Set boolean for a radical radical reaction (not supported by vtst)
     rad_rad_ts = False
     if 'ts_' in spc:
         if spc_dct_i['rad_rad']:
             rad_rad_ts = True
 
     if tors_level and not rad_rad_ts:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info, tors_level)
         tors_levelp = tors_level[0:3]
         tors_levelp.append(orb_restr)
@@ -81,12 +81,12 @@ def species_block(
             tors_save_fs.trunk.create()
             tors_save_path = tors_save_fs.trunk.path()
         tors_cnf_save_fs = autofile.fs.conformer(tors_save_path)
-        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+        tors_min_cnf_locs = util.min_energy_conformer_locators(tors_cnf_save_fs)
         if tors_min_cnf_locs:
             tors_cnf_save_path = tors_cnf_save_fs.leaf.path(tors_min_cnf_locs)
 
     if vpt2_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info, vpt2_level)
         vpt2_levelp = vpt2_level[0:3]
         vpt2_levelp.append(orb_restr)
@@ -98,7 +98,7 @@ def species_block(
             anh_save_path = anh_save_fs.trunk.path()
 
         anh_cnf_save_fs = autofile.fs.conformer(anh_save_path)
-        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+        anh_min_cnf_locs = util.min_energy_conformer_locators(anh_cnf_save_fs)
         # anh_cnf_save_path = anh_cnf_save_fs.leaf.path(anh_min_cnf_locs)
 
     # atom case - do as first step in each of other cases
@@ -379,7 +379,7 @@ def species_block(
                                          "export OMP_NUM_THREADS=10\n"
                                          "messpf pf.inp pf.out >> stdout.log &> stderr.log")
 
-                        moldr.util.run_script(pf_script_str, pf_path)
+                        util.run_script(pf_script_str, pf_path)
 
                         with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
                             output_string = mess_file.read()
@@ -414,7 +414,7 @@ def species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    moldr.util.run_script(projrot_script_str, path)
+                    util.run_script(projrot_script_str, path)
 
                     freqs = []
                     zpe_har_no_tors = 0.
@@ -439,7 +439,7 @@ def species_block(
                     # now run the other version of ProjRot
                     projrot_script_str2 = ("#!/usr/bin/env bash\n"
                     "RPHt.exe >& /dev/null")
-                    moldr.util.run_script(projrot_script_str2, path)
+                    util.run_script(projrot_script_str2, path)
                     zpe_har_no_tors_2 = 0.0
                     freqs_2 = []
                     if pot:
@@ -558,7 +558,7 @@ def vtst_with_no_saddle_block(
     ts_info = ['', ts_dct['chg'], ts_dct['mul']]
     print('ts_dct test:', ts_dct['mul'])
     print('multi info test:', multi_info)
-    orb_restr = moldr.util.orbital_restriction(ts_info, multi_info)
+    orb_restr = util.orbital_restriction(ts_info, multi_info)
     multi_level = multi_info[0:3]
     multi_level.append(orb_restr)
 
@@ -644,7 +644,7 @@ def vtst_with_no_saddle_block(
             with open(proj_file_path, 'w') as proj_file:
                 proj_file.write(projrot_inp_str)
 
-            moldr.util.run_script(projrot_script_str, path)
+            util.run_script(projrot_script_str, path)
 
             freqs = []
             if len(pot) > 0:
@@ -761,12 +761,12 @@ def pst_block(
     save_path_i = spc_save_fs.leaf.path(spc_info_i)
     save_path_j = spc_save_fs.leaf.path(spc_info_j)
 
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info_i, har_level)
     har_levelp_i = har_level[0:3]
     har_levelp_i.append(orb_restr)
     thy_save_fs_i = autofile.fs.theory(save_path_i)
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info_j, har_level)
     har_levelp_j = har_level[0:3]
     har_levelp_j.append(orb_restr)
@@ -776,58 +776,58 @@ def pst_block(
     har_save_path_j = thy_save_fs_j.leaf.path(har_levelp_j[1:4])
     har_cnf_save_fs_i = autofile.fs.conformer(har_save_path_i)
     har_cnf_save_fs_j = autofile.fs.conformer(har_save_path_j)
-    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
-    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+    har_min_cnf_locs_i = util.min_energy_conformer_locators(har_cnf_save_fs_i)
+    har_min_cnf_locs_j = util.min_energy_conformer_locators(har_cnf_save_fs_j)
 
     if sym_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_i, sym_level)
         sym_levelp_i = sym_level[0:3]
         sym_levelp_i.append(orb_restr)
         sym_save_path_i = thy_save_fs_i.leaf.path(sym_levelp_i[1:4])
         sym_cnf_save_fs_i = autofile.fs.conformer(sym_save_path_i)
-        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
-        orb_restr = moldr.util.orbital_restriction(
+        sym_min_cnf_locs_i = util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+        orb_restr = util.orbital_restriction(
             spc_info_j, sym_level)
         sym_levelp_j = sym_level[0:3]
         sym_levelp_j.append(orb_restr)
         sym_save_path_j = thy_save_fs_j.leaf.path(sym_levelp_j[1:4])
         sym_cnf_save_fs_j = autofile.fs.conformer(sym_save_path_j)
-        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+        sym_min_cnf_locs_j = util.min_energy_conformer_locators(sym_cnf_save_fs_j)
 
     if tors_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_i, tors_level)
         tors_levelp_i = tors_level[0:3]
         tors_levelp_i.append(orb_restr)
         tors_save_path_i = thy_save_fs_i.leaf.path(tors_levelp_i[1:4])
         tors_cnf_save_fs_i = autofile.fs.conformer(tors_save_path_i)
-        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+        tors_min_cnf_locs_i = util.min_energy_conformer_locators(tors_cnf_save_fs_i)
         tors_cnf_save_path_i = tors_cnf_save_fs_i.leaf.path(tors_min_cnf_locs_i)
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_j, tors_level)
         tors_levelp_j = tors_level[0:3]
         tors_levelp_j.append(orb_restr)
         tors_save_path_j = thy_save_fs_j.leaf.path(tors_levelp_j[1:4])
         tors_cnf_save_fs_j = autofile.fs.conformer(tors_save_path_j)
-        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+        tors_min_cnf_locs_j = util.min_energy_conformer_locators(tors_cnf_save_fs_j)
         tors_cnf_save_path_j = tors_cnf_save_fs_j.leaf.path(tors_min_cnf_locs_j)
 
     if vpt2_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_i, vpt2_level)
         vpt2_levelp_i = vpt2_level[0:3]
         vpt2_levelp_i.append(orb_restr)
         anh_save_path_i = thy_save_fs_i.leaf.path(vpt2_levelp_i[1:4])
         anh_cnf_save_fs_i = autofile.fs.conformer(anh_save_path_i)
-        anh_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_i)
-        orb_restr = moldr.util.orbital_restriction(
+        anh_min_cnf_locs_i = util.min_energy_conformer_locators(anh_cnf_save_fs_i)
+        orb_restr = util.orbital_restriction(
             spc_info_j, vpt2_level)
         vpt2_levelp_j = vpt2_level[0:3]
         vpt2_levelp_j.append(orb_restr)
         anh_save_path_j = thy_save_fs_j.leaf.path(vpt2_levelp_j[1:4])
         anh_cnf_save_fs_j = autofile.fs.conformer(anh_save_path_j)
-        anh_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs_j)
+        anh_min_cnf_locs_j = util.min_energy_conformer_locators(anh_cnf_save_fs_j)
 
     spc_str = ''
     if 'elec_levs' in spc_dct_i:
@@ -1064,7 +1064,7 @@ def pst_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    moldr.util.run_script(projrot_script_str, path)
+                    util.run_script(projrot_script_str, path)
 
                     freqs_i = []
                     if pot:
@@ -1182,7 +1182,7 @@ def pst_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    moldr.util.run_script(projrot_script_str, path)
+                    util.run_script(projrot_script_str, path)
 
                     freqs_j = []
                     if pot:
@@ -1226,12 +1226,12 @@ def fake_species_block(
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info_i, har_level)
     har_levelp_i = har_level[0:3]
     har_levelp_i.append(orb_restr)
     thy_save_fs_i = autofile.fs.theory(save_prefix_i)
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info_j, har_level)
     har_levelp_j = har_level[0:3]
     har_levelp_j.append(orb_restr)
@@ -1242,45 +1242,45 @@ def fake_species_block(
     har_save_path_j = thy_save_fs_j.leaf.path(har_levelp_j[1:4])
     har_cnf_save_fs_i = autofile.fs.conformer(har_save_path_i)
     har_cnf_save_fs_j = autofile.fs.conformer(har_save_path_j)
-    har_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_i)
-    har_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(har_cnf_save_fs_j)
+    har_min_cnf_locs_i = util.min_energy_conformer_locators(har_cnf_save_fs_i)
+    har_min_cnf_locs_j = util.min_energy_conformer_locators(har_cnf_save_fs_j)
 
     if sym_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_i, sym_level)
         sym_levelp_i = sym_level[0:3]
         sym_levelp_i.append(orb_restr)
         sym_save_path_i = thy_save_fs_i.leaf.path(sym_levelp_i[1:4])
         sym_cnf_save_fs_i = autofile.fs.conformer(sym_save_path_i)
-        sym_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_i)
+        sym_min_cnf_locs_i = util.min_energy_conformer_locators(sym_cnf_save_fs_i)
 
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_j, sym_level)
         sym_levelp_j = sym_level[0:3]
         sym_levelp_j.append(orb_restr)
         sym_save_path_j = thy_save_fs_j.leaf.path(sym_levelp_j[1:4])
         sym_cnf_save_fs_j = autofile.fs.conformer(sym_save_path_j)
-        sym_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(sym_cnf_save_fs_j)
+        sym_min_cnf_locs_j = util.min_energy_conformer_locators(sym_cnf_save_fs_j)
 
     tors_names = []
     if tors_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_i, tors_level)
         tors_levelp_i = tors_level[0:3]
         tors_levelp_i.append(orb_restr)
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info_j, tors_level)
         tors_levelp_j = tors_level[0:3]
         tors_levelp_j.append(orb_restr)
 
         tors_save_path_i = thy_save_fs_i.leaf.path(tors_levelp_i[1:4])
         tors_cnf_save_fs_i = autofile.fs.conformer(tors_save_path_i)
-        tors_min_cnf_locs_i = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_i)
+        tors_min_cnf_locs_i = util.min_energy_conformer_locators(tors_cnf_save_fs_i)
         tors_cnf_save_path_i = tors_cnf_save_fs_i.leaf.path(tors_min_cnf_locs_i)
 
         tors_save_path_j = thy_save_fs_j.leaf.path(tors_levelp_j[1:4])
         tors_cnf_save_fs_j = autofile.fs.conformer(tors_save_path_j)
-        tors_min_cnf_locs_j = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs_j)
+        tors_min_cnf_locs_j = util.min_energy_conformer_locators(tors_cnf_save_fs_j)
         tors_cnf_save_path_j = tors_cnf_save_fs_j.leaf.path(tors_min_cnf_locs_j)
 
     spc_str = ''
@@ -1561,7 +1561,7 @@ def fake_species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    moldr.util.run_script(projrot_script_str, path)
+                    util.run_script(projrot_script_str, path)
 
                     freqs_i = []
                     if pot:
@@ -1679,7 +1679,7 @@ def fake_species_block(
                     with open(proj_file_path, 'w') as proj_file:
                         proj_file.write(projrot_inp_str)
 
-                    moldr.util.run_script(projrot_script_str, path)
+                    util.run_script(projrot_script_str, path)
 
                     freqs_j = []
                     if pot:
@@ -1717,7 +1717,7 @@ def get_high_level_energy(
         spc_save_fs.leaf.create(spc_info)
         spc_save_path = spc_save_fs.leaf.path(spc_info)
 
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, thy_low_level)
     thy_low_level = thy_low_level[1:3]
     thy_low_level.append(orb_restr)
@@ -1731,7 +1731,7 @@ def get_high_level_energy(
         ll_save_path = ll_save_fs.trunk.path()
 
     cnf_save_fs = autofile.fs.conformer(ll_save_path)
-    min_cnf_locs = moldr.util.min_energy_conformer_locators(
+    min_cnf_locs = util.min_energy_conformer_locators(
         cnf_save_fs)
     if not min_cnf_locs:
         print('ERROR: No minimum conformer geometry for this species {}'.format(spc_info[0]))
@@ -1739,7 +1739,7 @@ def get_high_level_energy(
     cnf_save_path = cnf_save_fs.leaf.path(min_cnf_locs)
     # min_cnf_geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
 
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, thy_high_level)
     thy_high_level = thy_high_level[1:3]
     thy_high_level.append(orb_restr)
@@ -1768,7 +1768,7 @@ def get_zero_point_energy(
 
     thy_save_fs = autofile.fs.theory(save_prefix)
 
-    orb_restr = moldr.util.orbital_restriction(
+    orb_restr = util.orbital_restriction(
         spc_info, har_level)
     har_levelp = har_level[0:3]
     har_levelp.append(orb_restr)
@@ -1783,7 +1783,7 @@ def get_zero_point_energy(
 
     # print('inside zpe saddle is:', saddle)
     har_cnf_save_fs = autofile.fs.conformer(har_save_path)
-    har_min_cnf_locs = moldr.util.min_energy_conformer_locators(har_cnf_save_fs)
+    har_min_cnf_locs = util.min_energy_conformer_locators(har_cnf_save_fs)
     
     # Set boolean to account for a radical radical reaction (not supported by vtst)
     rad_rad_ts = False
@@ -1792,7 +1792,7 @@ def get_zero_point_energy(
             rad_rad_ts = True
 
     if tors_level and not rad_rad_ts:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info, tors_level)
         tors_levelp = tors_level[0:3]
         tors_levelp.append(orb_restr)
@@ -1805,14 +1805,14 @@ def get_zero_point_energy(
             tors_save_path = tors_save_fs.trunk.path()
 
         tors_cnf_save_fs = autofile.fs.conformer(tors_save_path)
-        tors_min_cnf_locs = moldr.util.min_energy_conformer_locators(tors_cnf_save_fs)
+        tors_min_cnf_locs = util.min_energy_conformer_locators(tors_cnf_save_fs)
         # print('tors_save_path test:', tors_save_path)
         # print('tors_min_cnf_locs test:', tors_min_cnf_locs)
         if tors_min_cnf_locs:
             tors_cnf_save_path = tors_cnf_save_fs.leaf.path(tors_min_cnf_locs)
 
     if vpt2_level:
-        orb_restr = moldr.util.orbital_restriction(
+        orb_restr = util.orbital_restriction(
             spc_info, vpt2_level)
         vpt2_levelp = vpt2_level[0:3]
         vpt2_levelp.append(orb_restr)
@@ -1824,7 +1824,7 @@ def get_zero_point_energy(
             anh_save_path = anh_save_fs.trunk.path()
 
         anh_cnf_save_fs = autofile.fs.conformer(anh_save_path)
-        anh_min_cnf_locs = moldr.util.min_energy_conformer_locators(anh_cnf_save_fs)
+        anh_min_cnf_locs = util.min_energy_conformer_locators(anh_cnf_save_fs)
 
     if saddle:
         frm_bnd_key = spc_dct_i['frm_bnd_key']
@@ -2050,7 +2050,7 @@ def get_zero_point_energy(
                 with open(proj_file_path, 'w') as proj_file:
                     proj_file.write(projrot_inp_str)
 
-                moldr.util.run_script(projrot_script_str, path)
+                util.run_script(projrot_script_str, path)
 
                 zpe_har_no_tors = har_zpe
                 if pot:
@@ -2062,7 +2062,7 @@ def get_zero_point_energy(
                 # now try again with the other projrot parameters
                 projrot_script_str2 = ("#!/usr/bin/env bash\n"
                 "RPHt.exe >& /dev/null")
-                moldr.util.run_script(projrot_script_str2, path)
+                util.run_script(projrot_script_str2, path)
                 zpe_har_no_tors_2 = har_zpe
                 freqs_2 = []
                 if pot:
@@ -2101,7 +2101,7 @@ def get_zero_point_energy(
                 # run messpf
                 with open(os.path.join(pf_path, 'pf.inp'), 'w') as pf_file:
                     pf_file.write(pf_inp_str)
-                moldr.util.run_script(pf_script_str, pf_path)
+                util.run_script(pf_script_str, pf_path)
 
                 with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
                     output_string = mess_file.read()
@@ -2188,7 +2188,7 @@ def tau_pf_write(
     """ Print out data fle for partition function evaluation
     """
     cnf_save_fs = autofile.fs.conformer(save_prefix)
-    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         ene_ref = cnf_save_fs.leaf.file.energy.read(min_cnf_locs)
 
@@ -2315,4 +2315,3 @@ def _hrpot_spline_fitter(pot, thresh=-0.05):
     final_potential = final_potential[:-1]
 
     return final_potential
-

@@ -7,15 +7,15 @@ import elstruct
 import autofile
 
 # New libs
+from routines.es import util
 from lib.phydat import phycon
 from lib.runner import driver
-from lib import moldr
 
 
 def conformer_sampling(
         spc_info, thy_level, thy_save_fs, cnf_run_fs, cnf_save_fs, script_str,
         overwrite, saddle=False, nsamp_par=(False, 3, 3, 1, 50, 50),
-        tors_names='', dist_info=[], two_stage=False, rxn_class='', **kwargs):
+        tors_names='', dist_info=(), two_stage=False, rxn_class='', **kwargs):
     """ Find the minimum energy conformer by optimizing from nsamp random
     initial torsional states
     """
@@ -35,11 +35,12 @@ def conformer_sampling(
     tors_range_dct = dict(zip(tors_names, tors_ranges))
     if not saddle:
         gra = automol.inchi.graph(ich)
-        ntaudof = len(automol.graph.rotational_bond_keys(gra, with_h_rotors=False))
-        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+        ntaudof = len(
+            automol.graph.rotational_bond_keys(gra, with_h_rotors=False))
+        nsamp = util.nsamp_init(nsamp_par, ntaudof)
     else:
         ntaudof = len(tors_names)
-        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+        nsamp = util.nsamp_init(nsamp_par, ntaudof)
 
     save_conformers(
         cnf_run_fs=cnf_run_fs,
@@ -72,7 +73,7 @@ def conformer_sampling(
     )
 
     # save information about the minimum energy conformer in top directory
-    min_cnf_locs = moldr.util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
         zma = cnf_save_fs.leaf.file.zmatrix.read(min_cnf_locs)
@@ -86,23 +87,23 @@ def conformer_sampling(
             thy_save_fs.trunk.file.zmatrix.write(zma)
 
 
-def single_conformer(spc_info, thy_level, fs, overwrite,
-                     saddle=False, dist_info=[]):
+def single_conformer(spc_info, thy_level, filesys, overwrite,
+                     saddle=False, dist_info=()):
     """ generate single optimized geometry for
         randomly sampled initial torsional angles
     """
     mc_nsamp = [False, 0, 0, 0, 0, 1]
-    sp_script_str, _, kwargs, _ = moldr.util.run_qchem_par(*thy_level[0:2])
-    thy_save_fs = fs[3]
+    sp_script_str, _, kwargs, _ = util.run_qchem_par(*thy_level[0:2])
+    thy_save_fs = filesys[3]
     two_stage = False
     if saddle:
         two_stage = True
-    moldr.conformer.conformer_sampling(
+    conformer_sampling(
         spc_info=spc_info,
         thy_level=thy_level,
         thy_save_fs=thy_save_fs,
-        cnf_run_fs=fs[4],
-        cnf_save_fs=fs[5],
+        cnf_run_fs=filesys[4],
+        cnf_save_fs=filesys[5],
         script_str=sp_script_str,
         overwrite=overwrite,
         nsamp_par=mc_nsamp,
@@ -169,8 +170,9 @@ def run_conformers(
             idx += 1
             print("Run {}/{}".format(nsampd+1, nsamp0))
             tors_names = list(tors_range_dct.keys())
-            if two_stage and len(tors_names) > 0:
-                print('Stage one beginning, holding the coordinates constant', tors_names, samp_zma)
+            if two_stage and tors_names:
+                print('Stage one beginning, holding the coordinates constant',
+                      tors_names, samp_zma)
                 driver.run_job(
                     job=elstruct.Job.OPTIMIZATION,
                     script_str=script_str,
@@ -184,9 +186,10 @@ def run_conformers(
                     **kwargs
                 )
                 print('Stage one success, reading for stage 2')
-                ret = driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+                ret = driver.read_job(
+                    job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
                 if ret:
-                    sinf_obj, inp_str, out_str = ret
+                    sinf_obj, _, out_str = ret
                     prog = sinf_obj.prog
                     samp_zma = elstruct.reader.opt_zmatrix(prog, out_str)
                     print('Stage one success beginning stage two on', samp_zma)
@@ -213,16 +216,6 @@ def run_conformers(
                     saddle=saddle,
                     **kwargs
                 )
-            #driver.run_job(
-            #    job=elstruct.Job.OPTIMIZATION,
-            #    script_str=script_str,
-            #    run_fs=run_fs,
-            #    geom=samp_zma,
-            #    spc_info=spc_info,
-            #    thy_level=thy_level,
-            #    overwrite=overwrite,
-            #    **kwargs
-            #)
 
             if cnf_save_fs.trunk.file.info.exists():
                 inf_obj_s = cnf_save_fs.trunk.file.info.read()
@@ -236,7 +229,8 @@ def run_conformers(
             cnf_run_fs.trunk.file.info.write(inf_obj)
 
 
-def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_class=''):
+def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False,
+                    dist_info=(), rxn_class=''):
     """ save the conformers that have been found so far
     """
 
@@ -261,10 +255,6 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                 method = inf_obj.method
                 ene = elstruct.reader.energy(prog, method, out_str)
                 geo = elstruct.reader.opt_geometry(prog, out_str)
-                #print('geo in conformer: \n', automol.geom.string(geo))
-                #if saddle:
-                    #gra = automol.geom.weakly_connected_graph(geo)
-                #else:
                 if not saddle:
                     gra = automol.geom.graph(geo)
                     conns = automol.graph.connected_components(gra)
@@ -276,7 +266,7 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                 else:
                     if saddle:
                         zma = elstruct.reader.opt_zmatrix(prog, out_str)
-                        print('zma in conformer: \n', automol.zmatrix.string(zma))
+                        print('zma conformer:\n', automol.zmatrix.string(zma))
                         dist_name = dist_info[0]
                         dist_len = dist_info[1]
                         ts_bnd = automol.zmatrix.bond_idxs(zma, dist_name)
@@ -293,7 +283,7 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                             ang_atms = [0, 0, 0]
                             cent_atm = list(set(brk_bnd) & set(ts_bnd))
                             if cent_atm:
-                                ang_atms[1] = cent_atm[0] 
+                                ang_atms[1] = cent_atm[0]
                                 for idx in brk_bnd:
                                     if idx != ang_atms[1]:
                                         ang_atms[0] = idx
@@ -301,41 +291,43 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                                     if idx != ang_atms[1]:
                                         ang_atms[2] = idx
                                 geom = automol.zmatrix.geometry(zma)
-                                # print('geom in conformer: \n', automol.geom.string(geom))
-                                # print('ang_atms test:', ang_atms)
-                                conf_ang = automol.geom.central_angle(geom, *ang_atms)
+                                conf_ang = automol.geom.central_angle(
+                                    geom, *ang_atms)
                         max_disp = 0.6
                         if 'addition' in rxn_class:
                             max_disp = 0.8
                         if 'abstraction' in rxn_class:
                             max_disp = 1.4
 
-                        # check if forming bond angle is similar to that in initil configuration
+                        # check forming bond angle similar to ini config
                         if cent_atm and 'elimination' not in rxn_class:
-                            print('angle test in conformer selection:', angle, conf_ang)
+                            print('angle test in conformer selection:',
+                                  angle, conf_ang)
                             if abs(conf_ang - angle) > .44:
-                                print(" - Transition State conformer has diverged from original",
-                                      "structure of angle {:.3f} with angle {:.3f}".format(
+                                print(" - Transition State conformer has",
+                                      "diverged from original structure of",
+                                      "angle {:.3f} with angle {:.3f}".format(
                                           angle, conf_ang))
                                 continue
-                        print('rxn_class test in conformer selection:', rxn_class)
-                        print('distance test in conformer selection:', dist_len, conf_dist_len)
-                        # check if radical atom is closer to some atom other than the bonding atom
-                        if 'addition' in rxn_class or 'abstraction' in rxn_class:
+                        # check if radical atom is closer to some atom
+                        # other than the bonding atom
+                        if 'add' in rxn_class or 'abst' in rxn_class:
                             print('it is an addition or an abstraction:')
-                            if not is_atom_closest_to_bond_atom(zma, ts_bnd2, conf_dist_len):
-                                print(" - Transition State conformer has diverged from original",
-                                      "structure of dist {:.3f} with dist {:.3f}".format(
+                            cls = is_atom_closest_to_bond_atom(
+                                zma, ts_bnd2, conf_dist_len)
+                            if not cls:
+                                print(" - Transition State conformer has",
+                                      "diverged from original structure of",
+                                      "dist {:.3f} with dist {:.3f}".format(
                                           dist_len, conf_dist_len))
-                                print("The radical atom now has a new nearest neighbor")
+                                print("Radical atom now new nearest neighbor")
                                 continue
                             if abs(conf_dist_len - dist_len) > max_disp:
-                                print(" - Transition State conformer has diverged from original",
-                                      "structure of dist {:.3f} with dist {:.3f}".format(
+                                print(" - Transition State conformer has",
+                                      "diverged from original structure of",
+                                      "dist {:.3f} with dist {:.3f}".format(
                                           dist_len, conf_dist_len))
                                 continue
-                            # check if radical atom has collapsed to the equilibrium bond length
-                            # this presumes the radical is the second group
                             symbols = automol.zmatrix.symbols(zma)
                             equi_bnd = 0.
                             if symbols[ts_bnd2] == 'H':
@@ -375,33 +367,42 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                                 elif symbols[ts_bnd1] == 'O':
                                     equi_bnd = 1.3 * phycon.ANG2BOHR
                             displace_from_equi = conf_dist_len - equi_bnd
-                            print('distance_from_equi test:', conf_dist_len, equi_bnd, dist_len)
-                            print('bnd atoms:', ts_bnd1, ts_bnd2, symbols[ts_bnd1], symbols[ts_bnd2])
-                            print('symbols:', symbols[ts_bnd1], symbols[ts_bnd2])
-                            if abs(conf_dist_len - dist_len) > 0.2 and displace_from_equi < 0.2:
-                                print(" - Transition State conformer has converged to an",
+                            print('distance_from_equi test:',
+                                  conf_dist_len, equi_bnd, dist_len)
+                            print('bnd atoms:', ts_bnd1, ts_bnd2,
+                                  symbols[ts_bnd1], symbols[ts_bnd2])
+                            print('symbols:', symbols[ts_bnd1],
+                                  symbols[ts_bnd2])
+                            dchk1 = abs(conf_dist_len - dist_len) > 0.2
+                            dchk2 = displace_from_equi < 0.2
+                            if dchk1 and dchk2:
+                                print(" - Transition State conformer has",
+                                      "converged to an",
                                       "equilibrium structure with dist",
-                                      " {:.3f} compared with equilibriumt {:.3f}".format(
+                                      " {:.3f} comp with equil {:.3f}".format(
                                           conf_dist_len, equi_bnd))
                                 continue
                         else:
                             if abs(conf_dist_len - dist_len) > 0.4:
-                                print(" - Transition State conformer has diverged from original",
-                                      "structure of dist {:.3f} with dist {:.3f}".format(
+                                print(" - Transition State conformer has",
+                                      "diverged from original structure of",
+                                      "dist {:.3f} with dist {:.3f}".format(
                                           dist_len, conf_dist_len))
                                 continue
                     else:
                         zma = automol.geom.zmatrix(geo)
-                    unique = is_unique_tors_dist_mat_energy(geo, ene, seen_geos, seen_enes, saddle)
+                    unique = is_unique_tors_dist_mat_energy(
+                        geo, ene, seen_geos, seen_enes, saddle)
 
                     if not unique:
                         print(" - Geometry is not unique. Skipping...")
                     else:
                         vma = automol.zmatrix.var_(zma)
                         if cnf_save_fs.trunk.file.vmatrix.exists():
-                            existing_vma = cnf_save_fs.trunk.file.vmatrix.read()
-                            if vma != existing_vma:
-                                print(" - Isomer is not the same as starting isomer. Skipping...")
+                            exist_vma = cnf_save_fs.trunk.file.vmatrix.read()
+                            if vma != exist_vma:
+                                print(" - Isomer is not the same as starting",
+                                      "isomer. Skipping...")
                             else:
                                 save_path = cnf_save_fs.leaf.path(locs)
                                 print(" - Geometry is unique. Saving...")
@@ -415,18 +416,17 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False, dist_info=[], rxn_cla
                                 cnf_save_fs.leaf.file.energy.write(ene, locs)
                                 cnf_save_fs.leaf.file.geometry.write(geo, locs)
                                 cnf_save_fs.leaf.file.zmatrix.write(zma, locs)
-                                #cnf_save_fs.trunk.file.info.write(inf_obj)
 
                     seen_geos.append(geo)
                     seen_enes.append(ene)
 
         # update the conformer trajectory file
-        moldr.util.traj_sort(cnf_save_fs)
+        util.traj_sort(cnf_save_fs)
 
 
 def is_atom_closest_to_bond_atom(zma, idx_rad, bond_dist):
-    """ Check to see whether the radical atom is still closest to the bond 
-    formation site.
+    """ Check to see whether the radical atom is still closest to the bond
+        formation site.
     """
     geo = automol.zmatrix.geometry(zma)
     atom_closest = True
@@ -436,6 +436,7 @@ def is_atom_closest_to_bond_atom(zma, idx_rad, bond_dist):
             if distance < bond_dist:
                 atom_closest = False
     return atom_closest
+
 
 def is_unique_coulomb_energy(geo, ene, geo_list, ene_list):
     """ compare given geo with list of geos all to see if any have the same
@@ -596,10 +597,13 @@ def are_torsions_same(geo, geoi):
     tors_namesi = automol.geom.zmatrix_torsion_coordinate_names(geoi)
     for idx, tors_name in enumerate(tors_names):
         val = automol.zmatrix.values(zma)[tors_name]
-        vali = automol.zmatrix.values(zmai)[tors_namesi[idx]]
+        vali = val - automol.zmatrix.values(zmai)[tors_namesi[idx]]
         valip = vali+2.*numpy.pi
         valim = vali-2.*numpy.pi
-        if abs(val - vali) > dtol and abs(val-valip) > dtol and abs(val-valim) > dtol:
+        vchk1 = abs(val - vali)
+        vchk2 = abs(val - valip)
+        vchk3 = abs(val - valim)
+        if all(val > dtol for val in (vchk1, vchk2, vchk3)):
             same_dihed = False
     return same_dihed
 

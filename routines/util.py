@@ -1,15 +1,13 @@
 """ utilites
 """
 import os
-import stat
-import subprocess
-import warnings
 import autofile
 import automol
+from automol.zmatrix.ts import _shifted_standard_forms_with_gaphs as shift_gra
 import elstruct
 
 
-def run_qchem_par(prog, method, saddle=False):
+def run_qchem_par(prog, method):  # , saddle=False):
     """ dictionary of parameters for different electronic structure codes
     """
     if prog == 'gaussian09':
@@ -25,7 +23,7 @@ def run_qchem_par(prog, method, saddle=False):
             'memory': 20,
             'machine_options': ['%NProcShared=10'],
             'gen_lines': {1: ['# int=ultrafine']},
-            #'gen_lines': {1: ['# int=superfine']},
+            # 'gen_lines': {1: ['# int=superfine']},
             'feedback': True,
             # 'job_options': ['verytight'],
             # 'job_options': ['verytight'],
@@ -50,7 +48,7 @@ def run_qchem_par(prog, method, saddle=False):
         #             elstruct.Option.Scf.Guess.MIX)]
 
         # doesn't quite work for gen_lines case right now
-        #if saddle:
+        # if saddle:
         #    opt_kwargs = {
         #        'memory': 20,
         #        'machine_options': ['%NProcShared=10'],
@@ -84,15 +82,17 @@ def run_qchem_par(prog, method, saddle=False):
         if method == 'caspt2':
             opt_script_str = (
                 "#!/usr/bin/env bash\n"
-                "molpro -n 8 run.inp -o run.out --nouse-logfile --no-xml-output >> "
+                "molpro -n 8 run.inp -o run.out",
+                "--nouse-logfile --no-xml-output >> "
                 "stdout.log &> stderr.log"
-                #"molpro -n 8 run.inp -o run.out >> stdout.log &> stderr.log"
+                # "molpro -n 8 run.inp -o run.out >> stdout.log &> stderr.log"
             )
         else:
             opt_script_str = (
                 "#!/usr/bin/env bash\n"
-                "molpro --mppx -n 12 run.inp -o run.out --nouse-logfile --no-xml-output >> "
-                #"molpro --mppx -n 12 run.inp -o run.out >> "
+                "molpro --mppx -n 12 run.inp -o run.out",
+                "--nouse-logfile --no-xml-output >> "
+                # "molpro --mppx -n 12 run.inp -o run.out >> "
                 "stdout.log &> stderr.log"
             )
         if method in ('caspt2', 'caspt2c'):
@@ -198,7 +198,7 @@ def set_molpro_options_mat(spc_info, geo):
     formula = automol.geom.formula(geo)
     elec_count = automol.formula.electron_count(formula)
     two_spin = spc_info[2] - 1
-    num_act_elc = two_spin 
+    num_act_elc = two_spin
     num_act_orb = num_act_elc
     closed_orb = (elec_count - num_act_elc) // 2
     occ_orb = closed_orb + num_act_orb
@@ -289,7 +289,7 @@ def min_dist_conformer_zma_geo(dist_coords, cnf_save_fs):
     min_dist = 100.
     min_zma = []
     for zma in cnf_zmas:
-        zmas, _ = automol.zmatrix.ts._shifted_standard_forms_with_gaphs([zma])
+        zmas, _ = shift_gra([zma])
         zma = zmas[0]
         geo = automol.zmatrix.geometry(zma)
         # print('min geo')
@@ -401,50 +401,12 @@ def ts_mul_from_reaction_muls(rcts, prds, spc_dct):
         for prd in prds:
             prd_spin_sum += (spc_dct[prd]['mul'] - 1.)/2.
             prd_muls.append(spc_dct[prd]['mul'])
-        if (min(rct_muls) == 1 or nrcts == 1) and (min(prd_muls) == 1 or nprds == 1):
+        rct_chk = bool(min(rct_muls) == 1 or nrcts == 1)
+        prd_chk = bool(min(prd_muls) == 1 or nprds == 1)
+        if rct_chk and prd_chk:
             rad_rad = False
         ts_mul_low = min(rct_spin_sum, prd_spin_sum)
         ts_mul_low = int(round(2*ts_mul_low + 1))
         ts_mul_high = max(rct_spin_sum, prd_spin_sum)
         ts_mul_high = int(round(2*ts_mul_high + 1))
     return ts_mul_low, ts_mul_high, rad_rad
-
-
-def run_script(script_str, run_dir):
-    """ run a program from a script
-    """
-
-    script_name = 'build.sh'
-    with _EnterDirectory(run_dir):
-        # write the submit script to the run directory
-        try:
-            os.remove('build.sh')
-            with open(script_name, 'w') as script_obj:
-                script_obj.write(script_str)
-        except:
-            with open(script_name, 'w') as script_obj:
-                script_obj.write(script_str)
-
-        # make the script executable
-        os.chmod(script_name, mode=os.stat(script_name).st_mode | stat.S_IEXEC)
-
-        # call the program
-        try:
-            subprocess.check_call('./{:s}'.format(script_name))
-        except subprocess.CalledProcessError as err:
-            # if the program failed, continue with a warning
-            warnings.warn("run failed in {}".format(run_dir))
-
-
-class _EnterDirectory():
-
-    def __init__(self, directory):
-        assert os.path.isdir(directory)
-        self.directory = directory
-        self.working_directory = os.getcwd()
-
-    def __enter__(self):
-        os.chdir(self.directory)
-
-    def __exit__(self, _exc_type, _exc_value, _traceback):
-        os.chdir(self.working_directory)

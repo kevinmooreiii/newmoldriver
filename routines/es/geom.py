@@ -12,13 +12,13 @@ import projrot_io
 from lib.phydat import phycon
 from lib.reaction import wells as lwells
 from lib.runner import driver
-from lib import moldr
+from routines.es import util
 
 
 def reference_geometry(
-        spc_dct_i, thy_level, ini_thy_level, fs, ini_fs, kickoff_size=0.1,
-        kickoff_backward=False, projrot_script_str='RPHt.exe',
-        overwrite=False):
+        spc_dct_i, thy_level, ini_thy_level, filesys, ini_filesys,
+        kickoff_size=0.1, kickoff_backward=False,
+        projrot_script_str='RPHt.exe', overwrite=False):
     """ determine what to use as the reference geometry for all future runs
     If ini_thy_info refers to geometry dictionary then use that,
     otherwise values are from a hierarchy of:
@@ -29,12 +29,12 @@ def reference_geometry(
 
     ret = None
 
-    thy_run_fs = fs[2]
-    thy_save_fs = fs[3]
-    ini_thy_save_fs = ini_fs[1]
-    cnf_run_fs = fs[4]
-    cnf_save_fs = fs[5]
-    run_fs = fs[-1]
+    thy_run_fs = filesys[2]
+    thy_save_fs = filesys[3]
+    ini_thy_save_fs = ini_filesys[1]
+    cnf_run_fs = filesys[4]
+    cnf_save_fs = filesys[5]
+    run_fs = filesys[-1]
     if run_fs.trunk.file.info.exists([]):
         inf_obj = run_fs.trunk.file.info.read([])
         if inf_obj.status == autofile.system.RunStatus.RUNNING:
@@ -53,7 +53,7 @@ def reference_geometry(
     print('initializing geometry in reference_geometry')
     geo = None
     try:
-#    Check to see if geometry should be obtained from dictionary
+        # Check to see if geometry should be obtained from dictionary
         spc_info = [spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul']]
         if 'input_geom' in ini_thy_level:
             geom_obj = spc_dct_i['geo_obj']
@@ -61,24 +61,29 @@ def reference_geometry(
             overwrite = True
             print('found initial geometry from geometry dictionary')
         else:
-        # Check to see if geo already exists at running_theory
+            # Check to see if geo already exists at running_theory
             if thy_save_fs.leaf.file.geometry.exists(thy_level[1:4]):
                 thy_path = thy_save_fs.leaf.path(thy_level[1:4])
                 print('getting reference geometry from {}'.format(thy_path))
                 geo = thy_save_fs.leaf.file.geometry.read(thy_level[1:4])
             if not geo:
                 if ini_thy_save_fs:
-                    if ini_thy_save_fs.leaf.file.geometry.exists(ini_thy_level[1:4]):
+                    geo_exists = ini_thy_save_fs.leaf.file.geometry.exists(
+                        ini_thy_level[1:4])
+                    if geo_exists:
                         # If not, Compute geo at running_theory, using geo from
                         # initial_level as the starting point
                         # or from inchi is no initial level geometry
-                        thy_path = ini_thy_save_fs.leaf.path(ini_thy_level[1:4])
-                        geo_init = ini_thy_save_fs.leaf.file.geometry.read(ini_thy_level[1:4])
+                        thy_path = ini_thy_save_fs.leaf.path(
+                            ini_thy_level[1:4])
+                        geo_init = ini_thy_save_fs.leaf.file.geometry.read(
+                            ini_thy_level[1:4])
                     elif 'geo_obj' in spc_dct_i:
                         geo_init = spc_dct_i['geo_obj']
                         print('getting geometry from geom dictionary')
                     else:
-                        print('getting reference geometry from inchi', spc_info[0])
+                        print('getting reference geometry from inchi',
+                              spc_info[0])
                         geo_init = automol.inchi.geometry(spc_info[0])
                         print('got reference geometry from inchi', geo_init)
                         print('getting reference geometry from inchi')
@@ -90,7 +95,8 @@ def reference_geometry(
                     print('getting reference geometry from inchi')
         # Optimize from initial geometry to get reference geometry
         if not geo:
-            _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+            _, opt_script_str, _, opt_kwargs = util.run_qchem_par(
+                *thy_level[0:2])
             params = {
                 'spc_info': spc_info,
                 'run_fs': run_fs,
@@ -102,8 +108,10 @@ def reference_geometry(
             geo, inf = run_initial_geometry_opt(**params, **opt_kwargs)
             thy_save_fs.leaf.create(thy_level[1:4])
             thy_save_path = thy_save_fs.leaf.path(thy_level[1:4])
-            if not automol.geom.is_atom(geo) and len(
-                    automol.graph.connected_components(automol.geom.graph(geo))) < 2:
+            ncp = len(
+                automol.graph.connected_components(
+                    automol.geom.graph(geo)))
+            if not automol.geom.is_atom(geo) and ncp < 2:
                 geo, hess = remove_imag(
                     spc_dct_i, geo, thy_level, thy_run_fs,
                     run_fs, kickoff_size,
@@ -114,10 +122,13 @@ def reference_geometry(
                 tors_names = automol.geom.zmatrix_torsion_coordinate_names(geo)
                 locs_lst = cnf_save_fs.leaf.existing()
                 if locs_lst:
-                    saved_geo = cnf_save_fs.leaf.file.geometry.read(locs_lst[0])
-                    saved_tors_names = automol.geom.zmatrix_torsion_coordinate_names(saved_geo)
-                    if tors_names != saved_tors_names:
-                        print("new reference geometry doesn't match original reference geometry")
+                    saved_geo = cnf_save_fs.leaf.file.geometry.read(
+                        locs_lst[0])
+                    saved_tors = automol.geom.zmatrix_torsion_coordinate_names(
+                        saved_geo)
+                    if tors_names != saved_tors:
+                        print("new reference geometry doesn't match original",
+                              " reference geometry")
                         print('removing original conformer save data')
                         cnf_run_fs.remove()
                         cnf_save_fs.remove()
@@ -127,14 +138,17 @@ def reference_geometry(
                 thy_save_fs.leaf.file.hessian.write(hess, thy_level[1:4])
 
             thy_save_fs.leaf.file.geometry.write(geo, thy_level[1:4])
-            if  len(automol.graph.connected_components(automol.geom.graph(geo))) < 2:
+            ncp = len(
+                automol.graph.connected_components(
+                    automol.geom.graph(geo)))
+            if ncp < 2:
                 zma = automol.geom.zmatrix(geo)
                 thy_save_fs.leaf.file.zmatrix.write(zma, thy_level[1:4])
-                scripts.es.run_single_conformer(spc_info, thy_level, fs, overwrite)
+                scripts.es.run_single_conformer(
+                    spc_info, thy_level, filesys, overwrite)
             else:
                 print("Cannot create zmatrix for disconnected species")
-                lwells.fake_conf(thy_level, fs, inf)
-
+                lwells.fake_conf(thy_level, filesys, inf)
 
         if geo:
             inf_obj.status = autofile.system.RunStatus.SUCCESS
@@ -143,7 +157,7 @@ def reference_geometry(
             inf_obj.status = autofile.system.RunStatus.FAILURE
             run_fs.trunk.file.info.write(inf_obj, [])
 
-    except:
+    except IOError:
         inf_obj.status = autofile.system.RunStatus.FAILURE
         run_fs.trunk.file.info.write(inf_obj, [])
 
@@ -152,7 +166,7 @@ def reference_geometry(
 
 def run_initial_geometry_opt(
         spc_info, thy_level, run_fs, thy_run_fs,
-        script_str, overwrite, geo_init, **kwargs):
+        script_str, overwrite, ini_geo, **kwargs):
     """ generate initial geometry via optimization from either reference
     geometries or from inchi
     """
@@ -161,10 +175,11 @@ def run_initial_geometry_opt(
     thy_run_path = thy_run_fs.leaf.path(thy_level[1:4])
     # check if geometry has already been saved
     # if not call the electronic structure optimizer
-    if  len(automol.graph.connected_components(automol.geom.graph(geo_init))) < 2:
-        geom = automol.geom.zmatrix(geo_init)
+    ncp1 = len(automol.graph.connected_components(automol.geom.graph(ini_geo)))
+    if ncp1 < 2:
+        geom = automol.geom.zmatrix(ini_geo)
     else:
-        geom = geo_init
+        geom = ini_geo
     run_fs = autofile.fs.run(thy_run_path)
     print('thy_run_path')
     driver.run_job(
@@ -185,7 +200,8 @@ def run_initial_geometry_opt(
         inf_obj, _, out_str = ret
         prog = inf_obj.prog
         geo = elstruct.reader.opt_geometry(prog, out_str)
-        if  len(automol.graph.connected_components(automol.geom.graph(geo))) >= 2:
+        ncp2 = len(automol.graph.connected_components(automol.geom.graph(geo)))
+        if ncp2 >= 2:
             method = inf_obj.method
             ene = elstruct.reader.energy(prog, method, out_str)
             inf = [inf_obj, ene]
@@ -197,13 +213,14 @@ def remove_imag(
         kickoff_backward=False,
         projrot_script_str='RPHt.exe',
         overwrite=False):
-    """ if there is an imaginary frequency displace the geometry along the imaginary
+    """ if there is an imaginary frequency displace geometry along the imaginary
     mode and then reoptimize
     """
 
     print('the initial geometries will be checked for imaginary frequencies')
     spc_info = scripts.es.get_spc_info(spc_dct_i)
-    script_str, opt_script_str, kwargs, opt_kwargs = moldr.util.run_qchem_par(*thy_level[0:2])
+    script_str, opt_script_str, kwargs, opt_kwargs = util.run_qchem_par(
+        *thy_level[0:2])
 
     imag, geo, disp_xyzs, hess = run_check_imaginary(
         spc_info, geo, thy_level, thy_run_fs, script_str,
@@ -214,7 +231,7 @@ def remove_imag(
         chk_idx += 1
         print('imaginary frequency detected, attempting to kick off')
 
-        geo = moldr.geom.run_kickoff_saddle(
+        geo = run_kickoff_saddle(
             geo, disp_xyzs, spc_info, thy_level, run_fs, thy_run_fs,
             opt_script_str, kickoff_size, kickoff_backward,
             opt_cart=True, **opt_kwargs)
@@ -264,14 +281,14 @@ def run_check_imaginary(
 
             if hess:
                 imag = False
-                freqs, imag_freq = projrot_frequencies(
+                _, imag_freq = projrot_frequencies(
                     geo, hess, thy_level, thy_run_fs, projrot_script_str)
                 if imag_freq:
                     imag = True
 
-    # mode for now set the imaginary frequency check to -100:
-    # Ultimately should decrease once frequency projector is functioning properly
-                if imag: 
+                # Mode for now set the imaginary frequency check to -100:
+                # Should decrease once freq projector functions properly
+                if imag:
                     imag = True
                     print('Imaginary mode found:')
                     norm_coos = elstruct.util.normal_coordinates(
@@ -342,7 +359,8 @@ def save_initial_geometry(
         thy_save_fs.leaf.file.zmatrix.write(zma, thy_level[1:4])
 
 
-def projrot_frequencies(geo, hess, thy_level, thy_run_fs, projrot_script_str='RPHt.exe'):
+def projrot_frequencies(geo, hess, thy_level, thy_run_fs,
+                        projrot_script_str='RPHt.exe'):
     """ Get the projected frequencies from projrot code
     """
     # Write the string for the ProjRot input
@@ -365,7 +383,7 @@ def projrot_frequencies(geo, hess, thy_level, thy_run_fs, projrot_script_str='RP
     with open(proj_file_path, 'w') as proj_file:
         proj_file.write(projrot_inp_str)
 
-    moldr.util.run_script(projrot_script_str, projrot_path)
+    util.run_script(projrot_script_str, projrot_path)
 
     imag_freq = ''
     if os.path.exists(projrot_path+'/hrproj_freq.dat'):
