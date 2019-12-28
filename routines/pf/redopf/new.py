@@ -709,7 +709,7 @@ def combine_elec_levels(spc_dct_i, spc_dct_j):
         else:
             idx = elec_levels.index(level)
             elec_levels[idx][1] += level[1]
-    
+
     return elec_levels
 
 

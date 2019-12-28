@@ -224,8 +224,9 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
             eval(ES_TSKS[tsk])(filesys, params, opt_kwargs)
 
 
-def geometry_analysis(tsk, thy_level, ini_filesys, selection,
-                      spc_info, spc, overwrite, saddle=False):
+def geometry_analysis(tsk, thy_level, ini_filesys,
+                      spc_info, spc, overwrite,
+                      saddle=False, selection='min'):
     """ run the specified electronic structure task
     for a set of geometries
     """

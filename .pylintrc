@@ -12,3 +12,5 @@ disable=
     no-member,
     eval-used,
     bare-except
+[FORMAT]
+    max-line-length=90

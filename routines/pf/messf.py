@@ -24,146 +24,86 @@ def species_block(
     """ prepare the species input for messpf
     """
 
-    har_level, tors_level, vpt2_level, sym_level = pf_levels
+    # Unpack the models and levels
+    harm_level, tors_level, vpt2_level, sym_level = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
-    # prepare the four sets of file systems
-    orb_restr = util.orbital_restriction(
-        spc_info, har_level)
-    har_levelp = har_level[0:3]
-    har_levelp.append(orb_restr)
+    # Set theory filesystem used throughout
     thy_save_fs = autofile.fs.theory(save_prefix)
 
-    # thy_save_fs.leaf.create(har_levelp[1:4])
-    har_save_path = thy_save_fs.leaf.path(har_levelp[1:4])
-    saddle = False
-    dist_names = []
-    tors_names = []
-    if 'ts_' in spc:
-        har_save_fs = autofile.fs.ts(har_save_path)
-        har_save_fs.trunk.create()
-        har_save_path = har_save_fs.trunk.path()
-        saddle = True
-        tors_names = spc_dct_i['tors_names']
-        if 'migration' in spc_dct_i['class'] or 'elimination' in spc_dct_i['class']:
-            dist_names.append(spc_dct_i['dist_info'][0])
-            dist_names.append(spc_dct_i['dist_info'][3])
-    har_cnf_save_fs = autofile.fs.conformer(har_save_path)
-    har_min_cnf_locs = util.min_energy_conformer_locators(har_cnf_save_fs)
-    if sym_level:
-        orb_restr = util.orbital_restriction(
-            spc_info, sym_level)
-        sym_levelp = sym_level[0:3]
-        sym_levelp.append(orb_restr)
-
-        sym_save_path = thy_save_fs.leaf.path(sym_levelp[1:4])
-        if 'ts_' in spc:
-            sym_save_fs = autofile.fs.ts(sym_save_path)
-            sym_save_fs.trunk.create()
-            sym_save_path = sym_save_fs.trunk.path()
-
-        sym_cnf_save_fs = autofile.fs.conformer(sym_save_path)
-        sym_min_cnf_locs = util.min_energy_conformer_locators(sym_cnf_save_fs)
-
-    # Set boolean for a radical radical reaction (not supported by vtst)
+    # Set boolean to account for rad-rad reaction (not supported by vtst)
     rad_rad_ts = False
     if 'ts_' in spc:
         if spc_dct_i['rad_rad']:
             rad_rad_ts = True
 
+    # Set the filesystem objects for various species models
+    harmfs = set_model_filesys(
+        thy_save_fs, spc_info, harm_level, ts=('ts_' in spc))
+    harm_cnf_save_fs, harm_cnf_save_path, harm_min_cnf_locs, harm_save_path = harmfs
+    if sym_level:
+        symfs = set_model_filesys(
+            thy_save_fs, spc_info, sym_level, ts=('ts_' in spc))
+        sym_cnf_save_fs, sym_cnf_save_path, sym_min_cnf_locs, sym_save_path = symfs
     if tors_level and not rad_rad_ts:
-        orb_restr = util.orbital_restriction(
-            spc_info, tors_level)
-        tors_levelp = tors_level[0:3]
-        tors_levelp.append(orb_restr)
-
-        tors_save_path = thy_save_fs.leaf.path(tors_levelp[1:4])
-        if 'ts_' in spc:
-            tors_save_fs = autofile.fs.ts(tors_save_path)
-            tors_save_fs.trunk.create()
-            tors_save_path = tors_save_fs.trunk.path()
-        tors_cnf_save_fs = autofile.fs.conformer(tors_save_path)
-        tors_min_cnf_locs = util.min_energy_conformer_locators(tors_cnf_save_fs)
-        if tors_min_cnf_locs:
-            tors_cnf_save_path = tors_cnf_save_fs.leaf.path(tors_min_cnf_locs)
-
+        torsfs = set_model_filesys(
+            thy_save_fs, spc_info, tors_level, ts=('ts_' in spc))
+        tors_cnf_save_fs, tors_cnf_save_path, tors_min_cnf_locs, tors_save_path = torsfs
     if vpt2_level:
-        orb_restr = util.orbital_restriction(
-            spc_info, vpt2_level)
-        vpt2_levelp = vpt2_level[0:3]
-        vpt2_levelp.append(orb_restr)
+        vpt2fs = set_model_filesys(
+            thy_save_fs, spc_info, vpt2_level, ts=('ts_' in spc))
+        vpt2_cnf_save_fs, vpt2_cnf_save_path, vpt2_min_cnf_locs, vpt2_save_path = vpt2fs
 
-        anh_save_path = thy_save_fs.leaf.path(vpt2_levelp[1:4])
-        if 'ts_' in spc:
-            anh_save_fs = autofile.fs.ts(anh_save_path)
-            anh_save_fs.trunk.create()
-            anh_save_path = anh_save_fs.trunk.path()
+    # Set additional info for a saddle point
+    saddle = False
+    dist_names = []
+    tors_names = []
+    if 'ts_' in spc:
+        saddle = True
+        tors_names = spc_dct_i['tors_names']
+        if 'migration' in spc_dct_i['class'] or 'elimination' in spc_dct_i['class']:
+            dist_names.append(spc_dct_i['dist_info'][0])
+            dist_names.append(spc_dct_i['dist_info'][3])
 
-        anh_cnf_save_fs = autofile.fs.conformer(anh_save_path)
-        anh_min_cnf_locs = util.min_energy_conformer_locators(anh_cnf_save_fs)
-        # anh_cnf_save_path = anh_cnf_save_fs.leaf.path(anh_min_cnf_locs)
+    # Set TS information
+    frm_bnd_key, brk_bnd_key = get_bnd_keys(spc_dct_i, saddle)
 
-    # atom case - do as first step in each of other cases
-    # pure harmonic case
-    spc_str = ''
-    elec_levels = [[0., spc_info[2]]]
-    if 'elec_levs' in spc_dct_i:
-        elec_levels = spc_dct_i['elec_levs']
+    # Initialize electronic energy levels
+    elec_levels = ini_elec_levels(spc_dct_i, spc_info)
 
-    sym_factor = 1.
-    form_coords = []
-    if saddle:
-        frm_bnd_key = spc_dct_i['frm_bnd_key']
-        brk_bnd_key = spc_dct_i['brk_bnd_key']
-    else:
-        frm_bnd_key = []
-        brk_bnd_key = []
-    if 'sym' in spc_dct_i:
-        sym_factor = spc_dct_i['sym']
-        print('sym_factor from spc_dct_i:', sym_factor)
-    else:
-        if sym_model == 'SAMPLING':
-            if not sym_min_cnf_locs:
-                print('ERROR: Reference geometry is missing for symmetry for species {}'.format(spc_info[0]))
-                return '', 0.
-            sym_geo = sym_cnf_save_fs.leaf.file.geometry.read(sym_min_cnf_locs)
-            sym_ene = sym_cnf_save_fs.leaf.file.energy.read(sym_min_cnf_locs)
-            if dist_names:
-                zma = tors_cnf_save_fs.leaf.file.zmatrix.read(tors_min_cnf_locs)
-                form_coords = list(automol.zmatrix.bond_idxs(zma, dist_names[0]))
-                form_coords.extend(list(dist_names[1]))
-            sym_factor = conformer.symmetry_factor(
-                sym_geo, sym_ene, sym_cnf_save_fs, saddle, frm_bnd_key, brk_bnd_key, form_coords, tors_names)
-            print('sym_factor from conformer sampling:', sym_factor)
-        if sym_model == '1DHR':
-            print('Warning: the 1DHR based symmetry number has not yet been set up')
-            sym_factor = 1
+    # Determine the species symmetry factor using the given model
+    sym_factor = get_symmetry_factor(
+        sym_model, spc_dct_i, spc_info, dist_names,
+        saddle, frm_bnd_key, brk_bnd_key, tors_names,
+        tors_cnf_save_fs, tors_min_cnf_locs,
+        sym_cnf_save_fs, sym_min_cnf_locs)
 
+    # Initialize imag frequency in case it is not set in the following if-block
     imag_freq = 0.
 
     if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
-        if har_min_cnf_locs is not None:
-            har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-            min_ene = har_cnf_save_fs.leaf.file.energy.read(har_min_cnf_locs)
-            if automol.geom.is_atom(har_geo):
+        if harm_min_cnf_locs is not None:
+            harm_geo = harm_cnf_save_fs.leaf.file.geometry.read(harm_min_cnf_locs)
+            min_ene = harm_cnf_save_fs.leaf.file.energy.read(harm_min_cnf_locs)
+            if automol.geom.is_atom(harm_geo):
                 print('This is an atom')
-                mass = ptab.to_mass(har_geo[0][0])
+                mass = ptab.to_mass(harm_geo[0][0])
                 spc_str = mess_io.writer.atom(
                     mass, elec_levels)
             else:
-                hess = har_cnf_save_fs.leaf.file.hessian.read(har_min_cnf_locs)
-                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+                hess = harm_cnf_save_fs.leaf.file.hessian.read(harm_min_cnf_locs)
+                freqs = elstruct.util.harmonic_frequencies(harm_geo, hess, project=False)
                 mode_start = 6
                 if 'ts_' in spc:
                     mode_start = mode_start + 1
                     imag_freq = freqs[0]
-                if automol.geom.is_linear(har_geo):
+                if automol.geom.is_linear(harm_geo):
                     mode_start = mode_start - 1
                 freqs = freqs[mode_start:]
 
                 hind_rot_str = ""
 
-                core = mess_io.writer.core_rigidrotor(har_geo, sym_factor)
+                core = mess_io.writer.core_rigidrotor(harm_geo, sym_factor)
                 spc_str = mess_io.writer.molecule(
                     core, freqs, elec_levels,
                     hind_rot=hind_rot_str,
@@ -175,17 +115,17 @@ def species_block(
             return '', 0.
 
     elif vib_model == 'HARM' and tors_model == '1DHR':
-        if har_min_cnf_locs is not None:
-            har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-            min_ene = har_cnf_save_fs.leaf.file.energy.read(har_min_cnf_locs)
-            if automol.geom.is_atom(har_geo):
+        if harm_min_cnf_locs is not None:
+            harm_geo = harm_cnf_save_fs.leaf.file.geometry.read(harm_min_cnf_locs)
+            min_ene = harm_cnf_save_fs.leaf.file.energy.read(harm_min_cnf_locs)
+            if automol.geom.is_atom(harm_geo):
                 # print('This is an atom')
-                mass = ptab.to_mass(har_geo[0][0])
+                mass = ptab.to_mass(harm_geo[0][0])
                 spc_str = mess_io.writer.atom(
                     mass, elec_levels)
             else:
-                hess = har_cnf_save_fs.leaf.file.hessian.read(har_min_cnf_locs)
-                freqs = elstruct.util.harmonic_frequencies(har_geo, hess, project=False)
+                hess = harm_cnf_save_fs.leaf.file.hessian.read(harm_min_cnf_locs)
+                freqs = elstruct.util.harmonic_frequencies(harm_geo, hess, project=False)
                 hind_rot_str = ""
                 proj_rotors_str = ""
                 # print('for species:', spc)
@@ -752,6 +692,7 @@ def pst_block(
     """ prepare a Phase Space Theory species block
     """
 
+    # Unpack the models and levels
     har_level, tors_level, vpt2_level, sym_level = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
@@ -832,33 +773,9 @@ def pst_block(
         anh_min_cnf_locs_j = util.min_energy_conformer_locators(anh_cnf_save_fs_j)
 
     spc_str = ''
-    if 'elec_levs' in spc_dct_i:
-        elec_levels_i = spc_dct_i['elec_levs']
-    else:
-        elec_levels_i = [[0., spc_dct_i['mul']]]
-    if 'elec_levs' in spc_dct_j:
-        elec_levels_j = spc_dct_j['elec_levs']
-    else:
-        elec_levels_j = [[0., spc_dct_j['mul']]]
-
-    # Combine the energy levels
-    init_elec_levels = []
-    for _, elec_level_i in enumerate(elec_levels_i):
-        for _, elec_level_j in enumerate(elec_levels_j):
-            init_elec_levels.append(
-                [elec_level_i[0]+elec_level_j[0],
-                 elec_level_i[1]*elec_level_j[1]])
-
-    # See if any levels repeat and thus need to be added together
-    elec_levels = []
-    for level in init_elec_levels:
-        # Put level in in final list
-        if level not in elec_levels:
-            elec_levels.append(level)
-        # Add the level to the one in the list
-        else:
-            idx = elec_levels.index(level)
-            elec_levels[idx][1] += level[1]
+    
+    # Get the combined electronic energy levels
+    elec_levels = combine_elec_levels(spc_dct_i, spc_dct_j)
 
     sym_factor_i = 1.
     sym_factor_j = 1.
@@ -1286,36 +1203,9 @@ def fake_species_block(
         tors_cnf_save_path_j = tors_cnf_save_fs_j.leaf.path(tors_min_cnf_locs_j)
 
     spc_str = ''
-    if 'elec_levs' in spc_dct_i:
-        elec_levels_i = spc_dct_i['elec_levs']
-    else:
-        elec_levels_i = [[0., spc_dct_i['mul']]]
-    if 'elec_levs' in spc_dct_j:
-        elec_levels_j = spc_dct_j['elec_levs']
-    else:
-        elec_levels_j = [[0., spc_dct_j['mul']]]
-
-    # Combine the energy levels
-    init_elec_levels = []
-    for _, elec_level_i in enumerate(elec_levels_i):
-        for _, elec_level_j in enumerate(elec_levels_j):
-            init_elec_levels.append(
-                [elec_level_i[0]+elec_level_j[0],
-                 elec_level_i[1]*elec_level_j[1]])
-
-    # See if any levels repeat and thus need to be added together
-    elec_levels = []
-    for level in init_elec_levels:
-        # Put level in in final list
-        if level not in elec_levels:
-            elec_levels.append(level)
-        # Add the level to the one in the list
-        else:
-            idx = elec_levels.index(level)
-            elec_levels[idx][1] += level[1]
-
-    # print('elec_levels final ')
-    # print(elec_levels)
+    
+    # Get the combined electronic energy levels
+    elec_levels = combine_elec_levels(spc_dct_i, spc_dct_j)
 
     sym_factor = 1.
     sym_factor_i = 1.
@@ -2246,6 +2136,146 @@ def tau_pf_write(
             print(sumq/float(idx), sigma, 100.*sigma*float(idx)/sumq, idx)
 
 
+####################
+# Helper functions #
+####################
+
+def set_model_filesys(thy_save_fs, spc_info, level, ts=False):
+    """ Gets filesystem objects for torsional calculations
+    """
+    # Set the level for the model
+    levelp = level[0:3]
+    levelp.append(util.orbital_restriction(spc_info, level))
+
+    # Get the save fileystem path
+    save_path = thy_save_fs.leaf.path(levelp[1:4])
+    if ts:
+        save_fs = autofile.fs.ts(save_path)
+        save_fs.trunk.create()
+        save_path = save_fs.trunk.path()
+
+    # Get the fs object and the locs
+    cnf_save_fs = autofile.fs.conformer(save_path)
+    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
+
+    # Get the save path for the conformers
+    if min_cnf_locs:
+        cnf_save_path = cnf_save_fs.leaf.path(min_cnf_locs)
+    else:
+        cnf_save_path = ''
+
+    return cnf_save_fs, cnf_save_path, min_cnf_locs, save_path
+
+
+def tors_params():
+    """ get tors parameters
+    """
+    if tors_cnf_save_fs.trunk.file.info.exists():
+        inf_obj_s = tors_cnf_save_fs.trunk.file.info.read()
+        tors_ranges = inf_obj_s.tors_ranges
+        tors_ranges = autofile.info.dict_(tors_ranges)
+        tors_names = list(tors_ranges.keys())
+
+def ini_elec_levels(spc_dct, spc_info):
+    """ get initial elec levels
+    """
+    elec_levels = [[0., spc_info[2]]]
+    if 'elec_levs' in spc_dct:
+        elec_levels = spc_dct['elec_levs']
+
+    return elec_levels
+
+
+def combine_elec_levels(spc_dct_i, spc_dct_j):
+    """ Put two elec levels together for two species
+    """
+
+    if 'elec_levs' in spc_dct_i:
+        elec_levels_i = spc_dct_i['elec_levs']
+    else:
+        elec_levels_i = [[0., spc_dct_i['mul']]]
+    if 'elec_levs' in spc_dct_j:
+        elec_levels_j = spc_dct_j['elec_levs']
+    else:
+        elec_levels_j = [[0., spc_dct_j['mul']]]
+
+    # Combine the energy levels
+    init_elec_levels = []
+    for _, elec_level_i in enumerate(elec_levels_i):
+        for _, elec_level_j in enumerate(elec_levels_j):
+            init_elec_levels.append(
+                [elec_level_i[0]+elec_level_j[0],
+                 elec_level_i[1]*elec_level_j[1]])
+
+    # See if any levels repeat and thus need to be added together
+    elec_levels = []
+    for level in init_elec_levels:
+        # Put level in in final list
+        if level not in elec_levels:
+            elec_levels.append(level)
+        # Add the level to the one in the list
+        else:
+            idx = elec_levels.index(level)
+            elec_levels[idx][1] += level[1]
+
+    return elec_levels
+
+
+def get_symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
+                        saddle, frm_bnd_key, brk_bnd_key, tors_names,
+                        tors_cnf_save_fs, tors_min_cnf_locs,
+                        sym_cnf_save_fs, sym_min_cnf_locs):
+    """ Get the overall factor for a species
+    """
+
+    form_coords = []
+    if 'sym' in spc_dct_i:
+        sym_factor = spc_dct_i['sym']
+        print('sym_factor from spc_dct_i:', sym_factor)
+    else:
+        if sym_model == 'SAMPLING':
+            if not sym_min_cnf_locs:
+                # Fix the return statement here
+                print('ERROR: Reference geometry is missing for symmetry',
+                      'for species {}'.format(spc_info[0]))
+                return '', 0.
+            sym_geo = sym_cnf_save_fs.leaf.file.geometry.read(sym_min_cnf_locs)
+            sym_ene = sym_cnf_save_fs.leaf.file.energy.read(sym_min_cnf_locs)
+            if dist_names:
+                zma = tors_cnf_save_fs.leaf.file.zmatrix.read(
+                    tors_min_cnf_locs)
+                form_coords = list(
+                    automol.zmatrix.bond_idxs(zma, dist_names[0]))
+                form_coords.extend(list(dist_names[1]))
+            sym_factor = conformer.symmetry_factor(
+                sym_geo, sym_ene, sym_cnf_save_fs, saddle,
+                frm_bnd_key, brk_bnd_key, form_coords, tors_names)
+            print('sym_factor from conformer sampling:', sym_factor)
+        elif sym_model == '1DHR':
+            print('Warning: the 1DHR based symmetry number',
+                  'has not yet been set up')
+            sym_factor = 1
+        else:
+            print('Warning: no symmetry model requested,',
+                  'setting symmetry factor to 1.0')
+            sym_factor = 1
+
+    return sym_factor
+
+
+def get_bnd_keys(spc_dct, saddle):
+    """ get bond broken and formed keys for a transition state
+    """
+    if saddle:
+        frm_bnd_key = spc_dct['frm_bnd_key']
+        brk_bnd_key = spc_dct['brk_bnd_key']
+    else:
+        frm_bnd_key = []
+        brk_bnd_key = []
+
+    return frm_bnd_key, brk_bnd_key
+
+
 def _hrpot_spline_fitter(pot, thresh=-0.05):
     """ Get a physical hindered rotor potential via a series of spline fits
     """
@@ -2268,7 +2298,8 @@ def _hrpot_spline_fitter(pot, thresh=-0.05):
 
     # Do second spline fit of only positive values if any negative values found
     if any(val < thresh for val in pot):
-        print('Found pot vals below {0} kcal. Refit w/ positives'.format(thresh))
+        print('Found pot vals below',
+              ' {0} kcal. Refit w/ positives'.format(thresh))
         print('Potential before spline:', pot)
         x_pos = numpy.array([i for i in range(lpot)
                              if pot[i] >= thresh])
@@ -2282,8 +2313,8 @@ def _hrpot_spline_fitter(pot, thresh=-0.05):
         print('Potential after spline:', pot_pos_fit)
         # Perform second check to see if negative potentials have been fixed
         if any(val < thresh for val in pot_pos_fit):
-            print('Found values below {0} kcal again. Trying linear interp of positive vals'
-                  .format(thresh))
+            print('Found values below {0} kcal again.'.format(thresh),
+                  ' Trying linear interp of positive vals')
             neg_idxs = [i for i in range(lpot) if pot_pos_fit[i] < thresh]
             clean_pot = []
             for i in range(lpot):
@@ -2299,8 +2330,8 @@ def _hrpot_spline_fitter(pot, thresh=-0.05):
                     # Get a new value for this point on the potential by
                     # doing a linear interp of positives
                     interp_val = (
-                        pot_pos_fit[idx_0] * (1.0 - ((i - idx_0) / (idx_1 - idx_0))) +
-                        pot_pos_fit[idx_1] * ((i - idx_0) / (idx_1 - idx_0))
+                        pot_pos_fit[idx_0] * (1.0-((i-idx_0)/(idx_1-idx_0))) +
+                        pot_pos_fit[idx_1] * ((i-idx_0)/(idx_1-idx_0))
                     )
                     clean_pot.append(interp_val)
                 else:

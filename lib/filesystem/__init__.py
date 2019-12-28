@@ -6,11 +6,13 @@ from lib.filesystem import build
 from lib.filesystem import inf
 from lib.filesystem import path
 from lib.filesystem import read
+from lib.filesystem import check
 
 
 __all__ = [
     'build',
     'inf',
     'path',
-    'read'
+    'read',
+    'check'
 ]
