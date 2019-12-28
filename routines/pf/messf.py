@@ -119,7 +119,6 @@ def species_block(
             harm_geo = harm_cnf_save_fs.leaf.file.geometry.read(harm_min_cnf_locs)
             min_ene = harm_cnf_save_fs.leaf.file.energy.read(harm_min_cnf_locs)
             if automol.geom.is_atom(harm_geo):
-                # print('This is an atom')
                 mass = ptab.to_mass(harm_geo[0][0])
                 spc_str = mess_io.writer.atom(
                     mass, elec_levels)
@@ -128,8 +127,6 @@ def species_block(
                 freqs = elstruct.util.harmonic_frequencies(harm_geo, hess, project=False)
                 hind_rot_str = ""
                 proj_rotors_str = ""
-                # print('for species:', spc)
-                #print('tors_min_cnf_locs test:', tors_min_cnf_locs)
 
                 if tors_min_cnf_locs is not None:
                     if tors_cnf_save_fs.trunk.file.info.exists():
@@ -184,89 +181,21 @@ def species_block(
                         enes = numpy.subtract(enes, min_ene)
                         pot = list(enes*phycon.EH2KCAL)
 
-                        # Build a potential list from only successful calculations
-                        # print('pot in species block:', enes, pot)
+                        # Build potential lst from only successful calculations
                         pot = _hrpot_spline_fitter(pot)
 
-                        axis = coo_dct[tors_name][1:3]
+                        # Get the HR groups using the graphs
+                        group = set_groups_ini(
+                            gra, coo_dct, tors_name, ts_bnd, saddle)
 
-                        atm_key = axis[1]
-                        if ts_bnd:
-                            for atm in axis:
-                                if atm in ts_bnd:
-                                    atm_key = atm
-                                    break
-                        group = list(
-                            automol.graph.branch_atom_keys(gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
-                            set(axis))
-                        if not group:
-                            for atm in axis:
-                                if atm != atm_key:
-                                    atm_key = atm
-                            group = list(
-                                automol.graph.branch_atom_keys(gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
-                                set(axis))
-                        #print('sym_num before:', sym_num)
                         if saddle:
-                            # check to see if fragment group was neglected
-                            n_atm = automol.zmatrix.count(zma)
-                            if 'addition' in spc_dct_i['class'] or 'abstraction' in spc_dct_i['class']:
-                                group2 = []
-                                ts_bnd1 = min(ts_bnd)
-                                ts_bnd2 = max(ts_bnd)
-                                for idx in range(ts_bnd2, n_atm):
-                                    group2.append(idx)
-                                #print('group2 test:', group2)
-                                #print('axis test:', axis)
-                                #print('ts_bnds test:', ts_bnd2, ts_bnd1)
-
-                                if ts_bnd1 in group:
-                                    for atm in group2:
-                                        if atm not in group:
-                                            group.append(atm)
-                            # check to see if symmetry of XH3 rotor was missed
-                            if sym_num == 1:
-                                group2 = []
-                                for idx in range(n_atm):
-                                    if idx not in group and idx not in axis:
-                                        group2.append(idx)
-                                all_H = True
-                                symbols = automol.zmatrix.symbols(zma)
-                                #print('symbols test:', symbols)
-                                #print('second group2:', group2)
-                                H_count = 0
-                                for idx in group2:
-                                    if symbols[idx] != 'H' and symbols[idx] != 'X':
-                                        all_H = False
-                                        break
-                                    else:
-                                        if symbols[idx] == 'H':
-                                            H_count += 1
-                                if all_H and H_count == 3:
-                                    sym_num = 3
-                                    lpot = int(len(pot)/3)
-                                    potp = []
-                                    potp[0:lpot] = pot[0:lpot]
-                                    pot = potp
-                                #print('all_h test=:', all_H, H_count)
+                            _ = check_saddle_groups(
+                                zma, spc_dct_i, group, axis, sym_num, pot, ts_bnd)
                                 
-                        #print('sym_num after:', sym_num)
-
                         group = list(numpy.add(group, 1))
                         axis = list(numpy.add(axis, 1))
-                        #print('axis test:', axis)
-                        #print('atm_key:', atm_key)
-                        #print('group:', group)
-                        #for idx, atm in enumerate(axis):
-                        #    if atm == atm_key+1:
-                        #        if idx != 0:
-                        #            axis.reverse()
-                        #            print('axis reversed', axis)
                         if (atm_key+1) != axis[1]:
                             axis.reverse()
-                            #print('axis reversed:', axis)
-                        #if atm_key != axis(0):
-                            #axis.reverse()
 
                         #check for dummy transformations
                         atom_symbols = automol.zmatrix.symbols(zma)
@@ -281,61 +210,16 @@ def species_block(
                                    remdummy[idx] += 1
                         hind_rot_str += mess_io.writer.rotor_hindered(
                             group, axis, sym_num, pot, remdummy=remdummy)
-                        #print('projrot 1 test:')
                         proj_rotors_str += projrot_io.writer.rotors(
                             axis, group, remdummy=remdummy)
                         sym_factor /= sym_num
                         idx += 1
 
-                    # create a messpf input file and run messpf to get tors_freqs and tors_zpes
+                    # Calculate ZPVES of the hindered rotors
                     if saddle and tors_names is not None:
-                        dummy_freqs = [1000.]
-                        dummy_zpe = 0.0
-                        core = mess_io.writer.core_rigidrotor(tors_geo, sym_factor)
-                        spc_str = mess_io.writer.molecule(
-                            core, dummy_freqs, elec_levels,
-                            hind_rot=hind_rot_str,
-                            )
-                        temp_step = 100.
-                        ntemps = 5
-                        zpe_str = '{0:<8.2f}\n'.format(dummy_zpe)
-                        zpe_str = ' ZeroEnergy[kcal/mol] ' + zpe_str
-                        zpe_str += 'End\n'
-                        global_pf_str = mess_io.writer.global_pf(
-                            [], temp_step, ntemps, rel_temp_inc=0.001,
-                            atom_dist_min=0.6)
-                        spc_head_str = 'Species ' + ' Tmp'
-                        pf_inp_str = '\n'.join(
-                            [global_pf_str, spc_head_str,
-                             spc_str, zpe_str])
-
-                        bld_locs = ['PF', 0]
-                        bld_save_fs = autofile.fs.build(tors_save_path)
-                        bld_save_fs.leaf.create(bld_locs)
-                        pf_path = bld_save_fs.leaf.path(bld_locs)
-
-                        # run messpf
-                        with open(os.path.join(pf_path, 'pf.inp'), 'w') as pf_file:
-                            pf_file.write(pf_inp_str)
-                        pf_script_str = ("#!/usr/bin/env bash\n"
-                                         "export OMP_NUM_THREADS=10\n"
-                                         "messpf pf.inp pf.out >> stdout.log &> stderr.log")
-
-                        run_script(pf_script_str, pf_path)
-
-                        with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
-                            output_string = mess_file.read()
-
-                        # Read the freqs and zpes
-                        tors_freqs = mess_io.reader.tors.freqs(output_string)
-                        tors_zpes = mess_io.reader.tors.zpves(output_string)
-                    else:
-                        tors_freqs = []
-                        tors_zpes = []
-
-                    tors_zpe = 0.0
-                    for (tors_freq, tors_1dhr_zpe) in zip(tors_freqs, tors_zpes):
-                        tors_zpe += tors_1dhr_zpe
+                        tors_zpe = calc_tors_freqs_zpe(
+                            tors_geo, sym_factor, elec_levels,
+                            hind_rot_str, tors_save_path)
 
                     # run one version of ProjRot to get the projected frequencies for that version
                     # Write the string for the ProjRot input
@@ -2167,15 +2051,6 @@ def set_model_filesys(thy_save_fs, spc_info, level, ts=False):
     return cnf_save_fs, cnf_save_path, min_cnf_locs, save_path
 
 
-def tors_params():
-    """ get tors parameters
-    """
-    if tors_cnf_save_fs.trunk.file.info.exists():
-        inf_obj_s = tors_cnf_save_fs.trunk.file.info.read()
-        tors_ranges = inf_obj_s.tors_ranges
-        tors_ranges = autofile.info.dict_(tors_ranges)
-        tors_names = list(tors_ranges.keys())
-
 def ini_elec_levels(spc_dct, spc_info):
     """ get initial elec levels
     """
@@ -2274,6 +2149,124 @@ def get_bnd_keys(spc_dct, saddle):
         brk_bnd_key = []
 
     return frm_bnd_key, brk_bnd_key
+
+
+def calc_tors_freqs_zpe(tors_geo, sym_factor, elec_levels,
+                        hind_rot_str, tors_save_path):
+    """ Calculate the frequencies and ZPVES of the hindered rotors
+        create a messpf input and run messpf to get tors_freqs and tors_zpes
+    """
+    dummy_freqs = [1000.]
+    dummy_zpe = 0.0
+    core = mess_io.writer.core_rigidrotor(tors_geo, sym_factor)
+    spc_str = mess_io.writer.molecule(
+        core, dummy_freqs, elec_levels,
+        hind_rot=hind_rot_str,
+        )
+    temp_step = 100.
+    ntemps = 5
+    zpe_str = '{0:<8.2f}\n'.format(dummy_zpe)
+    zpe_str = ' ZeroEnergy[kcal/mol] ' + zpe_str
+    zpe_str += 'End\n'
+    global_pf_str = mess_io.writer.global_pf(
+        [], temp_step, ntemps, rel_temp_inc=0.001,
+        atom_dist_min=0.6)
+    spc_head_str = 'Species ' + ' Tmp'
+    pf_inp_str = '\n'.join(
+        [global_pf_str, spc_head_str,
+         spc_str, zpe_str])
+
+    bld_locs = ['PF', 0]
+    bld_save_fs = autofile.fs.build(tors_save_path)
+    bld_save_fs.leaf.create(bld_locs)
+    pf_path = bld_save_fs.leaf.path(bld_locs)
+
+    # run messpf
+    with open(os.path.join(pf_path, 'pf.inp'), 'w') as pf_file:
+        pf_file.write(pf_inp_str)
+    pf_script_str = ("#!/usr/bin/env bash\n"
+                     "export OMP_NUM_THREADS=10\n"
+                     "messpf pf.inp pf.out >> stdout.log &> stderr.log")
+
+    moldr.util.run_script(pf_script_str, pf_path)
+
+    with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
+        output_string = mess_file.read()
+
+    # Read the freqs and zpes
+    tors_freqs = mess_io.reader.tors.freqs(output_string)
+    tors_zpes = mess_io.reader.tors.zpves(output_string)
+
+    # Calculate the torsional zpe
+    tors_zpe = sum(tors_zpes) if tors_zpes else 0.0
+
+    return tors_zpe
+
+
+def set_groups_ini(gra, coo_dct, tors_name, ts_bnd, saddle):
+    """ Set the initial set of groups
+    """
+    axis = coo_dct[tors_name][1:3]
+    atm_key = axis[1]
+    if ts_bnd:
+        for atm in axis:
+            if atm in ts_bnd:
+                atm_key = atm
+                break
+    group = list(
+        automol.graph.branch_atom_keys(
+            gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) - set(axis))
+    if not group:
+        for atm in axis:
+            if atm != atm_key:
+                atm_key = atm
+        group = list(
+            automol.graph.branch_atom_keys(
+                gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) - set(axis))
+
+    return group
+
+
+def check_saddle_groups(zma, spc_dct_i, group, axis, sym_num, pot, ts_bnd):
+    """ Assess that hindered rotor groups and axes
+    """
+    n_atm = automol.zmatrix.count(zma)
+    if 'addition' in spc_dct_i['class'] or 'abstraction' in spc_dct_i['class']:
+        group2 = []
+        ts_bnd1 = min(ts_bnd)
+        ts_bnd2 = max(ts_bnd)
+        for idx in range(ts_bnd2, n_atm):
+            group2.append(idx)
+
+        if ts_bnd1 in group:
+            for atm in group2:
+                if atm not in group:
+                    group.append(atm)
+
+    # Check to see if symmetry of XH3 rotor was missed
+    if sym_num == 1:
+        group2 = []
+        for idx in range(n_atm):
+            if idx not in group and idx not in axis:
+                group2.append(idx)
+        all_H = True
+        symbols = automol.zmatrix.symbols(zma)
+        H_count = 0
+        for idx in group2:
+            if symbols[idx] != 'H' and symbols[idx] != 'X':
+                all_H = False
+                break
+            else:
+                if symbols[idx] == 'H':
+                    H_count += 1
+        if all_H and H_count == 3:
+            sym_num = 3
+            lpot = int(len(pot)/3)
+            potp = []
+            potp[0:lpot] = pot[0:lpot]
+            pot = potp
+
+    return None
 
 
 def _hrpot_spline_fitter(pot, thresh=-0.05):
