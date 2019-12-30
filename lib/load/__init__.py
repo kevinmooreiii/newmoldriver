@@ -1,15 +1,17 @@
 """ Libraries of functions that parse the moldriver input files
 """
 
-# from lib.drivers.load import run
-# from lib.drivers.load import model
-# from lib.drivers.load import theory
-# from lib.drivers.load import species
-from lib.drivers.load import mechanism
+# from lib.load import run
+# from lib.load import model
+# from lib.load import theory
+# from lib.load import species
+from lib.load import mechanism
+from lib.load import ptt
 
 
 __all__ = [
-    'mechanism'
+    'mechanism',
+    'ptt'
 ]
 
 # def parse_automech_input():

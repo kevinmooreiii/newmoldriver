@@ -2,9 +2,10 @@
 Read the mechanism file
 """
 
+import numpy
 import chemkin_io
 import automol
-from ptt import read_inp_str
+from lib.load.ptt import read_inp_str
 
 
 MECH_INP = 'inp/mechanism.dat'
@@ -16,25 +17,25 @@ def read_theory_file():
     return read_inp_str(MECH_INP)
 
 
-def parse_mechanism_file(mech_str, mech_type,
+def parse_mechanism_file(mech_str, mech_type, spc_dct,
                          check_stereo=False, sort_rxns=False,
                          rad_rad_sort=False):
     """ Get the reactions and species from the mechanism input
     """
     # parsing moved to the input parsing module I am writing
     if mech_type.lower() == 'chemkin':
-        spc_dct, rct_names, prd_names, rxn_name, form_strs = _parse_chemkin(
-            mech_str, sort_rxns)
+        pes_dct = _parse_chemkin(
+            mech_str, spc_dct, sort_rxns)
     # elif mech_type.lower() == 'json':
     #     spc_dct, rct_names, prd_names, rxn_name, form_strs = _parse_json(
     #         mech_path, mech_file, check_stereo, rad_rad_sort)
     else:
         raise NotImplementedError
 
-    return spc_dct, rct_names, prd_names, rxn_name, form_strs
+    return pes_dct
 
 
-def _parse_chemkin(mech_str, sort_rxns):
+def _parse_chemkin(mech_str, spc_dct, sort_rxns):
     """ parse a chemkin formatted mechanism file
     """
 
@@ -45,6 +46,11 @@ def _parse_chemkin(mech_str, sort_rxns):
         map(chemkin_io.parser.reaction.reactant_names, rxn_strs))
     prd_names_lst = list(
         map(chemkin_io.parser.reaction.product_names, rxn_strs))
+
+    # Build the inchi dct
+    ich_dct = {}
+    for key in spc_dct.keys():
+        ich_dct[key] = spc_dct[key]['ich']
 
     # Sort reactant and product name lists by formula to facilitate
     # multichannel, multiwell rate evaluations
@@ -100,7 +106,7 @@ def build_pes_dct(formula_str_lst, rct_names_lst,
     return pes_dct
 
 
-def print_pes(pes_dct):
+def print_pes_channels(pes_dct):
     """ Print the PES
     """
     for pes_idx, pes in enumerate(pes_dct, start=1):
@@ -114,7 +120,7 @@ def print_pes(pes_dct):
                 ' + '.join(pes_prd_names_lst[chn_idx])))
 
 
-def determine_connected_pes_channels(pes_dct):
+def determine_connected_pes_channels(pes_dct, pesnums, channels):
     """ Sort the PES lst and set the connected channels
     """
     for pes_idx, pes in enumerate(pes_dct, start=1):

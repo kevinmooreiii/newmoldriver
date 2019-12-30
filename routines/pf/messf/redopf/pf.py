@@ -11,7 +11,6 @@ import autofile
 import moldr
 import mess_io
 from submission import substr
-from datalibs import phycon
 
 
 def species_block(

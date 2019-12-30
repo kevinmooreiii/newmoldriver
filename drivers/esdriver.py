@@ -10,12 +10,13 @@ import routines
 from lib.filesystem import build as fbuild
 from lib.filesystem import inf as finf
 from lib.filesystem import check as fcheck
+from lib.submission import theolvls
 from lib.reaction import wells as lwells
 from lib.reaction import ts as lts
 from lib import msg
 
 
-def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
+def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
         vdw_params=[False, False, True],
         pst_params=[1.0, 6],
         rad_rad_ts='vtst'):
@@ -23,6 +24,9 @@ def run(tsk_info_lst, es_dct, rxn_lst, spc_dct, run_prefix, save_prefix,
     """
 
     print("Tasks:\n", tsk_info_lst)
+
+    # Set the es_dct
+    es_dct = theolvls.ES_DCT
 
     # Prepare species queue
     spc_queue = []

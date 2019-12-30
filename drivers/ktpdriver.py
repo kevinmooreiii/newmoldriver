@@ -26,7 +26,7 @@ PRESS = [0.03, 0.1, 0.3, 1., 3., 10., 30., 100.]
 KICKOFF_SIZE = 0.1
 KICKOFF_BACKWARD = False
 
-def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
+def run(tsk_info_lst, spc_dct, rct_names_lst, prd_names_lst,
         run_prefix, save_prefix, ene_coeff=[1.],
         vdw_params=[False, False, True],
         options=[True, True, True, False],
@@ -70,7 +70,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
     if runes:
         runspecies = [{'species': spc_queue, 'reacs': [], 'prods': []}]
         esdriver.run(
-            spc_tsk_lst, es_dct, runspecies, spc_dct,
+            spc_tsk_lst, runspecies, spc_dct,
             run_prefix, save_prefix, vdw_params,
             pst_params=pst_params,
             rad_rad_ts=rad_rad_ts)
@@ -143,7 +143,7 @@ def run(tsk_info_lst, es_dct, spc_dct, rct_names_lst, prd_names_lst,
         # Run ESDriver
         if runes:
             ts_found = esdriver.run(
-                ts_tsk_lst, es_dct, rxn_lst, spc_dct,
+                ts_tsk_lst, rxn_lst, spc_dct,
                 run_prefix, save_prefix, vdw_params)
 
     if runrates:

@@ -11,7 +11,7 @@ import autofile
 
 # New libs
 from lib.phydat import phycon
-from routines.pf import messf
+from routines.pf.messf import blocks
 
 
 # Writer
@@ -72,7 +72,7 @@ def make_species_data(spc, spc_dct_i, spc_save_fs, spc_model,
     else:
         spc_save_fs.leaf.create(spc_info)
         save_path = spc_save_fs.leaf.path(spc_info)
-    species_data = messf.species_block(
+    species_data = blocks.species_block(
         spc=spc,
         spc_dct_i=spc_dct_i,
         spc_info=spc_info,
@@ -97,7 +97,7 @@ def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
     save_path_i = spc_save_fs.leaf.path(spc_info_i)
     save_path_j = spc_save_fs.leaf.path(spc_info_j)
     print('spc_model test:', spc_model)
-    species_data = messf.fake_species_block(
+    species_data = blocks.fake_species_block(
         spc_dct_i=spc_dct_i,
         spc_dct_j=spc_dct_j,
         spc_info_i=spc_info_i,
@@ -273,7 +273,7 @@ def make_channel_pfs(
                 idx_dct[well_dct_key1.replace('F', 'FRB')] = pst_r_label
                 spc_dct_i = spc_dct[rxn['reacs'][0]]
                 spc_dct_j = spc_dct[rxn['reacs'][1]]
-                pst_r_ts_str = messf.pst_block(
+                pst_r_ts_str = blocks.pst_block(
                     spc_dct_i, spc_dct_j, spc_model=spc_model,
                     pf_levels=pf_levels, projrot_script_str=projrot_script_str,
                     spc_save_fs=spc_save_fs,
@@ -316,7 +316,7 @@ def make_channel_pfs(
                 idx_dct[well_dct_key1.replace('F', 'FPB')] = pst_p_label
                 spc_dct_i = spc_dct[rxn['prods'][0]]
                 spc_dct_j = spc_dct[rxn['prods'][1]]
-                pst_p_ts_str = messf.pst_block(
+                pst_p_ts_str = blocks.pst_block(
                     spc_dct_i, spc_dct_j, spc_model=spc_model,
                     pf_levels=pf_levels, projrot_script_str=projrot_script_str,
                     spc_save_fs=spc_save_fs,
@@ -335,7 +335,7 @@ def make_channel_pfs(
         # Print inner TS data for radical radical call vtst or vrctst
         if rad_rad and low_spin and rad_rad_ts == 'pst':
             # zero_energy = SOMETHING
-            pst_str = messf.pst_block(
+            pst_str = blocks.pst_block(
                 spc_dct_i, spc_dct_j, spc_model=spc_model,
                 pf_levels=pf_levels, projrot_script_str=projrot_script_str,
                 spc_save_fs=spc_save_fs,
@@ -354,7 +354,7 @@ def make_channel_pfs(
                 spc_zpe = (
                     spc_dct[rxn['prods'][0]]['zpe'] +
                     spc_dct[rxn['prods'][1]]['zpe'])
-            ts_str += '\n' + messf.vtst_with_no_saddle_block(
+            ts_str += '\n' + blocks.vtst_with_no_saddle_block(
                 spc_dct[tsname], ts_label, fake_wellr_label, fake_wellp_label,
                 spc_ene, spc_zpe, projrot_script_str,
                 multi_info, elec_levels=[[0., 1]], sym_factor=1.
@@ -387,13 +387,13 @@ def make_channel_pfs(
             spc_zpe = (
                 spc_dct[rxn['prods'][0]]['zpe'] +
                 spc_dct[rxn['prods'][1]]['zpe'])
-        ts_str += '\n' + messf.vtst_with_no_saddle_block(
+        ts_str += '\n' + blocks.vtst_with_no_saddle_block(
             spc_dct[tsname], ts_label, reac_label, prod_label,
             spc_ene, spc_zpe, projrot_script_str,
             multi_info, elec_levels=[[0., 1]], sym_factor=1.)
     elif rad_rad and addn_rxn and low_spin and rad_rad_ts == 'pst':
         # zero_energy = SOMETHING
-        pst_str = messf.pst_block(
+        pst_str = blocks.pst_block(
             spc_dct_i, spc_dct_j, spc_model=spc_model,
             pf_levels=pf_levels, projrot_script_str=projrot_script_str,
             spc_save_fs=spc_save_fs,

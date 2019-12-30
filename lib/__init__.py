@@ -9,6 +9,7 @@ from lib import outpt
 from lib import runner
 from lib import calc
 from lib import reaction
+from lib import load
 
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     'runner',
     'calc',
     'reaction',
+    'load'
 ]

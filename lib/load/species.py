@@ -3,7 +3,8 @@
 
 import chemkin_io
 import automol
-from ptt import read_inp_str
+from lib.load.ptt import read_inp_str
+from lib.phydat import phycon, symm, eleclvl
 
 
 SPC_INP = 'inp/species.dat'
@@ -84,18 +85,23 @@ def read_spc_amech():
     return None
 
 
-def modify_spc_dct():
+def modify_spc_dct(spc_dct, geom_dct, hind_inc):
     """ Modify the species dct
     """
-    for spc in SPC_DCT:
-        ich = SPC_DCT[spc]['ich']
-        mul = SPC_DCT[spc]['mul']
+    mod_spc_dct = {}
+    for spc in spc_dct:
+        # Set the ich and mult
+        ich = spc_dct[spc]['ich']
+        mul = spc_dct[spc]['mul']
+        mod_spc_dct[spc]['ich'] = ich
+        mod_spc_dct[spc]['mul'] = mul
+        # Add the optional things
         if (ich, mul) in eleclvl.DCT:
-            SPC_DCT[spc]['elec_levs'] = eleclvl.DCT[(ich, mul)]
+            mod_spc_dct[spc]['elec_levs'] = eleclvl.DCT[(ich, mul)]
         if (ich, mul) in symm.DCT:
-            SPC_DCT[spc]['sym'] = symm.DCT[(ich, mul)]
-        if ich in GEOM_DCT:
-            SPC_DCT[spc]['geo_obj'] = GEOM_DCT[ich]
-        SPC_DCT[spc]['hind_inc'] = PARAMS.HIND_INC * phycon.DEG2RAD
+            mod_spc_dct[spc]['sym'] = symm.DCT[(ich, mul)]
+        if ich in geom_dct:
+            mod_spc_dct[spc]['geo_obj'] = geom_dct[ich]
+        mod_spc_dct[spc]['hind_inc'] = hind_inc * phycon.DEG2RAD
 
-    return spc_dct
+    return mod_spc_dct
