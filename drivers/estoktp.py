@@ -4,15 +4,13 @@
 """
 
 import os
-import sys
-import ktpdriver
 
 # New libs
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
 import lib.filesystem.build as lfs
 from lib.submission import read_dat
-import dfxns.mech as lmech
+import mech as lmech
 
 # Set runtime options based on user input
 INPUT = lmech.get_user_input()
@@ -48,29 +46,27 @@ PES_DCT = loadmech.parse_mechanism_file(
 #
 # Set the channels on the PESs to run
 loadmech.print_pes_channels(PES_DCT)
-PES = loadmech.determine_connected_pes_channels(
-    PES_DCT, PARAMS.PESNUMS, PARAMS.CHANNELS)
-PESCHNS, CONNCHNS, PES_RCT_NAMES_LST, PES_PRD_NAMES_LST, PES_RXN_NAME_LST = PES
-
-# Set the energy transfer parameter list
-ETRANS = lmech.etrans_lst(PARAMS)
+PESNUMS_LST = loadmech.get_pes_nums(PES_DCT, PARAMS.PESNUMS)
+CONN_CHNLS_LST = loadmech.determine_connected_pes_channels(
+    PES_DCT, PESNUMS_LST)
 
 # Stop here for now
-print('Exiting')
-sys.exit()
+# print('Exiting')
+# sys.exit()
 
 # Run the reactions driver (es, ktp, etc)
 if PARAMS.RUN_RATES:
-    ktpdriver.run(
+    lmech.run_ktp_driver(
+        PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
+        MOD_SPC_DCT, {},
         PARAMS.TSK_INFO_LST,
-        MOD_SPC_DCT,
-        PES_RCT_NAMES_LST,
-        PES_PRD_NAMES_LST,
-        PARAMS.RUN_PREFIX,
-        PARAMS.SAVE_PREFIX,
+        PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
         ene_coeff=[1.],
         vdw_params=[False, False, True],
-        options=[True, True, True, False],
-        etrans=ETRANS,
+        options=PARAMS.OPTIONS_RATE,
+        etrans=lmech.etrans_lst(PARAMS),
         pst_params=PARAMS.PST_PARAMS,
-        rad_rad_ts=PARAMS.RAD_RAD_TS)
+        rad_rad_ts=PARAMS.RAD_RAD_TS,
+        hind_inc=PARAMS.HIND_INC,
+        mc_nsamp=PARAMS.MC_NSAMP0
+    )

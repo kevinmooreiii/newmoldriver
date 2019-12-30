@@ -19,7 +19,8 @@ from lib import msg
 def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
         vdw_params=[False, False, True],
         pst_params=[1.0, 6],
-        rad_rad_ts='vtst'):
+        rad_rad_ts='vtst',
+        mc_nsamp=[True, 10, 1, 3, 100]):
     """ driver for all electronic structure tasks
     """
 
@@ -138,7 +139,7 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
                 if any(string in tsk for string in ('samp', 'scan', 'geom')):
                     routines.es.geometry_generation(
                         tsk, spc_dct[spc], spc_info,
-                        es_dct[es_run_key]['mc_nsamp'],
+                        mc_nsamp,
                         ini_thy_level, thy_level,
                         ini_filesys, filesys, overwrite,
                         saddle=True)
@@ -152,7 +153,7 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
                     if 'vdw_' not in spc:
                         routines.es.geometry_generation(
                             tsk, spc_dct[spc], spc_info,
-                            es_dct[es_run_key]['mc_nsamp'],
+                            mc_nsamp,
                             ini_thy_level, thy_level,
                             ini_filesys, filesys, overwrite,
                             saddle=False)

@@ -93,8 +93,12 @@ def modify_spc_dct(spc_dct, geom_dct, hind_inc):
         # Set the ich and mult
         ich = spc_dct[spc]['ich']
         mul = spc_dct[spc]['mul']
+        chg = spc_dct[spc]['chg']
+        mod_spc_dct[spc] = {}
         mod_spc_dct[spc]['ich'] = ich
         mod_spc_dct[spc]['mul'] = mul
+        mod_spc_dct[spc]['chg'] = chg
+
         # Add the optional things
         if (ich, mul) in eleclvl.DCT:
             mod_spc_dct[spc]['elec_levs'] = eleclvl.DCT[(ich, mul)]

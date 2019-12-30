@@ -26,13 +26,15 @@ PRESS = [0.03, 0.1, 0.3, 1., 3., 10., 30., 100.]
 KICKOFF_SIZE = 0.1
 KICKOFF_BACKWARD = False
 
-def run(tsk_info_lst, spc_dct, rct_names_lst, prd_names_lst,
+
+def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
         run_prefix, save_prefix, ene_coeff=[1.],
         vdw_params=[False, False, True],
         options=[True, True, True, False],
         etrans=[200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0],
         pst_params=[1.0, 6],
-        rad_rad_ts='vtst'):
+        rad_rad_ts='vtst',
+        mc_nsamp=[True, 10, 1, 3, 100]):
     """ main driver for generation of full set of rate constants on a single PES
     """
 
@@ -73,7 +75,8 @@ def run(tsk_info_lst, spc_dct, rct_names_lst, prd_names_lst,
             spc_tsk_lst, runspecies, spc_dct,
             run_prefix, save_prefix, vdw_params,
             pst_params=pst_params,
-            rad_rad_ts=rad_rad_ts)
+            rad_rad_ts=rad_rad_ts,
+            mc_nsamp=mc_nsamp)
 
     # Form the reaction list
     rxn_lst = []
@@ -144,10 +147,15 @@ def run(tsk_info_lst, spc_dct, rct_names_lst, prd_names_lst,
         if runes:
             ts_found = esdriver.run(
                 ts_tsk_lst, rxn_lst, spc_dct,
-                run_prefix, save_prefix, vdw_params)
+                run_prefix, save_prefix, vdw_params,
+                mc_nsamp=mc_nsamp)
 
+    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+    print(options)
+    print(runrates)
     if runrates:
         for spc in spc_dct:
+            print(spc)
             if 'original_zma' in spc_dct[spc]:
                 pes_formula = automol.geom.formula(
                     automol.zmatrix.geometry(spc_dct[spc]['original_zma']))

@@ -120,25 +120,33 @@ def print_pes_channels(pes_dct):
                 ' + '.join(pes_prd_names_lst[chn_idx])))
 
 
-def determine_connected_pes_channels(pes_dct, pesnums, channels):
+def get_pes_nums(pes_dct, pesnums):
+    """ take user input of pes nums and convert them to int list
+    """
+    for pes_idx, _ in enumerate(pes_dct, start=1):
+        if isinstance(pesnums, str):
+            if pesnums == 'all':
+                pesnums_lst = numpy.arange(len(pes_dct)+1)
+            elif '-' in pesnums:
+                start, end = pesnums.split('-')
+                pesnums_lst = numpy.arange(int(start), int(end)+1)
+            elif '[' in pesnums:
+                nums = pesnums.replace('[', '').replace(']', '').split(',')
+                pesnums_lst = [int(num) for num in nums]
+
+    return pesnums_lst
+
+
+def determine_connected_pes_channels(pes_dct, pesnums_lst):
     """ Sort the PES lst and set the connected channels
     """
+    conn_chn_lst = []
     for pes_idx, pes in enumerate(pes_dct, start=1):
-        if pes_idx in pesnums:
+        if pes_idx in pesnums_lst:
+            # Set the names list needed below
             pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
             pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
             pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
-            if isinstance(channels, str):
-                if channels == 'all':
-                    print(len(pes_rxn_name_lst))
-                    pes_chns = numpy.arange(len(pes_rxn_name_lst)+1)
-                elif '-' in channels:
-                    start, end = channels.split('-')
-                    pes_chns = numpy.arange(int(start), int(end)+1)
-                elif '[' in channels:
-                    nums = channels.replace('[', '').replace(']', '').split(',')
-                    pes_chns = [int(num) for num in nums]
-            print('for pes:', pes_idx)
 
             # Split up sub-pes within a formula
             subpes_idx = 0
@@ -184,7 +192,9 @@ def determine_connected_pes_channels(pes_dct, pesnums, channels):
                 for cval in cvals:
                     print(pes_rxn_name_lst[cval])
 
-            return connchnls
+            conn_chn_lst.append(connchnls)
+
+    return conn_chn_lst
 
 
 # def parse_json():

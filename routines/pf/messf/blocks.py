@@ -641,12 +641,12 @@ def fake_species_block(
 
     # prepare the four sets of file systems
     orb_restr = util.orbital_restriction(
-        spc_info_i, har_level)
-    har_levelp_i = har_level[0:3]
+        spc_info_i, harm_level)
+    har_levelp_i = harm_level[0:3]
     har_levelp_i.append(orb_restr)
     orb_restr = util.orbital_restriction(
-        spc_info_j, har_level)
-    har_levelp_j = har_level[0:3]
+        spc_info_j, harm_level)
+    har_levelp_j = harm_level[0:3]
     har_levelp_j.append(orb_restr)
 
     # Set theory filesystem used throughout
