@@ -50,11 +50,20 @@ PESNUMS_LST = loadmech.get_pes_nums(PES_DCT, PARAMS.PESNUMS)
 CONN_CHNLS_LST = loadmech.determine_connected_pes_channels(
     PES_DCT, PESNUMS_LST)
 
-# Stop here for now
-# print('Exiting')
-# sys.exit()
+# Run the es driver
+if PARAMS.RUN_ES:
+    lmech.run_spc_esdriver(
+        rct_names_lst, prd_names_lst, tsk_info_lst,
+        spc_dct, run_prefix, save_prefix, vdw_params,
+        pst_params=[1.0, 6],
+        rad_rad_ts='pst')
+    lmech.run_rxn_esdriver(
+        rct_names_lst, prd_names_lst, tsk_info_lst,
+        spc_dct, run_prefix, save_prefix, vdw_params,
+        pst_params=[1.0, 6],
+        rad_rad_ts='pst')
 
-# Run the reactions driver (es, ktp, etc)
+# Run the rates driver
 if PARAMS.RUN_RATES:
     lmech.run_ktp_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
