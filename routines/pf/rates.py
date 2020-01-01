@@ -39,26 +39,25 @@ def rate_headers(
 
 
 def make_all_species_data(rxn_lst, spc_dct, save_prefix, model_info,
-                          pf_info, ts_found, projrot_script_str):
+                          pf_info, projrot_script_str):
     """ generate the MESS species blocks for all the species
     """
     species = {}
     spc_save_fs = autofile.fs.species(save_prefix)
     for idx, rxn in enumerate(rxn_lst):
         tsname = 'ts_{:g}'.format(idx)
-        if tsname in ts_found:
-            specieslist = rxn['reacs'] + rxn['prods']
-            for name in specieslist:
-                if name not in species:
-                    species[name], _ = make_species_data(
-                        name, spc_dct[name], spc_save_fs,
-                        model_info, pf_info, projrot_script_str)
-            if 'radical radical addition' not in spc_dct[tsname]['class']:
-                ret1, ret2 = make_species_data(
-                    tsname, spc_dct[tsname], save_prefix,
+        specieslist = rxn['reacs'] + rxn['prods']
+        for name in specieslist:
+            if name not in species:
+                species[name], _ = make_species_data(
+                    name, spc_dct[name], spc_save_fs,
                     model_info, pf_info, projrot_script_str)
-                species[tsname] = ret1
-                spc_dct[tsname]['imag_freq'] = ret2
+        if 'radical radical addition' not in spc_dct[tsname]['class']:
+            ret1, ret2 = make_species_data(
+                tsname, spc_dct[tsname], save_prefix,
+                model_info, pf_info, projrot_script_str)
+            species[tsname] = ret1
+            spc_dct[tsname]['imag_freq'] = ret2
     return species
 
 

@@ -18,6 +18,7 @@ from lib.reaction.ts import ts_class
 from routines.pf.fit import fit_rates
 from routines.pf import rates as messrates
 from routines.pf import get_high_level_energy
+import mech as lmech
 
 
 TEMPS = [500., 550., 600., 650., 700., 750., 800., 850., 900., 950., 1000., 1050., 1100., 1150., 1200., 1250., 1300., 1350., 1400., 1450., 1500., 1550., 1600., 1650., 1700., 1750., 1800., 1850., 1900., 1950., 2000.]
@@ -42,7 +43,7 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
     fbuild.prefix_filesystem(run_prefix, save_prefix)
 
     # Determine options
-    runes = options[0]  # run electronic structure theory (True/False)
+#    runes = options[0]  # run electronic structure theory (True/False)
     runmess = options[2]  # run mess (True) / only make mess input file (False)
     runrates = options[3]
     if not runmess:
@@ -69,15 +70,6 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
         else:
             spc_tsk_lst.append(tsk)
 
-    if runes:
-        runspecies = [{'species': spc_queue, 'reacs': [], 'prods': []}]
-        esdriver.run(
-            spc_tsk_lst, runspecies, spc_dct,
-            run_prefix, save_prefix, vdw_params,
-            pst_params=pst_params,
-            rad_rad_ts=rad_rad_ts,
-            mc_nsamp=mc_nsamp)
-
     # Form the reaction list
     rxn_lst = []
     for rxn, _ in enumerate(rct_names_lst):
@@ -85,83 +77,21 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
             {'species': [], 'reacs': list(rct_names_lst[rxn]), 'prods':
              list(prd_names_lst[rxn])})
 
-    # Add addtional dictionary items for all the TSs
-    # This presumes that es has been run previously for species list
-    # to produce energies in save file system
-    if ts_tsk_lst:
-        print('\nBegin transition state prep')
-        for ts in spc_dct:
-            if 'ts_' in ts:
-                # Exothermicity reordering requires electronic energy which requires theory level and
-                # tsk_info
-                es_ini_key = ts_tsk_lst[0][2]
-                es_run_key = ts_tsk_lst[0][1]
-                ini_thy_info = finf.get_es_info(es_ini_key)
-                thy_info = finf.get_es_info(es_run_key)
-                # generate rxn data, reorder if necessary, and put in spc_dct for given ts
-                rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
-                    run_prefix, save_prefix, ts, spc_dct, thy_info, ini_thy_info)
-                spc_dct[ts]['rxn_ichs'] = rxn_ichs
-                spc_dct[ts]['rxn_chgs'] = rxn_chgs
-                spc_dct[ts]['rxn_muls'] = rxn_muls
-                spc_dct[ts]['low_mul'] = low_mul
-                spc_dct[ts]['high_mul'] = high_mul
-                # generate rxn_fs from rxn_info stored in spc_dct
-                rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
-                    run_prefix, save_prefix, spc_dct[ts])
-                spc_dct[ts]['rxn_fs'] = [rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path]
-
-                rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
-                    spc_dct[ts]['reacs'], spc_dct[ts]['prods'], spc_dct,
-                    ini_thy_info, save_prefix, run_prefix, KICKOFF_SIZE,
-                    KICKOFF_BACKWARD, substr.PROJROT)
-                ret = ts_class(
-                    rct_zmas, prd_zmas, spc_dct[ts]['rad_rad'],
-                    spc_dct[ts]['mul'], low_mul, high_mul,
-                    rct_cnf_save_fs, prd_cnf_save_fs, spc_dct[ts]['given_class'])
-                ret1, ret2 = ret
-                if ret1:
-                    rxn_class, ts_zma, dist_name, brk_name, grid, frm_bnd_key, brk_bnd_key, tors_names, update_guess = ret1
-                    spc_dct[ts]['class'] = rxn_class
-                    spc_dct[ts]['grid'] = grid
-                    spc_dct[ts]['tors_names'] = tors_names
-                    spc_dct[ts]['original_zma'] = ts_zma
-                    dist_info = [dist_name, 0., update_guess, brk_name]
-                    spc_dct[ts]['dist_info'] = dist_info
-                    spc_dct[ts]['frm_bnd_key'] = frm_bnd_key
-                    spc_dct[ts]['brk_bnd_key'] = brk_bnd_key
-                    # Adding in the rct and prd zmas for vrctst
-                    spc_dct[ts]['rct_zmas'] = rct_zmas
-                    spc_dct[ts]['prd_zmas'] = prd_zmas
-                    if ret2:
-                        spc_dct[ts]['bkp_data'] = ret2
-                    else:
-                        spc_dct[ts]['bkp_data'] = None
-                else:
-                    spc_dct[ts]['class'] = None
-                    spc_dct[ts]['bkp_data'] = None
-
-        print('End transition state prep\n')
-
-        # Run ESDriver
-        if runes:
-            ts_found = esdriver.run(
-                ts_tsk_lst, rxn_lst, spc_dct,
-                run_prefix, save_prefix, vdw_params,
-                mc_nsamp=mc_nsamp)
-
-    print('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-    print(options)
+    # Run the rates
+    print('RATES TEST')
     print(runrates)
+    print(spc_dct)
     if runrates:
-        for spc in spc_dct:
-            print(spc)
-            if 'original_zma' in spc_dct[spc]:
-                pes_formula = automol.geom.formula(
-                    automol.zmatrix.geometry(spc_dct[spc]['original_zma']))
-                print('Starting mess file preparation for {}:'.format(
-                    pes_formula))
-                break
+        # for spc in spc_dct:
+        #     print('PES FORMULA ASSESS TEST')
+        #     print(spc_dct[spc])
+        #     print(spc)
+        #     if 'original_zma' in spc_dct[spc]:
+        #         pes_formula = automol.geom.formula(
+        #             automol.zmatrix.geometry(spc_dct[spc]['original_zma']))
+        #         print('Starting mess file preparation for {}:'.format(
+        #             pes_formula))
+        #         break
 
         # Figure out the model and theory levels for the MESS files
         geo_lvl = ''
@@ -250,13 +180,19 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
         spc_save_fs = autofile.fs.species(save_prefix)
         ts_queue = []
         for spc in spc_dct:   # Have toget them for the TS too
-            if spc in ts_found:
+            if 'ts_' in spc:
                 ts_queue.append(spc)
+            # if spc in ts_found:
+            #     ts_queue.append(spc)
         print('getting ready for zpe:')
         for spc in spc_queue + ts_queue:
+            print('SPC TEST')
+            print(spc_dct[spc])
             spc_info = (
                 spc_dct[spc]['ich'], spc_dct[spc]['chg'], spc_dct[spc]['mul'])
             if 'ts_' in spc:
+                spc_dct[spc] = lmech.set_sadpt_info(
+                    ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix)
                 spc_save_path = spc_dct[spc]['rxn_fs'][3]
                 saddle = True
                 save_path = spc_save_path
@@ -265,6 +201,22 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
                 spc_save_path = spc_save_fs.leaf.path(spc_info)
                 saddle = False
                 save_path = save_prefix
+            print('SPC_CHK')
+            print(spc_dct[spc])
+            print(spc_save_path)
+            # Set the pes_formula using the original zma
+            for spc_2 in spc_dct:
+                # print('PES FORMULA ASSESS TEST')
+                # print(spc_dct[spc])
+                # print(spc)
+                if 'original_zma' in spc_dct[spc_2]:
+                    pes_formula = automol.geom.formula(
+                        automol.zmatrix.geometry(spc_dct[spc_2]['original_zma']))
+                    print('Starting mess file preparation for {}:'.format(
+                        pes_formula))
+                    break
+            print('ZPE TEST')
+            print(spc_dct[spc])
             zpe, _ = calczpe.get_zpe(
                 spc, spc_dct[spc], spc_save_path, pf_levels, ts_model)
             spc_dct[spc]['zpe'] = zpe
@@ -311,24 +263,23 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
         first_ground_ene = 0.
         species = messrates.make_all_species_data(
             rxn_lst, spc_dct, save_prefix, ts_model, pf_levels,
-            ts_found, substr.PROJROT)
+            substr.PROJROT)
         for idx, rxn in enumerate(rxn_lst):
             tsname = 'ts_{:g}'.format(idx)
-            if tsname in ts_found:
-                # if spc_dct[ts]['rad_rad']:
-                tsform = automol.geom.formula(
-                    automol.zmatrix.geometry(spc_dct[tsname]['original_zma']))
-                if tsform != pes_formula:
-                    print('Reaction list contains reactions on different potential energy',
-                          'surfaces: {} and {}'.format(tsform, pes_formula))
-                    print('Will proceed to construct only {}'.format(pes_formula))
-                    continue
-                mess_strs, first_ground_ene = messrates.make_channel_pfs(
-                    tsname, rxn, species, spc_dct, idx_dct, mess_strs,
-                    first_ground_ene, spc_save_fs, ts_model, pf_levels,
-                    multi_info, substr.PROJROT,
-                    pst_params=pst_params)
-                # print(idx_dct)
+            # if spc_dct[ts]['rad_rad']:
+            tsform = automol.geom.formula(
+                automol.zmatrix.geometry(spc_dct[tsname]['original_zma']))
+            if tsform != pes_formula:
+                print('Reaction list contains reactions on different potential energy',
+                      'surfaces: {} and {}'.format(tsform, pes_formula))
+                print('Will proceed to construct only {}'.format(pes_formula))
+                continue
+            mess_strs, first_ground_ene = messrates.make_channel_pfs(
+                tsname, rxn, species, spc_dct, idx_dct, mess_strs,
+                first_ground_ene, spc_save_fs, ts_model, pf_levels,
+                multi_info, substr.PROJROT,
+                pst_params=pst_params)
+            # print(idx_dct)
         well_str, bim_str, ts_str = mess_strs
         ts_str += '\nEnd\n'
         print(well_str)

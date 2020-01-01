@@ -52,20 +52,7 @@ CONN_CHNLS_LST = loadmech.determine_connected_pes_channels(
 
 # Run the es driver
 if PARAMS.RUN_ES:
-    lmech.run_spc_esdriver(
-        rct_names_lst, prd_names_lst, tsk_info_lst,
-        spc_dct, run_prefix, save_prefix, vdw_params,
-        pst_params=[1.0, 6],
-        rad_rad_ts='pst')
-    lmech.run_rxn_esdriver(
-        rct_names_lst, prd_names_lst, tsk_info_lst,
-        spc_dct, run_prefix, save_prefix, vdw_params,
-        pst_params=[1.0, 6],
-        rad_rad_ts='pst')
-
-# Run the rates driver
-if PARAMS.RUN_RATES:
-    lmech.run_ktp_driver(
+    lmech.run_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
         MOD_SPC_DCT, {},
         PARAMS.TSK_INFO_LST,
@@ -77,5 +64,39 @@ if PARAMS.RUN_RATES:
         pst_params=PARAMS.PST_PARAMS,
         rad_rad_ts=PARAMS.RAD_RAD_TS,
         hind_inc=PARAMS.HIND_INC,
-        mc_nsamp=PARAMS.MC_NSAMP0
+        mc_nsamp=PARAMS.MC_NSAMP0,
+        driver='es_spc'
+    )
+    lmech.run_driver(
+        PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
+        MOD_SPC_DCT, {},
+        PARAMS.TSK_INFO_LST,
+        PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
+        ene_coeff=[1.],
+        vdw_params=[False, False, True],
+        options=PARAMS.OPTIONS_RATE,
+        etrans=lmech.etrans_lst(PARAMS),
+        pst_params=PARAMS.PST_PARAMS,
+        rad_rad_ts=PARAMS.RAD_RAD_TS,
+        hind_inc=PARAMS.HIND_INC,
+        mc_nsamp=PARAMS.MC_NSAMP0,
+        driver='es_rxn'
+    )
+
+# Run the rates driver
+if PARAMS.RUN_RATES:
+    lmech.run_driver(
+        PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
+        MOD_SPC_DCT, {},
+        PARAMS.TSK_INFO_LST,
+        PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
+        ene_coeff=[1.],
+        vdw_params=[False, False, True],
+        options=PARAMS.OPTIONS_RATE,
+        etrans=lmech.etrans_lst(PARAMS),
+        pst_params=PARAMS.PST_PARAMS,
+        rad_rad_ts=PARAMS.RAD_RAD_TS,
+        hind_inc=PARAMS.HIND_INC,
+        mc_nsamp=PARAMS.MC_NSAMP0,
+        driver='ktp'
     )

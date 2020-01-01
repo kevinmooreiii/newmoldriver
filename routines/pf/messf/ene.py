@@ -84,6 +84,8 @@ def get_zero_point_energy(
     har_levelp.append(orb_restr)
 
     har_save_path = thy_save_fs.leaf.path(har_levelp[1:4])
+    print('har save path test')
+    print(har_save_path)
     saddle = False
     if 'ts_' in spc:
         har_save_fs = autofile.fs.ts(har_save_path)

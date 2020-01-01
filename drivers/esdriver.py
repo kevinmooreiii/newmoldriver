@@ -43,7 +43,6 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
     fbuild.prefix_filesystem(run_prefix, save_prefix)
 
     # Loop over Tasks
-    ts_found = []
     for tsk_info in tsk_info_lst:
 
         # Task information
@@ -97,7 +96,6 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
                             print('Success, transition state',
                                   '{} added to species queue'.format(sadpt))
                             spc_queue.append(sadpt)
-                            ts_found.append(sadpt)
                     elif 'vdw' in tsk:
                         pass
                         # vdws = lwells.find_vdw(
@@ -176,7 +174,6 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
                             tsk, thy_level, ini_filesys,
                             spc_info, spc_dct[spc], overwrite,
                             saddle=False, selection='min')
-    return ts_found
 
 
 def set_fs(spc, spc_info, thy_info,
