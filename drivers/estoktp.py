@@ -11,6 +11,7 @@ from lib.load import species as loadspc
 import lib.filesystem.build as lfs
 from lib.submission import read_dat
 import mech as lmech
+import thermodriver
 
 # Set runtime options based on user input
 INPUT = lmech.get_user_input()
@@ -36,22 +37,14 @@ PES_DCT = loadmech.parse_mechanism_file(
     sort_rxns=PARAMS.SORT_RXNS,
     rad_rad_sort=PARAMS.RAD_RAD_SORT)
 
-# # Run thermo if desired
-# if RUN_THERMO:
-#     SPC_QUEUE = list(SPC_NAMES)
-#     thermodriver.driver.run(
-#         PARAMS.TSK_INFO_LST, ES_DCT, SPC_DCT, SPC_QUEUE, PARAMS.REF_MOLS,
-#         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
-#         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
-#
 # Set the channels on the PESs to run
 loadmech.print_pes_channels(PES_DCT)
 PESNUMS_LST = loadmech.get_pes_nums(PES_DCT, PARAMS.PESNUMS)
 CONN_CHNLS_LST = loadmech.determine_connected_pes_channels(
     PES_DCT, PESNUMS_LST)
 
-# Run the es driver
-if PARAMS.RUN_ES:
+# Run the requested drivers: es, thermo, ktp
+if PARAMS.RUN_ES_RXN:
     lmech.run_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
         MOD_SPC_DCT, {},
@@ -67,6 +60,8 @@ if PARAMS.RUN_ES:
         mc_nsamp=PARAMS.MC_NSAMP0,
         driver='es_spc'
     )
+
+if PARAMS.RUN_ES_RXN:
     lmech.run_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
         MOD_SPC_DCT, {},
@@ -83,7 +78,12 @@ if PARAMS.RUN_ES:
         driver='es_rxn'
     )
 
-# Run the rates driver
+if PARAMS.RUN_THERMO:
+    thermodriver.run(
+        PARAMS.TSK_INFO_LST, SPC_DCT, PARAMS.REF_MOLS,
+        PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
+        ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
+
 if PARAMS.RUN_RATES:
     lmech.run_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,

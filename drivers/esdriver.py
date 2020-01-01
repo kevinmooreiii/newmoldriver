@@ -24,8 +24,6 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
     """ driver for all electronic structure tasks
     """
 
-    print("Tasks:\n", tsk_info_lst)
-
     # Set the es_dct
     es_dct = theolvls.ES_DCT
 

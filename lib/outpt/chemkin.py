@@ -12,7 +12,7 @@ def run_ckin_header(pf_info, ref_info, spc_model):
     """
     tors_model, vib_model, _ = spc_model
     har_info, tors_info, vpt2_info, _, sp_str, = pf_info
-    har_ref_info, tors_ref_info, vpt2_ref_info, _ = ref_info
+    har_ref_info, tors_ref_info, vpt2_ref_info, _, _ = ref_info
 
     # Convert the pac99 polynomial to chemkin polynomial
     chemkin_header_str = '! tors model: {0}\n'.format(tors_model)

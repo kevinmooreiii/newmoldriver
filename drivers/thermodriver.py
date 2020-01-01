@@ -4,7 +4,6 @@ import os
 import automol.inchi
 import automol.geom
 import thermo.heatform
-import esdriver
 import autofile.fs
 
 # Calling the new libs
@@ -24,14 +23,16 @@ REF_CALLS = {"basic": "get_basic",
              "cbh2": "get_cbhtwo"}
 
 
-def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
+def run(tsk_info_lst, spcdct, ref,
         run_prefix, save_prefix, ene_coeff=[1.],
         options=[True, True, True, False]):
     """ main driver for thermo run
     """
 
+    # Prepare prefix filesystem
+    fbuild.prefix_filesystem(run_prefix, save_prefix)
+
     # Determine options
-    runes = options[0]      # Run electronic structure theory
     runmess = options[1]    # Run mess/just make the mess input file
     runthermo = options[2]
     if not runmess:
@@ -39,6 +40,7 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
 
     # Fix any issues in tsk_list
     tsk_info_lst = fix(tsk_info_lst)
+
     # Add reference molecules
     for spc in spc_queue:
         if 'ich' not in spcdct[spc]:
@@ -48,25 +50,7 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
     full_queue = list(dict.fromkeys(full_queue))
     print(msg)
 
-    # Prepare prefix filesystem
-    fbuild.prefix_filesystem(run_prefix, save_prefix)
-
-    # Run ESDriver
-    if runes:
-        runspecies = [{'species': full_queue, 'reacs': [], 'prods': []}]
-        esdriver.run(
-            tsk_info_lst, es_dct, runspecies, spcdct, run_prefix, save_prefix)
-
     if runmess:
-        geo_lvl = ''
-        harm_lvl = ''
-        anharm_lvl = ''
-        tors_lvl = ''
-        sym_lvl = ''
-        harm_lvl_ref = ''
-        anharm_lvl_ref = ''
-        tors_lvl_ref = ''
-        sym_lvl_ref = ''
 
         # Get PF input header
         temp_step = 100.
@@ -74,59 +58,8 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
         global_pf_str = messpf.get_pf_header(temp_step, ntemps)
 
         # Gather PF model and theory level info
-        spc_model = ['RIGID', 'HARM', '']
-        geom = False
-        hess = False
-        for tsk in tsk_info_lst:
-            if 'samp' in tsk[0] or 'geom' in tsk[0]:
-                geo_lvl = tsk[1]
-                geom = True
-            if 'grad' in tsk[0] or 'hess' in tsk[0]:
-                harm_lvl = tsk[1]
-                harm_lvl_ref = tsk[2]
-                # if 'grad' in tsk[0]:
-                #     grad = True
-                if 'hess' in tsk[0]:
-                    hess = True
-                if not geom:
-                    ene_lvl = tsk[1]
-                    geo_lvl = tsk[1]
-            if 'hr' in tsk[0] or 'tau' in tsk[0]:
-                tors_lvl = tsk[1]
-                tors_lvl_ref = tsk[2]
-                if 'md' in tsk[0]:
-                    spc_model[0] = 'MDHR'
-                if 'tau' in tsk[0]:
-                    spc_model[0] = 'TAU'
-                else:
-                    spc_model[0] = '1DHR'
-            if 'anharm' in tsk[0] or 'vpt2' in tsk[0]:
-                anharm_lvl = tsk[1]
-                anharm_lvl_ref = tsk[2]
-                spc_model[1] = 'ANHARM'
-                if not hess:
-                    geo_lvl = tsk[1]
-            if 'sym' in tsk[0]:
-                sym_lvl = tsk[1]
-                sym_lvl_ref = tsk[2]
-                if 'samp' in tsk[0]:
-                    spc_model[2] = 'SAMPLING'
-                if '1DHR' in tsk[0]:
-                    spc_model[2] = '1DHR'
-        geo_thy_info = finf.get_thy_info(geo_lvl)
-        harm_thy_info = finf.get_thy_info(harm_lvl)
-        tors_thy_info = finf.get_thy_info(tors_lvl)
-        anharm_thy_info = finf.get_thy_info(anharm_lvl)
-        sym_thy_info = finf.get_thy_info(sym_lvl)
-        pf_levels = [harm_thy_info, tors_thy_info,
-                     anharm_thy_info, sym_thy_info]
-
-        harm_ref_thy_info = finf.get_thy_info(harm_lvl_ref)
-        tors_ref_thy_info = finf.get_thy_info(tors_lvl_ref)
-        anharm_ref_thy_info = finf.get_thy_info(anharm_lvl_ref)
-        sym_ref_thy_info = finf.get_thy_info(sym_lvl_ref)
-        ref_levels = [harm_ref_thy_info, tors_ref_thy_info,
-                      anharm_ref_thy_info, sym_ref_thy_info]
+        pf_levels, ref_levels, ts_model = lmech.set_model_info(
+            tsk_info_lst)
 
         # Collect the PF input for each species
         # Initialize the ene for each of the species
@@ -163,7 +96,7 @@ def run(tsk_info_lst, es_dct, spcdct, spc_queue, ref,
             spcdct[spc]['spc_str'] = spc_str
             spcdct[spc]['ene'] = 0
 
-        # Make and Run the PF file
+    # Make and Run the PF file
     if runthermo:
         for spc in spc_queue:
             spc_save_path = spcdct[spc]['spc_save_path']

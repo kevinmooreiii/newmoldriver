@@ -5,10 +5,12 @@ better home
 import os
 import sys
 import numpy
+import automol.geom
 import esdriver
 import ktpdriver
 
 from routines import util
+from routines.pf import get_high_level_energy
 from lib.phydat import phycon
 from lib.submission import substr
 from lib.filesystem import inf as finf
@@ -52,8 +54,8 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                     start, end = channels.split('-')
                     pes_chns = numpy.arange(int(start), int(end)+1)
                 elif '[' in channels:
-                    nums = channels.replace('[', '').replace(']', '').split(',')
-                    pes_chns = [int(num) for num in nums]
+                    nums = channels.replace('[', '').replace(']', '')
+                    pes_chns = [int(num) for num in nums.split(',')]
 
             # Print out the channel that is being run
             for cidx, cvals in enumerate(connchnls_lst[pes_idx-1].values()):
@@ -64,7 +66,7 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
 
             # Run the KTPDriver over the channels
             for cidx, cvals in enumerate(connchnls_lst[pes_idx-1].values()):
-                print('ktp on PES{}_{}: {} for the following channels...'.format(
+                print('ktp on PES{}_{}: {} for following channels...'.format(
                     str(pes_idx), str(cidx+1), pes))
                 run_pes = False
                 rct_names_lst = []
@@ -93,10 +95,12 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                         prods = rxn['prods']
                         tsname = 'ts_{:g}'.format(ts_idx)
                         spc_dct[tsname] = {}
-                        if rxn_name_lst[idx] in cla_dct:
-                            spc_dct[tsname]['given_class'] = cla_dct[rxn_name_lst[idx]]
-                        elif '='.join(rxn_name_lst[idx].split('=')[::-1]) in cla_dct:
-                            spc_dct[tsname]['given_class'] = cla_dct['='.join(rxn_name_lst[idx].split('=')[::-1])]
+                        rname = rxn_name_lst[idx]
+                        rname_eq = '='.join(rname.split('=')[::-1])
+                        if rname in cla_dct:
+                            spc_dct[tsname]['given_class'] = cla_dct[rname]
+                        elif rname_eq in cla_dct:
+                            spc_dct[tsname]['given_class'] = cla_dct[rname_eq]
                             reacs = rxn['prods']
                             prods = rxn['reacs']
                         else:
@@ -110,9 +114,9 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             print(spc_dct[rct])
                             ts_chg += spc_dct[rct]['chg']
                         spc_dct[tsname]['chg'] = ts_chg
-                        ts_mul_low, ts_mul_high, rad_rad = util.ts_mul_from_reaction_muls(
+                        mul_low, _, rad_rad = util.ts_mul_from_reaction_muls(
                             rct_names_lst[idx], prd_names_lst[idx], spc_dct)
-                        spc_dct[tsname]['mul'] = ts_mul_low
+                        spc_dct[tsname]['mul'] = mul_low
                         spc_dct[tsname]['rad_rad'] = rad_rad
                         spc_dct[tsname]['hind_inc'] = (
                             hind_inc * phycon.DEG2RAD)
@@ -142,12 +146,9 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             run_prefix,
                             save_prefix,
                             ene_coeff=ene_coeff,
-                            vdw_params=vdw_params,
                             options=options,
                             etrans=etrans,
-                            pst_params=pst_params,
-                            rad_rad_ts=rad_rad_ts,
-                            mc_nsamp=mc_nsamp)
+                            pst_params=pst_params)
 
 
 def get_user_input():
@@ -198,28 +199,17 @@ def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                  mc_nsamp=[True, 10, 1, 3, 100]):
     """ Call the ESDriver Routines for species in the spc dct
     """
-    spc_queue = []
-    for rxn, _ in enumerate(rct_names_lst):
-        rxn_spc = list(rct_names_lst[rxn])
-        rxn_spc.extend(list(prd_names_lst[rxn]))
-        for spc in rxn_spc:
-            if spc not in spc_queue:
-                spc_queue.append(spc)
 
-    spc_tsk_lst = []
-    ts_tsk_lst = []
-    ts_tsk = False
-    for tsk in tsk_info_lst:
-        if 'find_ts' in tsk[0]:
-            ts_tsk = True
-        if ts_tsk:
-            ts_tsk_lst.append(tsk)
-        else:
-            spc_tsk_lst.append(tsk)
+    # Get the reactant and product speceies in a list to be run
+    spc_queue = form_spc_queue(rct_names_lst, prd_names_lst)
+    spc_run_lst = format_run_spc_lst(spc_queue)
 
-    runspecies = [{'species': spc_queue, 'reacs': [], 'prods': []}]
+    # Format the task info list
+    spc_tsk_lst, _ = format_tsk_lst(tsk_info_lst)
+
+    # Execute ESDriver
     esdriver.run(
-        spc_tsk_lst, runspecies, spc_dct,
+        spc_tsk_lst, spc_run_lst, spc_dct,
         run_prefix, save_prefix, vdw_params,
         pst_params=pst_params,
         rad_rad_ts=rad_rad_ts,
@@ -233,19 +223,11 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                  mc_nsamp=[True, 10, 1, 3, 100]):
     """ Call the ESDriver Routines for reactions in the spc dct
     """
-    rxn_lst = []
-    for rxn, _ in enumerate(rct_names_lst):
-        rxn_lst.append(
-            {'species': [], 'reacs': list(rct_names_lst[rxn]), 'prods':
-             list(prd_names_lst[rxn])})
+    # Format the task info list
+    _, ts_tsk_lst = format_tsk_lst(tsk_info_lst)
 
-    ts_tsk_lst = []
-    ts_tsk = False
-    for tsk in tsk_info_lst:
-        if 'find_ts' in tsk[0]:
-            ts_tsk = True
-        if ts_tsk:
-            ts_tsk_lst.append(tsk)
+    # Form the reaction list
+    rxn_lst = format_run_rxn_lst(rct_names_lst, prd_names_lst)
 
     # Add addtional dictionary items for all the TSs
     # This presumes that es has been run previously for species list
@@ -258,13 +240,62 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                     ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix)
         print('End transition state prep\n')
 
-        # Run ESDriver
+        # Execute ESDriver
         esdriver.run(
             ts_tsk_lst, rxn_lst, spc_dct,
             run_prefix, save_prefix, vdw_params,
             pst_params=pst_params,
             rad_rad_ts=rad_rad_ts,
             mc_nsamp=mc_nsamp)
+
+
+def form_spc_queue(spc_lst=(), rct_names_lst=(), prd_names_lst=()):
+    """ form the species queue from tht elist
+    """
+    spc_queue = list(spc_lst)
+    for rxn, _ in enumerate(rct_names_lst):
+        rxn_spc = list(rct_names_lst[rxn])
+        rxn_spc.extend(list(prd_names_lst[rxn]))
+        for spc in rxn_spc:
+            if spc not in spc_queue:
+                spc_queue.append(spc)
+
+    return spc_queue
+
+
+def format_tsk_lst(tsk_info_lst):
+    """ Format the input task list appropriate for spc or rxns
+    """
+    spc_tsk_lst = []
+    ts_tsk_lst = []
+    ts_tsk = False
+    for tsk in tsk_info_lst:
+        if 'find_ts' in tsk[0]:
+            ts_tsk = True
+        if ts_tsk:
+            ts_tsk_lst.append(tsk)
+        else:
+            spc_tsk_lst.append(tsk)
+
+    return spc_tsk_lst, ts_tsk_lst
+
+
+def format_run_spc_lst(spc_queue):
+    """ get the list of species to run
+    """
+    return [{'species': spc_queue, 'reacs': [], 'prods': []}]
+
+
+def format_run_rxn_lst(rct_names_lst, prd_names_lst):
+    """ Get the lst of reactions to be run
+    """
+    run_lst = []
+    for rxn, _ in enumerate(rct_names_lst):
+        run_lst.append(
+            {'species': [], 'reacs': list(rct_names_lst[rxn]), 'prods':
+             list(prd_names_lst[rxn])})
+
+    return run_lst
 
 
 def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
@@ -274,7 +305,8 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
     es_run_key = ts_tsk_lst[0][1]
     ini_thy_info = finf.get_es_info(es_ini_key)
     thy_info = finf.get_es_info(es_run_key)
-    # generate rxn data, reorder if necessary, and put in spc_dct for given ts
+
+    # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
     rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
         run_prefix, save_prefix, spc, spc_dct, thy_info, ini_thy_info)
     spc_dct[spc]['rxn_ichs'] = rxn_ichs
@@ -282,11 +314,15 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
     spc_dct[spc]['rxn_muls'] = rxn_muls
     spc_dct[spc]['low_mul'] = low_mul
     spc_dct[spc]['high_mul'] = high_mul
-    # generate rxn_fs from rxn_info stored in spc_dct
+
+    # Generate rxn_fs from rxn_info stored in spc_dct
     rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
         run_prefix, save_prefix, spc_dct[spc])
-    spc_dct[spc]['rxn_fs'] = [rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path]
-
+    spc_dct[spc]['rxn_fs'] = [
+        rxn_run_fs,
+        rxn_save_fs,
+        rxn_run_path,
+        rxn_save_path]
     rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
         spc_dct[spc]['reacs'], spc_dct[spc]['prods'], spc_dct,
         ini_thy_info, save_prefix, run_prefix, KICKOFF_SIZE,
@@ -297,8 +333,10 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
         rct_cnf_save_fs, prd_cnf_save_fs, spc_dct[spc]['given_class'])
     ret1, ret2 = ret
     if ret1:
-        print('CCCCCCCCCC')
-        rxn_class, spc_zma, dist_name, brk_name, grid, frm_bnd_key, brk_bnd_key, tors_names, update_guess = ret1
+        [rxn_class, spc_zma,
+         dist_name, brk_name, grid,
+         frm_bnd_key, brk_bnd_key,
+         tors_names, update_guess] = ret1
         spc_dct[spc]['class'] = rxn_class
         spc_dct[spc]['grid'] = grid
         spc_dct[spc]['tors_names'] = tors_names
@@ -307,7 +345,7 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
         spc_dct[spc]['dist_info'] = dist_info
         spc_dct[spc]['frm_bnd_key'] = frm_bnd_key
         spc_dct[spc]['brk_bnd_key'] = brk_bnd_key
-        # Adding in the rct and prd zmas for vrcspct (check if theory is correct)
+        # Adding in the rct and prd zmas for vrctst
         spc_dct[spc]['rct_zmas'] = rct_zmas
         spc_dct[spc]['prd_zmas'] = prd_zmas
         if ret2:
@@ -319,3 +357,167 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
         spc_dct[spc]['bkp_data'] = None
 
     return spc_dct[spc]
+
+
+def set_model_info(ts_tsk_lst):
+    """ Set the model info
+    """
+    # Initialize the levels
+    geo_lvl = ''
+    harm_lvl = ''
+    anharm_lvl = ''
+    tors_lvl = ''
+    sym_lvl = ''
+    # Initialize the reference levels
+    geo_lvl_ref = ''
+    harm_lvl_ref = ''
+    anharm_lvl_ref = ''
+    tors_lvl_ref = ''
+    sym_lvl_ref = ''
+
+    # Set model levels
+    ts_model = ['RIGID', 'HARM', '']
+    geom = False
+    hess = False
+    for tsk in ts_tsk_lst:
+        if 'samp' in tsk[0] or 'find' in tsk[0]:
+            geo_lvl = tsk[1]
+            geom = True
+            if 'find' in tsk[0]:
+                geo_lvl_ref = geo_lvl
+        if 'grad' in tsk[0] or 'hess' in tsk[0]:
+            harm_lvl = tsk[1]
+            harm_lvl_ref = tsk[2]
+            if 'hess' in tsk[0]:
+                hess = True
+            if not geom:
+                geo_lvl = tsk[1]
+        if 'hr' in tsk[0] or 'tau' in tsk[0]:
+            tors_lvl = tsk[1]
+            tors_lvl_ref = tsk[2]
+            if 'md' in tsk[0]:
+                ts_model[0] = 'MDHR'
+            if 'tau' in tsk[0]:
+                ts_model[0] = 'TAU'
+            else:
+                ts_model[0] = '1DHR'
+        if 'anharm' in tsk[0] or 'vpt2' in tsk[0]:
+            anharm_lvl = tsk[1]
+            anharm_lvl_ref = tsk[2]
+            ts_model[1] = 'ANHARM'
+            if not hess:
+                geo_lvl = tsk[1]
+        if 'sym' in tsk[0]:
+            sym_lvl = tsk[1]
+            sym_lvl_ref = tsk[2]
+            if 'samp' in tsk[0]:
+                ts_model[2] = 'SAMPLING'
+            if '1DHR' in tsk[0]:
+                ts_model[2] = '1DHR'
+
+    # Set the theory info objects
+    harm_thy_info = finf.get_thy_info(harm_lvl)
+    tors_thy_info = None
+    anharm_thy_info = None
+    sym_thy_info = None
+    geo_ref_thy_info = finf.get_thy_info(geo_lvl_ref)
+    harm_ref_thy_info = None
+    tors_ref_thy_info = None
+    anharm_ref_thy_info = None
+    sym_ref_thy_info = None
+    if tors_lvl:
+        tors_thy_info = finf.get_thy_info(tors_lvl)
+    if anharm_lvl:
+        anharm_thy_info = finf.get_thy_info(anharm_lvl)
+    if sym_lvl:
+        sym_thy_info = finf.get_thy_info(sym_lvl)
+    if harm_lvl_ref:
+        harm_ref_thy_info = finf.get_thy_info(harm_lvl_ref)
+    if tors_lvl_ref:
+        tors_ref_thy_info = finf.get_thy_info(tors_lvl_ref)
+    if anharm_lvl_ref:
+        anharm_ref_thy_info = finf.get_thy_info(anharm_lvl_ref)
+    if sym_lvl_ref:
+        sym_ref_thy_info = finf.get_thy_info(sym_lvl_ref)
+
+    # Combine levels into a list
+    pf_levels = [
+        harm_thy_info, tors_thy_info,
+        anharm_thy_info, sym_thy_info]
+    ref_levels = [
+        harm_ref_thy_info, tors_ref_thy_info,
+        anharm_ref_thy_info, sym_ref_thy_info,
+        geo_ref_thy_info]
+
+    return pf_levels, ref_levels, ts_model
+
+
+def set_pes_formula(spc_dct):
+    """ Set pes formula using zma
+    """
+    for spc_2 in spc_dct:
+        if 'original_zma' in spc_dct[spc_2]:
+            pes_formula = automol.geom.formula(
+                automol.zmatrix.geometry(spc_dct[spc_2]['original_zma']))
+            print('Starting mess file preparation for {}:'.format(
+                pes_formula))
+            break
+    return pes_formula
+
+
+def get_high_energy(ts_tsk_lst, spc_info, save_path, saddle, ene_coeff):
+    """
+    """
+    spc_ene = 0.0
+    ene_idx = 0
+    for tsk in ts_tsk_lst:
+        if 'ene' in tsk[0]:
+            if ene_idx > len(ene_coeff)-1:
+                print('Warning - an insufficient ',
+                      'energy coefficient list was provided')
+                break
+            ene_lvl = tsk[1]
+            ene_lvl_ref = tsk[2]
+            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref)
+            ene_thy_info = finf.get_thy_info(ene_lvl)
+            ene = get_high_level_energy(
+                spc_info=spc_info,
+                thy_low_level=ene_ref_thy_info,
+                thy_high_level=ene_thy_info,
+                save_prefix=save_path,
+                saddle=saddle)
+            spc_ene += ene*ene_coeff[ene_idx]
+            ene_idx += 1
+
+    return spc_ene
+
+
+def get_ckin_ene_lvl_str(ts_tsk_lst, ene_coeff):
+    """ Write the comment lines for the enrgy lvls for ckin
+    """
+    ene_strl = []
+    ene_idx = 0
+    ene_str = '! energy level:'
+    for tsk in ts_tsk_lst:
+        if 'ene' in tsk[0]:
+            if ene_idx > len(ene_coeff)-1:
+                print('Warning - an insufficient ',
+                      'energy coefficient list was provided')
+                break
+            ene_lvl = tsk[1]
+            ene_lvl_ref = tsk[2]
+            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref)
+            ene_thy_info = finf.get_thy_info(ene_lvl)
+            ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
+                ene_coeff[ene_idx],
+                ene_thy_info[3],
+                ene_thy_info[1],
+                ene_thy_info[2],
+                ene_ref_thy_info[3],
+                ene_ref_thy_info[1],
+                ene_ref_thy_info[2]))
+            ene_idx += 1
+    ene_str += '!               '.join(ene_strl)
+
+    return ene_str
+
