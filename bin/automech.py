@@ -4,12 +4,13 @@
 """
 
 import os
+from drivers import mech as lmech
+from drivers import thermodriver
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
-import lib.filesystem.build as lfs
+from lib.filesystem import build as lfs
 from lib.submission import read_dat
-import mech as lmech
-import thermodriver
+
 
 # Set runtime options based on user input
 INPUT = lmech.get_user_input()

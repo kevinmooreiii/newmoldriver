@@ -7,6 +7,40 @@ import autofile
 from routines import util
 
 
+def reaction_energy(save_prefix, rxn_ich, rxn_chg, rxn_mul, thy_level):
+    """ reaction energy """
+    rct_ichs, prd_ichs = rxn_ich
+    rct_chgs, prd_chgs = rxn_chg
+    rct_muls, prd_muls = rxn_mul
+    rct_enes = reagent_energies(
+        save_prefix, rct_ichs, rct_chgs, rct_muls, thy_level)
+    prd_enes = reagent_energies(
+        save_prefix, prd_ichs, prd_chgs, prd_muls, thy_level)
+    return sum(prd_enes) - sum(rct_enes)
+
+
+def reagent_energies(save_prefix, rgt_ichs, rgt_chgs, rgt_muls, thy_level):
+    """ reagent energies """
+    enes = []
+    for rgt_ich, rgt_chg, rgt_mul in zip(rgt_ichs, rgt_chgs, rgt_muls):
+        spc_save_fs = autofile.fs.species(save_prefix)
+        rgt_info = [rgt_ich, rgt_chg, rgt_mul]
+        spc_save_path = spc_save_fs.leaf.path(rgt_info)
+
+        orb_restr = orbital_restriction(rgt_info, thy_level)
+        thy_lvl = thy_level[0:3]
+        thy_lvl.append(orb_restr)
+        thy_save_fs = autofile.fs.theory(spc_save_path)
+        thy_save_path = thy_save_fs.leaf.path(thy_lvl[1:4])
+        cnf_save_fs = autofile.fs.conformer(thy_save_path)
+        # print('thy_save_path')
+        # print(thy_save_path)
+        min_cnf_locs = min_energy_conformer_locators(cnf_save_fs)
+        ene = cnf_save_fs.leaf.file.energy.read(min_cnf_locs)
+        enes.append(ene)
+    return enes
+
+
 def get_zmas(
         reacs, prods, spc_dct, ini_thy_info, save_prefix, run_prefix,
         kickoff_size, kickoff_backward, projrot_script_str):
@@ -81,3 +115,41 @@ def get_geos(
                 overwrite=False)
         spc_geos.append(geo)
     return spc_geos, cnf_save_fs_lst
+
+
+def min_dist_conformer_zma(dist_name, cnf_save_fs):
+    """ locators for minimum energy conformer """
+    cnf_locs_lst = cnf_save_fs.leaf.existing()
+    cnf_zmas = [cnf_save_fs.leaf.file.zmatrix.read(locs)
+                for locs in cnf_locs_lst]
+    min_dist = 100.
+    min_zma = []
+    for zma in cnf_zmas:
+        dist = automol.zmatrix.values(zma)[dist_name]
+        if dist < min_dist:
+            min_dist = dist
+            min_zma = zma
+    min_zma = [min_zma]
+    return min_zma
+
+
+def min_dist_conformer_zma_geo(dist_coords, cnf_save_fs):
+    """ locators for minimum energy conformer """
+    cnf_locs_lst = cnf_save_fs.leaf.existing()
+    cnf_zmas = [cnf_save_fs.leaf.file.zmatrix.read(locs)
+                for locs in cnf_locs_lst]
+    min_dist = 100.
+    min_zma = []
+    for zma in cnf_zmas:
+        zmas, _ = shift_gra([zma])
+        zma = zmas[0]
+        geo = automol.zmatrix.geometry(zma)
+        # print('min geo')
+        # print(automol.geom.string(geo))
+        # print(*list(dist_coords))
+        dist = automol.geom.distance(geo, *list(dist_coords))
+        if dist < min_dist:
+            min_dist = dist
+            min_zma = zma
+    min_zma = [min_zma]
+    return min_zma

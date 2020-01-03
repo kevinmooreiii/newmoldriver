@@ -2,8 +2,62 @@
 """
 
 import automol
-from lib.phydat import phycon
 from routines import util
+from lib.phydat import phycon
+from lib.reaction import rxnid
+
+
+def ts_class(rct_zmas, prd_zmas, rad_rad, ts_mul, low_mul, high_mul, rct_cnf_save_fs_lst, prd_cnf_save_fs_lst, given_class):
+    """ determine type of reaction and related ts info from the reactant and product z-matrices.
+    Returns the type, the transition state z-matrix, the name of the coordinate to optimize,
+    the grid of values for the initial grid search, the torsion names and symmetries, and
+    whether or not to update the guess on successive steps.
+    These parameters are set for both the initial and a backup evaluation for if the initial ts
+    search fails.
+    """
+
+    # Convert termolecular reactions to bimolecular reactions
+    rct_tors_names = []
+    if len(rct_zmas) > 2 or len(prd_zmas) > 2:
+        rct_zmas, prd_zmas, rct_tors_names = rxnid.conv_termol_to_bimol(
+            rct_zmas, prd_zmas)
+
+    # Determine the reaction types
+    ret = rxnid.determine_reaction_type(
+        rct_zmas, prd_zmas,
+        ts_mul, high_mul, low_mul,
+        rct_cnf_save_fs_lst, prd_cnf_save_fs_lst,
+        rct_tors_names,
+        given_class, rad_rad)
+    [typ, bkp_typ,
+     ts_zma, bkp_ts_zma,
+     tors_names, bkp_tors_names,
+     dist_name, bkp_dist_name, brk_name,
+     frm_bnd_key, brk_bnd_key] = ret
+
+    # Determine grid for preliminary search for all different reaction types
+    dist_coo, = automol.zmatrix.coordinates(ts_zma)[dist_name]
+    syms = automol.zmatrix.symbols(ts_zma)
+    ts_bnd_len = tuple(sorted(map(syms.__getitem__, dist_coo)))
+    grid, update_guess, bkp_grid, bkp_update_guess = rxngrid.build_grid(
+        typ, bkp_typ, ts_bnd_len, ts_zma, dist_name, npoints=None)
+
+    # Build class data lists to return from the function
+    if typ:
+        ts_class_data = [
+            typ, ts_zma, dist_name, brk_name,
+            grid, frm_bnd_key, brk_bnd_key,
+            tors_names, update_guess]
+    else:
+        ts_class_data = []
+    if bkp_typ:
+        bkp_ts_class_data = [
+            bkp_typ, bkp_ts_zma, bkp_dist_name,
+            bkp_grid, bkp_tors_names, bkp_update_guess]
+    else:
+        bkp_ts_class_data = []
+
+    return ts_class_data, bkp_ts_class_data
 
 
 def conv_termol_to_bimol(rct_zmas, prd_zmas):
@@ -187,3 +241,37 @@ def set_ts_spin(ts_mul, high_mul, low_mul):
     elif ts_mul == low_mul:
         spin = 'low'
     return spin
+
+
+def ts_mul_from_reaction_muls(rcts, prds, spc_dct):
+    """ evaluate the ts multiplicity from the multiplicities
+        of the reactants and products
+    """
+    nrcts = len(rcts)
+    nprds = len(prds)
+    rct_spin_sum = 0
+    prd_spin_sum = 0
+    rad_rad = True
+    rct_muls = []
+    prd_muls = []
+    if nrcts == 1 and nprds == 1:
+        ts_mul_low = max(spc_dct[rcts[0]]['mul'], spc_dct[prds[0]]['mul'])
+        ts_mul_high = ts_mul_low
+        rad_rad = False
+    else:
+        for rct in rcts:
+            rct_spin_sum += (spc_dct[rct]['mul'] - 1.)/2.
+            rct_muls.append(spc_dct[rct]['mul'])
+        for prd in prds:
+            prd_spin_sum += (spc_dct[prd]['mul'] - 1.)/2.
+            prd_muls.append(spc_dct[prd]['mul'])
+        rct_chk = bool(min(rct_muls) == 1 or nrcts == 1)
+        prd_chk = bool(min(prd_muls) == 1 or nprds == 1)
+        if rct_chk and prd_chk:
+            rad_rad = False
+        ts_mul_low = min(rct_spin_sum, prd_spin_sum)
+        ts_mul_low = int(round(2*ts_mul_low + 1))
+        ts_mul_high = max(rct_spin_sum, prd_spin_sum)
+        ts_mul_high = int(round(2*ts_mul_high + 1))
+    return ts_mul_low, ts_mul_high, rad_rad
+
