@@ -33,10 +33,9 @@ def run(tsk_info_lst, spcdct, ref,
     fbuild.prefix_filesystem(run_prefix, save_prefix)
 
     # Determine options
-    runmess = options[1]    # Run mess/just make the mess input file
-    runthermo = options[2]
-    if not runmess:
-        runthermo = False
+    runmess = options[1]
+    runthermo = options[2] if runmess else False
+    runfits = True
 
     # Fix any issues in tsk_list
     tsk_info_lst = fix(tsk_info_lst)
@@ -159,6 +158,9 @@ def run(tsk_info_lst, spcdct, ref,
                 spc_bas, clist = get_ref(spc, spcdct, reference_function)
             hf0k = calctherm.get_hf0k(spc, spcdct, spc_bas, clist)
             spcdct[spc]['Hfs'] = [hf0k]
+
+    # Fit the partifition functions to NASA polynomials
+    if runfits:
 
         chemkin_header_str = cout.run_ckin_header(
             pf_levels, ref_levels, spc_model)

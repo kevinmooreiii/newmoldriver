@@ -13,15 +13,10 @@ from routines.pf import rates as messrates
 from lib.outpt import chemkin as cout
 from lib.phydat import phycon
 
-# Constants to make job params at some point
-ASSESS_PDEP_TEMPS = [500., 1000.0]
-PLOW = 0.3
-PHIGH = 3.
-
 
 def fit_rates(spc_dct, pes_formula, idx_dct,
               pf_levels, ref_levels, ts_model,
-              ene_str, mess_path):
+              ene_str, mess_path, assess_pdep):
     """ Parse the MESS output and fit the rates to
         Arrhenius expressions written as CHEMKIN strings
     """
@@ -53,7 +48,7 @@ def fit_rates(spc_dct, pes_formula, idx_dct,
                             spc_dct, name_i, name_j, lab_i, lab_j,
                             mess_path, a_conv_factor, err_thresh, ckin_path,
                             chemkin_poly_str, chemkin_header_str,
-                            pes_formula_str)
+                            pes_formula_str, assess_pdep)
 
     # Print the results for the whole PES to a file
     with open(os.path.join(ckin_path, pes_formula_str+'.ckin'), 'a') as cfile:
@@ -62,9 +57,14 @@ def fit_rates(spc_dct, pes_formula, idx_dct,
 
 def perform_fits(spc_dct, name_i, name_j, lab_i, lab_j,
                  mess_path, a_conv_factor, err_thresh, ckin_path,
-                 chemkin_poly_str, chemkin_header_str, pes_formula_str):
+                 chemkin_poly_str, chemkin_header_str, pes_formula_str,
+                 assess_pdep):
     """ Read the rates for each channel and perform the fits
     """
+    # Unpack assess pdep
+    [plow, phigh, assess_pdep_temps] = assess_pdep
+
+    # Run
     ene = 0.0
     for spc in name_i.split('+'):
         ene += (spc_dct[spc]['ene'] +
@@ -77,8 +77,8 @@ def perform_fits(spc_dct, name_i, name_j, lab_i, lab_j,
 
         # Read the rate constants out of the mess outputs
         ktp_dct = messrates.read_rates(
-            lab_i, lab_j, mess_path, ASSESS_PDEP_TEMPS,
-            pdep_low=PLOW, pdep_high=PHIGH,
+            lab_i, lab_j, mess_path, assess_pdep_temps,
+            pdep_low=plow, pdep_high=phigh,
             pdep_tolerance=20, no_pdep_pval=1.0,
             bimol=numpy.isclose(a_conv_factor, 6.0221e23))
 

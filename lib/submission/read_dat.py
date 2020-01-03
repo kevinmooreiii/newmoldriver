@@ -6,8 +6,19 @@ from types import SimpleNamespace
 # setting SORT_RXNS to False leads to missing channels
 # for now just leave them sorted
 
+TEMPS = [500., 550., 600., 650., 700., 750., 800.,
+         850., 900., 950., 1000., 1050., 1100., 1150.,
+         1200., 1250., 1300., 1350., 1400., 1450., 1500.,
+         1550., 1600., 1650., 1700., 1750., 1800., 1850.,
+         1900., 1950., 2000.]
+PRESSURES = [0.03, 0.1, 0.3, 1., 3., 10., 30., 100.]
+
+
 # Set each keyword to their default values
 PARAMS = {
+    'TEMPS': TEMPS,
+    'PRESSURES': PRESSURES,
+    'ASSESS_PDEP': [0.3, 3.0, [500., 1000.0]],
     'DATA_PATH': '/home/sjklipp/PACC/mech_test',
     'HIND_INC': 30.,
     'MC_NSAMP0': [True, 6, 1, 3, 100],
@@ -26,7 +37,8 @@ PARAMS = {
     'OPT_MESS': False,
     'OPT_THERMO': False,
     'OPT_ALLPF': False,
-    'RUN_ES': True,
+    'RUN_ES_SPC': True,
+    'RUN_ES_RXN': True,
     'RUN_SPECIES': True,
     'RUN_MESS': True,
     'RUN_RATES_OPT': True,
@@ -38,6 +50,7 @@ PARAMS = {
     'SP_LVL2': 'cc_lvl_tf',
     'SP_LVL3': 'cc_lvl_qf',
     'MULTI_LVL': 'mlvl_cas_dz',
+    'MULTI_INFO': ['molpro2015', 'caspt2', 'cc-pVDZ', 'RR'],
     'TSK_INFO_LST': [
         ['find_geom', 'lvl_wbs', 'lvl_wbs', False],
         ['conf_samp', 'lvl_wbs', 'lvl_wbs', False],
@@ -63,7 +76,9 @@ PARAMS = {
     'SIG2': 6.,
     'MASS1': 15.0,
     'RUN_PREFIX': '/lcrc/project/PACC/run',
-    'SAVE_PREFIX': '/lcrc/project/PACC/save'
+    'SAVE_PREFIX': '/lcrc/project/PACC/save',
+    'KICKOFF_SIZE': 0.1,
+    'KICKOFF_BACKWARD': 3.0
 }
 
 

@@ -11,6 +11,7 @@ import ktpdriver
 
 from routines import util
 from routines.pf import get_high_level_energy
+from routines.pf import rates as messrates
 from lib.phydat import phycon
 from lib.submission import substr
 from lib.filesystem import inf as finf
@@ -35,6 +36,10 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                rad_rad_ts='vtst',
                hind_inc=30.0,
                mc_nsamp=[True, 10, 1, 3, 100],
+               multi_info=['molpro2015', 'caspt2', 'cc-pVDZ', 'RR'],
+               temps=[500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.],
+               pressures=[0.03, 0.1, 0.3, 1., 3., 10., 30., 100.],
+               assess_pdep=[0.3, 3.0, [500., 1000.0]],
                driver='es_spc'):
     """ Run the ktp driver for the PESs
     """
@@ -249,10 +254,10 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
             mc_nsamp=mc_nsamp)
 
 
-def form_spc_queue(spc_lst=(), rct_names_lst=(), prd_names_lst=()):
+def form_spc_queue(rct_names_lst=(), prd_names_lst=()):
     """ form the species queue from tht elist
     """
-    spc_queue = list(spc_lst)
+    spc_queue = []
     for rxn, _ in enumerate(rct_names_lst):
         rxn_spc = list(rct_names_lst[rxn])
         rxn_spc.extend(list(prd_names_lst[rxn]))
@@ -260,6 +265,20 @@ def form_spc_queue(spc_lst=(), rct_names_lst=(), prd_names_lst=()):
             if spc not in spc_queue:
                 spc_queue.append(spc)
 
+    return spc_queue
+
+
+def form_spc_queue_2(rxn_lst):
+    """ second spc queue; redundant to one above
+    """
+    spc_queue = []
+    for _, rxn in enumerate(rxn_lst):
+        reacs = rxn['reacs']
+        prods = rxn['prods']
+        spc_queue.extend(rxn['species'])
+        spc_queue.extend(reacs)
+        spc_queue.extend(prods)
+    spc_queue = list(dict.fromkeys(spc_queue))
     return spc_queue
 
 
@@ -456,6 +475,9 @@ def set_pes_formula(spc_dct):
     """ Set pes formula using zma
     """
     for spc_2 in spc_dct:
+        print('TEST PES FORM')
+        print(spc_2)
+        print(spc_dct[spc_2])
         if 'original_zma' in spc_dct[spc_2]:
             pes_formula = automol.geom.formula(
                 automol.zmatrix.geometry(spc_dct[spc_2]['original_zma']))
@@ -521,3 +543,35 @@ def get_ckin_ene_lvl_str(ts_tsk_lst, ene_coeff):
 
     return ene_str
 
+
+def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
+                            ts_model, pf_levels, multi_info, pst_params,
+                            spc_save_fs, save_prefix,
+                            idx_dct, mess_strs):
+    """ Write all the MESS input file strings for the reaction channels
+    """
+    first_ground_ene = 0.
+    species = messrates.make_all_species_data(
+        rxn_lst, spc_dct, save_prefix, ts_model, pf_levels,
+        substr.PROJROT)
+    for idx, rxn in enumerate(rxn_lst):
+        tsname = 'ts_{:g}'.format(idx)
+        tsform = automol.geom.formula(
+            automol.zmatrix.geometry(spc_dct[tsname]['original_zma']))
+        if tsform != pes_formula:
+            print('Reaction ist contains reactions on different potential',
+                  'energy surfaces: {} and {}'.format(tsform, pes_formula))
+            print('Will proceed to construct only {}'.format(pes_formula))
+            continue
+        mess_strs, first_ground_ene = messrates.make_channel_pfs(
+            tsname, rxn, species, spc_dct, idx_dct, mess_strs,
+            first_ground_ene, spc_save_fs, ts_model, pf_levels,
+            multi_info, substr.PROJROT,
+            pst_params=pst_params)
+    well_str, bim_str, ts_str = mess_strs
+    ts_str += '\nEnd\n'
+    print(well_str)
+    print(bim_str)
+    print(ts_str)
+
+    return well_str, bim_str, ts_str

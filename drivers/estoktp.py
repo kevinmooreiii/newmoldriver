@@ -4,8 +4,6 @@
 """
 
 import os
-
-# New libs
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
 import lib.filesystem.build as lfs
@@ -44,7 +42,7 @@ CONN_CHNLS_LST = loadmech.determine_connected_pes_channels(
     PES_DCT, PESNUMS_LST)
 
 # Run the requested drivers: es, thermo, ktp
-if PARAMS.RUN_ES_RXN:
+if PARAMS.RUN_ES_SPC:
     lmech.run_driver(
         PES_DCT, PESNUMS_LST, PARAMS.CHANNELS, CONN_CHNLS_LST,
         MOD_SPC_DCT, {},
@@ -58,6 +56,10 @@ if PARAMS.RUN_ES_RXN:
         rad_rad_ts=PARAMS.RAD_RAD_TS,
         hind_inc=PARAMS.HIND_INC,
         mc_nsamp=PARAMS.MC_NSAMP0,
+        temps=PARAMS.TEMPS,
+        pressures=PARAMS.PRESSURES,
+        multi_info=PARAMS.MULTI_INFO,
+        assess_pdep=PARAMS.ASSESS_PDEP,
         driver='es_spc'
     )
 
@@ -75,6 +77,10 @@ if PARAMS.RUN_ES_RXN:
         rad_rad_ts=PARAMS.RAD_RAD_TS,
         hind_inc=PARAMS.HIND_INC,
         mc_nsamp=PARAMS.MC_NSAMP0,
+        temps=PARAMS.TEMPS,
+        pressures=PARAMS.PRESSURES,
+        multi_info=PARAMS.MULTI_INFO,
+        assess_pdep=PARAMS.ASSESS_PDEP,
         driver='es_rxn'
     )
 
@@ -98,5 +104,9 @@ if PARAMS.RUN_RATES:
         rad_rad_ts=PARAMS.RAD_RAD_TS,
         hind_inc=PARAMS.HIND_INC,
         mc_nsamp=PARAMS.MC_NSAMP0,
+        temps=PARAMS.TEMPS,
+        pressures=PARAMS.PRESSURES,
+        multi_info=PARAMS.MULTI_INFO,
+        assess_pdep=PARAMS.ASSESS_PDEP,
         driver='ktp'
     )
