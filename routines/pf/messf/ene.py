@@ -209,21 +209,26 @@ def get_zero_point_energy(
                 scan_increment = 30. * phycon.DEG2RAD
             val_dct = automol.zmatrix.values(zma)
             tors_linspaces = automol.zmatrix.torsional_scan_linspaces(
-                zma, tors_names, scan_increment, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key)
+                zma, tors_names, scan_increment,
+                frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key)
             tors_grids = [numpy.linspace(*linspace) + val_dct[name]
-                          for name, linspace in zip(tors_names, tors_linspaces)]
+                          for name, linspace in zip(tors_names, tors_linspaces)
+                          ]
             tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
-                zma, tors_names, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key))
+                zma, tors_names,
+                frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key))
             # print('tors_names:', tors_names)
             if tors_names:
-                for tors_name, tors_grid, sym_num in zip(tors_names, tors_grids, tors_sym_nums):
+                tors_info = zip(tors_names, tors_grids, tors_sym_nums)
+                for tors_name, tors_grid, sym_num in tors_info:
                     locs_lst = []
                     enes = []
                     for grid_val in tors_grid:
                         locs_lst.append([[tors_name], [grid_val]])
                     for locs in locs_lst:
                         if scn_save_fs.leaf.exists(locs):
-                            enes.append(scn_save_fs.leaf.file.energy.read(locs))
+                            enes.append(
+                                scn_save_fs.leaf.file.energy.read(locs))
                         else:
                             enes.append(10.)
                             print('ERROR: missing grid value for torsional potential of {}'.
@@ -242,14 +247,16 @@ def get_zero_point_energy(
                                 atm_key = atm
                                 break
                     group = list(
-                        automol.graph.branch_atom_keys(gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
+                        automol.graph.branch_atom_keys(
+                            gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
                         set(axis))
                     if not group:
                         for atm in axis:
                             if atm != atm_key:
                                 atm_key = atm
                         group = list(
-                            automol.graph.branch_atom_keys(gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
+                            automol.graph.branch_atom_keys(
+                                gra, atm_key, axis, saddle=saddle, ts_bnd=ts_bnd) -
                             set(axis))
                     if saddle:
                         n_atm = automol.zmatrix.count(zma)

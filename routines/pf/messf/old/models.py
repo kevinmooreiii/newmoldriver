@@ -18,31 +18,49 @@ from lib.phydat import phycon
 from lib.runner import script
 
 
-def vib_harm_tors_rigid(spc, spc_info, harm_min_cnf_locs, harm_cnf_save_fs):
+def vib_harm_tors_rigid(spc, spc_info, elec_levels, sym_factor,
+                        harm_min_cnf_locs, harm_cnf_save_fs):
     """ Build the species string for a model of
         harmonic vibrational frequencies and rigid torsions
     """
     # Do the freqs obtain for two species for fake and pst
     if harm_min_cnf_locs is not None:
-        # Obtain geom and freqs from filesys
         harm_geo = harm_cnf_save_fs.leaf.file.geometry.read(harm_min_cnf_locs)
-        hess = harm_cnf_save_fs.leaf.file.hessian.read(harm_min_cnf_locs)
-        freqs = elstruct.util.harmonic_frequencies(
-            harm_geo, hess, project=False)
-        # Modify freqs lst and get imaginary frequencies
-        mode_start = 6
-        if 'ts_' in spc:
-            mode_start = mode_start + 1
-            imag_freq = freqs[0]
-        if automol.geom.is_linear(harm_geo):
-            mode_start = mode_start - 1
-        freqs = freqs[mode_start:]
+        # min_ene = harm_cnf_save_fs.leaf.file.energy.read(harm_min_cnf_locs)
+
+        if automol.geom.is_atom(harm_geo):
+            # Different for pst and fake
+            print('This is an atom')
+            mass = ptab.to_mass(harm_geo[0][0])
+            spc_str = mess_io.writer.atom(
+                mass, elec_levels)
+        else:
+            hess = harm_cnf_save_fs.leaf.file.hessian.read(harm_min_cnf_locs)
+            freqs = elstruct.util.harmonic_frequencies(
+                harm_geo, hess, project=False)
+            mode_start = 6
+            if 'ts_' in spc:
+                mode_start = mode_start + 1
+                imag_freq = freqs[0]
+            if automol.geom.is_linear(harm_geo):
+                mode_start = mode_start - 1
+            freqs = freqs[mode_start:]
+
+            hind_rot_str = ""
+
+            core = mess_io.writer.core_rigidrotor(harm_geo, sym_factor)
+            spc_str = mess_io.writer.molecule(
+                core, freqs, elec_levels,
+                hind_rot=hind_rot_str,
+                )
     else:
         print('ERROR: Reference geometry is missing for harmonic frequencies ',
               'for species {}'.format(spc_info[0]))
         raise ValueError
+        # spc_str = ''
+        # imag_freq = 0.
 
-    return harm_geo, freqs, imag_freq
+    return spc_str, imag_freq
 
 
 def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
@@ -60,98 +78,111 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
             harm_min_cnf_locs)
         min_ene = harm_cnf_save_fs.leaf.file.energy.read(
             harm_min_cnf_locs)
-        hess = harm_cnf_save_fs.leaf.file.hessian.read(
-            harm_min_cnf_locs)
-        freqs = elstruct.util.harmonic_frequencies(
-            harm_geo, hess, project=False)
-        hind_rot_str = ""
-        proj_rotors_str = ""
+        if automol.geom.is_atom(harm_geo):
+            mass = ptab.to_mass(harm_geo[0][0])
+            spc_str = mess_io.writer.atom(
+                mass, elec_levels)
+            imag_freq = 0.0
+        else:
+            hess = harm_cnf_save_fs.leaf.file.hessian.read(
+                harm_min_cnf_locs)
+            freqs = elstruct.util.harmonic_frequencies(
+                harm_geo, hess, project=False)
+            hind_rot_str = ""
+            proj_rotors_str = ""
 
-        if tors_min_cnf_locs is not None:
+            if tors_min_cnf_locs is not None:
 
-            # Get geometry for the torsional minimum
-            zma = tors_cnf_save_fs.leaf.file.zmatrix.read(
-                tors_min_cnf_locs)
-            tors_geo = tors_cnf_save_fs.leaf.file.geometry.read(
-                tors_min_cnf_locs)
+                # Get geometry for the torsional minimum
+                zma = tors_cnf_save_fs.leaf.file.zmatrix.read(
+                    tors_min_cnf_locs)
+                tors_geo = tors_cnf_save_fs.leaf.file.geometry.read(
+                    tors_min_cnf_locs)
 
-            # Set torsional stuff
-            tors_names, ts_bnd = get_tors_names(
-                spc_dct_i, zma, tors_cnf_save_fs, saddle=saddle)
-            tors_grids, tors_sym_nums = tors_params(
-                spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key)
+                # Set torsional stuff
+                tors_names, ts_bnd = get_tors_names(
+                    spc_dct_i, zma, tors_cnf_save_fs, saddle=saddle)
+                tors_grids, tors_sym_nums = tors_params(
+                    spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key)
 
-            # Loop over the torsions
-            pot = []
-            tors_info = zip(tors_names, tors_grids, tors_sym_nums)
-            for tors_name, tors_grid, sym_num in tors_info:
+                # Loop over the torsions
+                pot = []
+                tors_info = zip(tors_names, tors_grids, tors_sym_nums)
+                for tors_name, tors_grid, sym_num in tors_info:
 
-                # Read the hindered rotor potential
-                pot = read_hr_pot(
-                    spc_info, tors_name, tors_grid,
-                    tors_cnf_save_path, min_ene)
+                    # Read the hindered rotor potential
+                    pot = read_hr_pot(
+                        spc_info, tors_name, tors_grid,
+                        tors_cnf_save_path, min_ene)
 
-                # Build potential lst from only successful calculations
-                pot = hrpot_spline_fitter(pot)
+                    # Build potential lst from only successful calculations
+                    pot = hrpot_spline_fitter(pot)
 
-                # Get the HR groups and axis for the rotor
-                group, axis, atm_key = set_groups_ini(
-                    zma, tors_name, ts_bnd, saddle)
-                if saddle:
-                    group, axis, pot = check_saddle_groups(
-                        zma, spc_dct_i, group, axis,
-                        pot, ts_bnd, sym_num)
-                group = list(numpy.add(group, 1))
-                axis = list(numpy.add(axis, 1))
-                if (atm_key+1) != axis[1]:
-                    axis.reverse()
+                    # Get the HR groups and axis for the rotor
+                    group, axis, atm_key = set_groups_ini(
+                        zma, tors_name, ts_bnd, saddle)
+                    if saddle:
+                        group, axis, pot = check_saddle_groups(
+                            zma, spc_dct_i, group, axis,
+                            pot, ts_bnd, sym_num)
+                    group = list(numpy.add(group, 1))
+                    axis = list(numpy.add(axis, 1))
+                    if (atm_key+1) != axis[1]:
+                        axis.reverse()
 
-                # Check for dummy transformations
-                remdummy = check_dummy_trans(zma)
+                    # Check for dummy transformations
+                    remdummy = check_dummy_trans(zma)
 
-                # Write the MESS and ProjRot strings for the rotor
-                hind_rot_str += mess_io.writer.rotor_hindered(
-                    group, axis, sym_num, pot, remdummy=remdummy)
-                proj_rotors_str += projrot_io.writer.rotors(
-                    axis, group, remdummy=remdummy)
+                    # Write the MESS and ProjRot strings for the rotor
+                    hind_rot_str += mess_io.writer.rotor_hindered(
+                        group, axis, sym_num, pot, remdummy=remdummy)
+                    proj_rotors_str += projrot_io.writer.rotors(
+                        axis, group, remdummy=remdummy)
 
-                # Divide total sym_factor by rotor sym number
-                sym_factor /= sym_num
+                    # Divide total sym_factor by rotor sym number
+                    sym_factor /= sym_num
 
-                # Increment index for the loop
-                # idx += 1
+                    # Increment index for the loop
+                    # idx += 1
 
-            # Calculate ZPVES of the hindered rotors
-            tors_zpe = 0.0
-            if saddle and tors_names is not None:
-                tors_zpe = calc_tors_freqs_zpe(
-                    tors_geo, sym_factor, elec_levels,
-                    hind_rot_str, tors_save_path)
+                # Calculate ZPVES of the hindered rotors
+                tors_zpe = 0.0
+                if saddle and tors_names is not None:
+                    tors_zpe = calc_tors_freqs_zpe(
+                        tors_geo, sym_factor, elec_levels,
+                        hind_rot_str, tors_save_path)
 
-            # Run one vers ProjRot to proj freqs for that version
-            freqs1, imag_freq1, zpe_harm_no_tors = projrot_freqs_1(
-                tors_geo, hess, pot,
-                proj_rotors_str, projrot_script_str,
-                tors_save_path, saddle=False)
+                # Run one vers ProjRot to proj freqs for that version
+                freqs1, imag_freq1, zpe_harm_no_tors = projrot_freqs_1(
+                    tors_geo, hess, pot,
+                    proj_rotors_str, projrot_script_str,
+                    tors_save_path, saddle=False)
 
-            # Now run the other version of ProjRot
-            pfreqs2 = projrot_freqs_2(
-                tors_save_path, pot, spc)
-            [freqs2, imag_freq2,
-             zpe_harm_no_tors_2, harm_zpe] = pfreqs2
+                # Now run the other version of ProjRot
+                pfreqs2 = projrot_freqs_2(
+                    tors_save_path, pot, spc)
+                [freqs2, imag_freq2,
+                 zpe_harm_no_tors_2, harm_zpe] = pfreqs2
 
-            # Determine freqs and imag_freqs
-            freqs, imag_freq = determine_freqs(
-                freqs1, freqs2, imag_freq1, imag_freq2,
-                zpe_harm_no_tors, zpe_harm_no_tors_2,
-                harm_zpe, tors_zpe)
+                # Determine freqs and imag_freqs
+                freqs, imag_freq = determine_freqs(
+                    freqs1, freqs2, imag_freq1, imag_freq2,
+                    zpe_harm_no_tors, zpe_harm_no_tors_2,
+                    harm_zpe, tors_zpe)
+
+                # Write the MESS string
+                core = mess_io.writer.core_rigidrotor(tors_geo, sym_factor)
+                spc_str = mess_io.writer.molecule(
+                    core, freqs, elec_levels,
+                    hind_rot=hind_rot_str
+                    )
     else:
         print('ERROR: Reference geometry is missing for harmonic frequencies',
               ' for species {}'.format(spc_info[0]))
-        tors_geo, freqs, imag_freq, hind_rot_str = (), (), 0.0, ''
-        raise ValueError
+        spc_str = ''
+        imag_freq = 0.0
 
-    return tors_geo, freqs, imag_freq, hind_rot_str
+    return spc_str, imag_freq
 
 
 def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
@@ -582,22 +613,17 @@ def determine_freqs(freqs1, freqs2, imag_freq1, imag_freq2,
     return freqs, imag_freq
 
 
-def set_fake_freqs(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
-                   harm_cnf_save_fs_i, harm_cnf_save_fs_j):
+def set_fake_freqs(har_geo_i, har_geo_j,
+                   har_min_cnf_locs_i, har_min_cnf_locs_j,
+                   har_cnf_save_fs_i, har_cnf_save_fs_j):
     """ Set fake frequencies
     """
-    if harm_min_cnf_locs_i is not None:
-        harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
-            harm_min_cnf_locs_i)
-        if harm_min_cnf_locs_j is not None:
-            harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
-                harm_min_cnf_locs_j)
     freqs = [30, 50, 70, 100, 200]
     ntrans = 5
-    is_atom_i = automol.geom.is_atom(harm_geo_i)
-    is_linear_i = automol.geom.is_linear(harm_geo_i)
-    is_atom_j = automol.geom.is_atom(harm_geo_j)
-    is_linear_j = automol.geom.is_linear(harm_geo_i)
+    is_atom_i = automol.geom.is_atom(har_geo_i)
+    is_linear_i = automol.geom.is_linear(har_geo_i)
+    is_atom_j = automol.geom.is_atom(har_geo_j)
+    is_linear_j = automol.geom.is_linear(har_geo_i)
     if is_atom_i:
         ntrans = ntrans - 3
     if is_atom_j:
@@ -609,28 +635,39 @@ def set_fake_freqs(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
     if is_atom_i and is_atom_j:
         ntrans = 0
     freqs = freqs[0:ntrans]
+    if not is_atom_i:
+        hess_i = har_cnf_save_fs_i.leaf.file.hessian.read(
+            har_min_cnf_locs_i)
+        freqs_i = elstruct.util.harmonic_frequencies(
+            har_geo_i, hess_i, project=False)
+        mode_start = 6
+        if automol.geom.is_linear(har_geo_i):
+            mode_start = mode_start - 1
+        freqs += freqs_i[mode_start:]
+    if not is_atom_j:
+        hess_j = har_cnf_save_fs_j.leaf.file.hessian.read(
+            har_min_cnf_locs_j)
+        freqs_j = elstruct.util.harmonic_frequencies(
+            har_geo_j, hess_j, project=False)
+        mode_start = 6
+        if automol.geom.is_linear(har_geo_j):
+            mode_start = mode_start - 1
+        freqs += freqs_j[mode_start:]
 
     return freqs
 
 
-def combine_geos_in_fake_well(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
-                              harm_cnf_save_fs_i, harm_cnf_save_fs_j):
+def combine_geos_in_fake_well(har_geo_i, har_geo_j):
     """ put two geometries together in a fake well
     """
-    if harm_min_cnf_locs_i is not None:
-        harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
-            harm_min_cnf_locs_i)
-        if harm_min_cnf_locs_j is not None:
-            harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
-                harm_min_cnf_locs_j)
-    max_z_i = max(atom[1][2] for atom in harm_geo_i)
-    min_z_j = min(atom[1][2] for atom in harm_geo_j)
-    harm_geo = harm_geo_i
-    harm_geo_j = automol.geom.translated(
-        harm_geo_j, [0., 0., max_z_i + 6. - min_z_j])
-    harm_geo += harm_geo_j
+    max_z_i = max(atom[1][2] for atom in har_geo_i)
+    min_z_j = min(atom[1][2] for atom in har_geo_j)
+    har_geo = har_geo_i
+    har_geo_j = automol.geom.translated(
+        har_geo_j, [0., 0., max_z_i + 6. - min_z_j])
+    har_geo += har_geo_j
 
-    return harm_geo
+    return har_geo
 
 
 def is_atom(har_min_cnf_locs, har_cnf_save_fs):
