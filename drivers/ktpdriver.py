@@ -2,23 +2,23 @@
 """
 
 import autofile.fs
-from lib.filesystem import build as fbuild
-from lib.calc import zpe as calczpe
-from lib.runner import rates as raterunner
+from drivers import mech as lmech
+from routines.pf.calc import zpe as calczpe
 from routines.pf.fit import fit_rates
 from routines.pf import rates as messrates
-import mech as lmech
+from lib.filesystem import build as fbuild
+from lib.runner import rates as raterunner
 
 
 def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
-        run_prefix, save_prefix, ene_coeff=[1.],
-        options=[True, True, True, False],
-        etrans=[200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0],
-        pst_params=[1.0, 6],
-        multi_info=['molpro2015', 'caspt2', 'cc-pVDZ', 'RR'],
-        temps=[500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.],
-        pressures=[0.03, 0.1, 0.3, 1., 3., 10., 30., 100.],
-        assess_pdep=[0.3, 10.0, [500.0]]):
+        run_prefix, save_prefix, ene_coeff=(1.),
+        options=(True, True, True, False),
+        etrans=(200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0),
+        pst_params=(1.0, 6),
+        multi_info=('molpro2015', 'caspt2', 'cc-pVDZ', 'RR'),
+        temps=(500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.),
+        pressures=(0.03, 0.1, 0.3, 1., 3., 10., 30., 100.),
+        assess_pdep=(0.3, 10.0, (500.0))):
     """ main driver for generation of full set of rate constants on a single PES
     """
 
@@ -57,7 +57,8 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
             print(spc_dct)
             if 'ts_' in spc:
                 spc_dct[spc] = lmech.set_sadpt_info(
-                    ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix)
+                    ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix,
+                    kickoff=(0.1, False))
                 spc_save_path = spc_dct[spc]['rxn_fs'][3]
                 saddle = True
                 save_path = spc_save_path

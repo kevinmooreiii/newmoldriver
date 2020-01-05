@@ -3,8 +3,10 @@
 """
 
 import automol
+from automol.zmatrix.ts import _shifted_standard_forms_with_gaphs as shift_gra
 import autofile
-from routines import util
+from lib.filesystem import orb as fsorb
+from lib.filesystem import minc as fsmin
 
 
 def reaction_energy(save_prefix, rxn_ich, rxn_chg, rxn_mul, thy_level):
@@ -27,15 +29,13 @@ def reagent_energies(save_prefix, rgt_ichs, rgt_chgs, rgt_muls, thy_level):
         rgt_info = [rgt_ich, rgt_chg, rgt_mul]
         spc_save_path = spc_save_fs.leaf.path(rgt_info)
 
-        orb_restr = orbital_restriction(rgt_info, thy_level)
+        orb_restr = fsorb.orbital_restriction(rgt_info, thy_level)
         thy_lvl = thy_level[0:3]
         thy_lvl.append(orb_restr)
         thy_save_fs = autofile.fs.theory(spc_save_path)
         thy_save_path = thy_save_fs.leaf.path(thy_lvl[1:4])
         cnf_save_fs = autofile.fs.conformer(thy_save_path)
-        # print('thy_save_path')
-        # print(thy_save_path)
-        min_cnf_locs = min_energy_conformer_locators(cnf_save_fs)
+        min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
         ene = cnf_save_fs.leaf.file.energy.read(min_cnf_locs)
         enes.append(ene)
     return enes
@@ -64,8 +64,6 @@ def get_zmas(
         kickoff_backward, projrot_script_str)
     rct_zmas = list(map(automol.geom.zmatrix, rct_geos))
     prd_zmas = list(map(automol.geom.zmatrix, prd_geos))
-    # for geo in prd_geos:
-    #     xyzs = automol.geom.coordinates(geo)
     if len(rct_zmas) > 2:
         rct_zmas.append(ichzma)
     if len(prd_zmas) > 2:
@@ -84,7 +82,7 @@ def get_geos(
         spc_info = [spc_dct[spc]['ich'],
                     spc_dct[spc]['chg'],
                     spc_dct[spc]['mul']]
-        orb_restr = util.orbital_restriction(spc_info, ini_thy_info)
+        orb_restr = fsorb.orbital_restriction(spc_info, ini_thy_info)
         ini_thy_level = ini_thy_info[0:3]
         ini_thy_level.append(orb_restr)
         spc_save_fs = autofile.fs.species(save_prefix)
@@ -100,7 +98,7 @@ def get_geos(
         cnf_save_fs = autofile.fs.conformer(ini_thy_save_path)
         cnf_save_fs_lst.append(cnf_save_fs)
         cnf_run_fs = autofile.fs.conformer(ini_thy_run_path)
-        min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
+        min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
         if min_cnf_locs:
             geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
         else:
@@ -144,9 +142,6 @@ def min_dist_conformer_zma_geo(dist_coords, cnf_save_fs):
         zmas, _ = shift_gra([zma])
         zma = zmas[0]
         geo = automol.zmatrix.geometry(zma)
-        # print('min geo')
-        # print(automol.geom.string(geo))
-        # print(*list(dist_coords))
         dist = automol.geom.distance(geo, *list(dist_coords))
         if dist < min_dist:
             min_dist = dist

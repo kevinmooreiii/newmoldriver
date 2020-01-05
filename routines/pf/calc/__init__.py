@@ -2,8 +2,8 @@
   Library of helper calculator functions
 """
 
-from lib.calc import zpe
-from lib.calc import therm
+from routines.pf.calc import zpe
+from routines.pf.calc import therm
 
 
 __all__ = [

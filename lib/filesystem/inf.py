@@ -3,12 +3,12 @@ Build paths and file systesm given species and theory
 'info' objects
 """
 
-import automol
 import autofile
-
+from automol.mult.ts import _low as tslow
+from automol.mult.ts import _high as tshigh
 from lib.phydat import phycon
 from lib.submission import theolvls
-from routines import util
+from lib.filesystem import read as fsread
 
 
 def get_thy_info(method):
@@ -53,7 +53,7 @@ def get_spc_info(spc_dct):
     return props
 
 
-def rxn_info(run_prefix, save_prefix, ts, spc_dct,
+def rxn_info(save_prefix, sadpt, spc_dct,
              thy_info, ini_thy_info=None):
     """ prepare rxn info and reverse the reactants and products
         if reaction is endothermic
@@ -62,10 +62,12 @@ def rxn_info(run_prefix, save_prefix, ts, spc_dct,
     rxn_chgs = [[], []]
     rxn_muls = [[], []]
     print('\n TS for {}: {} = {}'.format(
-        ts, '+'.join(spc_dct[ts]['reacs']), '+'.join(spc_dct[ts]['prods'])))
-    reacs = spc_dct[ts]['reacs']
-    prods = spc_dct[ts]['prods']
-    print('ts dct', spc_dct[ts])
+        sadpt,
+        '+'.join(spc_dct[sadpt]['reacs']),
+        '+'.join(spc_dct[sadpt]['prods'])))
+    reacs = spc_dct[sadpt]['reacs']
+    prods = spc_dct[sadpt]['prods']
+    print('sadpt dct', spc_dct[sadpt])
     for spc in reacs:
         rxn_ichs[0].append(spc_dct[spc]['ich'])
         rxn_chgs[0].append(spc_dct[spc]['chg'])
@@ -74,33 +76,30 @@ def rxn_info(run_prefix, save_prefix, ts, spc_dct,
         rxn_ichs[1].append(spc_dct[spc]['ich'])
         rxn_chgs[1].append(spc_dct[spc]['chg'])
         rxn_muls[1].append(spc_dct[spc]['mul'])
-    # check direction of reaction
+
+    # Check direction of reaction
     try:
-        rxn_exo = util.reaction_energy(
+        rxn_exo = fsread.reaction_energy(
             save_prefix, rxn_ichs, rxn_chgs, rxn_muls, thy_info)
-    except:
-        rxn_exo = util.reaction_energy(
+    except IOError:
+        rxn_exo = fsread.reaction_energy(
             save_prefix, rxn_ichs, rxn_chgs, rxn_muls, ini_thy_info)
     print('reaction is {:.2f} endothermic'.format(rxn_exo*phycon.EH2KCAL))
-    if rxn_exo > 0 and not spc_dct[ts]['given_class']:
+    if rxn_exo > 0 and not spc_dct[sadpt]['given_class']:
         rxn_ichs = rxn_ichs[::-1]
         rxn_chgs = rxn_chgs[::-1]
         rxn_muls = rxn_muls[::-1]
-        spc_dct[ts]['reacs'] = prods
-        spc_dct[ts]['prods'] = reacs
+        spc_dct[sadpt]['reacs'] = prods
+        spc_dct[sadpt]['prods'] = reacs
         print('Reaction will proceed as {}: {} = {}'.format(
-            ts, '+'.join(spc_dct[ts]['reacs']),
-            '+'.join(spc_dct[ts]['prods'])))
-        # print('ts search will be performed in reverse direction')
+            sadpt,
+            '+'.join(spc_dct[sadpt]['reacs']),
+            '+'.join(spc_dct[sadpt]['prods'])))
 
     # set up the filesystem
     rxn_ichs, rxn_chgs, rxn_muls = autofile.system.sort_together(
         rxn_ichs, rxn_chgs, rxn_muls)
-    low_mul = min(
-        automol.mult.ts._low(rxn_muls[0]),
-        automol.mult.ts._low(rxn_muls[1]))
-    high_mul = max(
-        automol.mult.ts._high(rxn_muls[0]),
-        automol.mult.ts._high(rxn_muls[1]))
+    low_mul = min(tslow(rxn_muls[0]), tslow(rxn_muls[1]))
+    high_mul = max(tshigh(rxn_muls[0]), tshigh(rxn_muls[1]))
 
     return rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul

@@ -5,7 +5,7 @@ import elstruct
 import autofile
 
 # New libs
-from routines import util
+from lib.runner import par as runpar
 from lib.runner import driver
 
 
@@ -30,7 +30,7 @@ def run_energy(
 
         # Add options matrix for energy runs for molpro
         if thy_level[0] == 'molpro2015':
-            errors, options_mat = util.set_molpro_options_mat(spc_info, geo)
+            errors, options_mat = runpar.set_molpro_options_mat(spc_info, geo)
         else:
             errors = ()
             options_mat = ()

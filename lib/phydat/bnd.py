@@ -13,4 +13,3 @@ LEN_DCT = {
     ('C', 'O'): 1.43 * ANG2BOHR,
     ('H', 'O'): 0.95 * ANG2BOHR,
 }
-

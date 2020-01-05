@@ -5,9 +5,9 @@ import automol
 import elstruct
 
 # New libs
-from routines import util
 from routines.es import conformer
 from lib.runner import driver
+from lib.runner import par as runpar
 
 
 def sadpt_reference_geometry(spcdct, thy_level, ini_thy_level,
@@ -52,7 +52,7 @@ def sadpt_reference_geometry(spcdct, thy_level, ini_thy_level,
                     zma_init = ini_thy_save_fs.trunk.file.zmatrix.read()
                     geo_init = ini_thy_save_fs.trunk.file.geometry.read()
     if not geo and geo_init:
-        _, opt_script_str, _, opt_kwargs = util.run_qchem_par(
+        _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(
             *thy_level[0:2])
         driver.run_job(
             job='optimization',
@@ -85,7 +85,7 @@ def sadpt_reference_geometry(spcdct, thy_level, ini_thy_level,
             thy_save_fs.trunk.file.geometry.write(geo)
             thy_save_fs.trunk.file.zmatrix.write(zma)
 
-            conformer.run_single_conformer(
+            conformer.single_conformer(
                 spc_info, thy_level, geo_fs,
                 overwrite, True, dist_info)
     return geo

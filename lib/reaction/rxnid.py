@@ -2,28 +2,31 @@
 """
 
 import automol
-from routines import util
 from lib.phydat import phycon
-from lib.reaction import rxnid
+from lib.reaction import grid as rxngrid
+from lib.filesystem import read as fsread
 
 
-def ts_class(rct_zmas, prd_zmas, rad_rad, ts_mul, low_mul, high_mul, rct_cnf_save_fs_lst, prd_cnf_save_fs_lst, given_class):
-    """ determine type of reaction and related ts info from the reactant and product z-matrices.
-    Returns the type, the transition state z-matrix, the name of the coordinate to optimize,
-    the grid of values for the initial grid search, the torsion names and symmetries, and
-    whether or not to update the guess on successive steps.
-    These parameters are set for both the initial and a backup evaluation for if the initial ts
-    search fails.
+def ts_class(rct_zmas, prd_zmas, rad_rad, ts_mul, low_mul, high_mul,
+             rct_cnf_save_fs_lst, prd_cnf_save_fs_lst, given_class):
+    """ Determine type of reaction and related ts info from the
+        reactant and product z-matrices.
+        Returns the type, the transition state z-matrix, the name of the
+        coordinate to optimize, the grid of values for the initial grid search,
+        the torsion names and symmetries, and whether or not to update the
+        guess on successive steps.
+        These parameters are set for both the initial and a backup
+        evaluation for if the initial ts search fails.
     """
 
     # Convert termolecular reactions to bimolecular reactions
     rct_tors_names = []
     if len(rct_zmas) > 2 or len(prd_zmas) > 2:
-        rct_zmas, prd_zmas, rct_tors_names = rxnid.conv_termol_to_bimol(
+        rct_zmas, prd_zmas, rct_tors_names = conv_termol_to_bimol(
             rct_zmas, prd_zmas)
 
     # Determine the reaction types
-    ret = rxnid.determine_reaction_type(
+    ret = determine_reaction_type(
         rct_zmas, prd_zmas,
         ts_mul, high_mul, low_mul,
         rct_cnf_save_fs_lst, prd_cnf_save_fs_lst,
@@ -146,18 +149,22 @@ def determine_reaction_type(rct_zmas, prd_zmas,
         # Check for hydrogen migration
         if typ is None:
             orig_dist = automol.zmatrix.ts.min_hyd_mig_dist(rct_zmas, prd_zmas)
-            if orig_dist and (not given_class or given_class == 'hydrogenmigration'):
-                rct_zmas = util.min_dist_conformer_zma_geo(orig_dist, cnf_save_fs_lst[0])
+            hmcls = not given_class or given_class == 'hydrogenmigration'
+            if orig_dist and hmcls:
+                rct_zmas = fsread.min_dist_conformer_zma_geo(
+                    orig_dist, cnf_save_fs_lst[0])
                 ret = automol.zmatrix.ts.hydrogen_migration(rct_zmas, prd_zmas)
                 if ret:
                     typ = 'hydrogen migration'
-                    ts_zma, dist_name, frm_bnd_key, brk_bnd_key, tors_names = ret
+                    zma, dist_name, frm_bnd_key, brk_bnd_key, tors_names = ret
+                    ts_zma = zma
 
         # Check for hydrogen abstraction
         if typ is None:
             ret = automol.zmatrix.ts.hydrogen_abstraction(
                 rct_zmas, prd_zmas, sigma=False)
-            if ret and (not given_class or given_class == 'hydrogenabstraction'):
+            hmcls = not given_class or given_class == 'hydrogenmigration'
+            if ret and hmcls:
                 typ = 'hydrogen abstraction'
                 ts_zma, dist_name, frm_bnd_key, brk_bnd_key, tors_names = ret
                 typ += set_ts_spin(ts_mul, high_mul, low_mul)
@@ -187,7 +194,7 @@ def determine_reaction_type(rct_zmas, prd_zmas,
             orig_dist = automol.zmatrix.ts.min_unimolecular_elimination_dist(
                 rct_zmas, prd_zmas)
             if orig_dist:
-                rct_zmas = util.min_dist_conformer_zma_geo(
+                rct_zmas = fsread.min_dist_conformer_zma_geo(
                     orig_dist, cnf_save_fs_lst[0])
                 ret = automol.zmatrix.ts.concerted_unimolecular_elimination(
                     rct_zmas, prd_zmas)
@@ -274,4 +281,3 @@ def ts_mul_from_reaction_muls(rcts, prds, spc_dct):
         ts_mul_high = max(rct_spin_sum, prd_spin_sum)
         ts_mul_high = int(round(2*ts_mul_high + 1))
     return ts_mul_low, ts_mul_high, rad_rad
-

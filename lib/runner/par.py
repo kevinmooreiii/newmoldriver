@@ -1,10 +1,7 @@
 """ Set runtime parameters
 """
 
-import os
-import autofile
 import automol
-from automol.zmatrix.ts import _shifted_standard_forms_with_gaphs as shift_gra
 import elstruct
 
 

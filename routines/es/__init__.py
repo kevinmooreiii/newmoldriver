@@ -36,9 +36,15 @@ from routines.es.ts import sadpt_reference_geometry
 from routines.es.ts import cas_options_1
 from routines.es.ts import cas_options_2
 from routines.es.ts import multiref_wavefunction_guess
-from routines import util
+from routines.es.wells import find_vdw
+from routines.es.wells import fake_conf
+from routines.es.wells import fake_geo_gen
+from routines.es.util import nsamp_init
+from routines.es.find import find_ts
 from lib.phydat import phycon
 from lib.submission import substr
+from lib.runner import par as runpar
+from lib.filesystem import minc as fsmin
 
 
 __all__ = [
@@ -76,6 +82,10 @@ __all__ = [
     'cas_options_1',
     'cas_options_2',
     'multiref_wavefunction_guess',
+    'find_vdw',
+    'fake_conf',
+    'fake_geo_gen',
+    'nsamp_init'
 ]
 
 
@@ -168,22 +178,18 @@ def run_tau_sampling(filesys, params, opt_kwargs):
     tau_sampling(**params, **opt_kwargs)
 
 
-KICKOFF_SIZE = 0.1
-KICKOFF_BACKWARD = False
-PROJROT_SCRIPT_STR = substr.PROJROT
-
-
 def geometry_generation(tsk, spc, spc_info, mc_nsamp,
                         ini_thy_level, thy_level, ini_filesys, filesys,
-                        overwrite, saddle=False):
+                        overwrite, saddle=False, kickoff=(0.1, False)):
     """ run an electronic structure task
     for generating a list of conformer or tau sampling geometries
     """
+    [kickoff_size, kickoff_backward] = kickoff
     if not saddle:
         geo = reference_geometry(
             spc, thy_level, ini_thy_level, filesys, ini_filesys,
-            kickoff_size=KICKOFF_SIZE,
-            kickoff_backward=KICKOFF_BACKWARD,
+            kickoff_size=kickoff_size,
+            kickoff_backward=kickoff_backward,
             projrot_script_str=substr.PROJROT,
             overwrite=overwrite)
     else:
@@ -193,7 +199,7 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
 
     if geo:
         print('Task:', tsk)
-        _, opt_script_str, _, opt_kwargs = util.run_qchem_par(
+        _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(
             *thy_level[0:2])
         params = {'spc_info': spc_info,
                   'thy_level': thy_level,
@@ -254,11 +260,11 @@ def geometry_analysis(tsk, thy_level, ini_filesys,
         if selection == 'all':
             locs_lst = save_dir.leaf.existing()
         elif selection == 'min':
-            locs_lst = [util.min_energy_conformer_locators(save_dir)]
+            locs_lst = [fsmin.min_energy_conformer_locators(save_dir)]
     else:
         locs_lst = selection
 
-    sp_script_str, _, kwargs, _ = util.run_qchem_par(
+    sp_script_str, _, kwargs, _ = runpar.run_qchem_par(
         *thy_level[0:2])
     params['spc_info'] = spc_info
     params['thy_level'] = thy_level

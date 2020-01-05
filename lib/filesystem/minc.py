@@ -1,5 +1,6 @@
-""" filesys stuff from util
+""" Dealing withe the minimum-energy conf and trajectories
 """
+
 
 def min_energy_conformer_locators(cnf_save_fs):
     """ locators for minimum energy conformer """
@@ -43,6 +44,3 @@ def traj_sort(save_fs):
         traj_path = save_fs.trunk.file.trajectory.path()
         print("Updating trajectory file at {}".format(traj_path))
         save_fs.trunk.file.trajectory.write(traj)
-
-
-

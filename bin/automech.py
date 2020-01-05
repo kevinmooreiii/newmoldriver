@@ -5,7 +5,7 @@
 
 import os
 from drivers import mech as lmech
-from drivers import thermodriver
+# from drivers import thermodriver
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
 from lib.filesystem import build as lfs
@@ -57,10 +57,8 @@ if PARAMS.RUN_ES_SPC:
         rad_rad_ts=PARAMS.RAD_RAD_TS,
         hind_inc=PARAMS.HIND_INC,
         mc_nsamp=PARAMS.MC_NSAMP0,
-        temps=PARAMS.TEMPS,
-        pressures=PARAMS.PRESSURES,
         multi_info=PARAMS.MULTI_INFO,
-        assess_pdep=PARAMS.ASSESS_PDEP,
+        kickoff=(PARAMS.KICKOFF_SIZE, PARAMS.KICKOFF_BACKWARD),
         driver='es_spc'
     )
 
@@ -82,14 +80,15 @@ if PARAMS.RUN_ES_RXN:
         pressures=PARAMS.PRESSURES,
         multi_info=PARAMS.MULTI_INFO,
         assess_pdep=PARAMS.ASSESS_PDEP,
+        kickoff=(PARAMS.KICKOFF_SIZE, PARAMS.KICKOFF_BACKWARD),
         driver='es_rxn'
     )
 
-if PARAMS.RUN_THERMO:
-    thermodriver.run(
-        PARAMS.TSK_INFO_LST, SPC_DCT, PARAMS.REF_MOLS,
-        PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
-        ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
+# if PARAMS.RUN_THERMO:
+#     thermodriver.run(
+#         PARAMS.TSK_INFO_LST, SPC_DCT, PARAMS.REF_MOLS,
+#         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
+#         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
 
 if PARAMS.RUN_RATES:
     lmech.run_driver(

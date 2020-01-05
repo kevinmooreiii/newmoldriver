@@ -3,8 +3,9 @@ Build paths for spc and thy file systems
 """
 
 import autofile
-from routines import util
 from lib.filesystem import inf as finf
+from lib.filesystem import minc as fsmin
+from lib.filesystem import orb as fsorb
 
 
 def set_fs(spc, spc_info, thy_info,
@@ -28,7 +29,7 @@ def set_fs(spc, spc_info, thy_info,
 
     # Build the theory filesys obj
     thy_level = thy_info
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_info)
     thy_level = thy_info[0:3]
     thy_level.append(orb_restr)
@@ -60,7 +61,7 @@ def set_fs(spc, spc_info, thy_info,
         cnf_save_fs = autofile.fs.conformer(thy_save_path)
         tau_run_fs = autofile.fs.tau(thy_run_path)
         tau_save_fs = autofile.fs.tau(thy_save_path)
-        min_cnf_locs = util.min_energy_conformer_locators(
+        min_cnf_locs = fsmin.min_energy_conformer_locators(
             cnf_save_fs)
         if min_cnf_locs:
             min_cnf_run_path = cnf_run_fs.leaf.path(min_cnf_locs)
@@ -91,12 +92,16 @@ def set_fs(spc, spc_info, thy_info,
 def set_spc_fs(spc_dct, spc, run_prefix, save_prefix, rad_rad_ts):
     """ set the species filesys objects
     """
-    if 'ts_' in spc and rad_rad_ts != 'pst':
+    print('INFO TEST')
+    print(spc)
+    print(spc_dct)
+    if 'ts_' in spc:  # and rad_rad_ts != 'pst':
         run_fs, save_fs, run_path, save_path = spc_dct[spc]['rxn_fs']
         info = finf.get_spc_info(spc_dct[spc])
     else:
         info = finf.get_spc_info(spc_dct[spc])
         run_fs = autofile.fs.species(run_prefix)
+        print(info)
         run_fs.leaf.create(info)
         run_path = run_fs.leaf.path(info)
 
@@ -128,7 +133,7 @@ def get_spc_save_path(save_prefix, spc_info):
 def get_thy_run_path(run_prefix, spc_info, thy_info):
     """ create theory run path
     """
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)
@@ -142,7 +147,7 @@ def get_thy_run_path(run_prefix, spc_info, thy_info):
 def get_thy_save_fs(save_prefix, spc_info, thy_info):
     """ create theory save filesystem
     """
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)
@@ -154,7 +159,7 @@ def get_thy_save_fs(save_prefix, spc_info, thy_info):
 def get_thy_save_path(save_prefix, spc_info, thy_info):
     """ create theory save path
     """
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)

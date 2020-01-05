@@ -7,7 +7,7 @@ from lib.phydat import phycon
 from lib.phydat import bnd
 
 
-def find_max_1D(typ, grid, ts_zma, dist_name, scn_save_fs):
+def find_max_1d(typ, grid, ts_zma, dist_name, scn_save_fs):
     """ Find the maxmimum of the grid along one dimension
     """
     locs_list = []
@@ -32,7 +32,7 @@ def find_max_1D(typ, grid, ts_zma, dist_name, scn_save_fs):
     return max_zma, max_ene
 
 
-def find_max_2D(grid1, grid2, dist_name, brk_name, scn_save_fs):
+def find_max_2d(grid1, grid2, dist_name, brk_name, scn_save_fs):
     """ Find the maxmimum of the grid along two dimensions
     """
     enes_lst = []
@@ -159,7 +159,7 @@ def addition_grid(npoints, ts_bnd_len):
     return grid, update_guess
 
 
-def hydrogen_migration_grid(npoints, ts_bnd_len):
+def hydrogen_migration_grid(npoints, ts_bnd_len, ts_zma, dist_name):
     """ Build forward 1D grid for addition reaction
     """
     interval = 0.3*phycon.ANG2BOHR
@@ -182,7 +182,7 @@ def hydrogen_migration_grid(npoints, ts_bnd_len):
     return grid, update_guess
 
 
-def unimolecular_elimination_grid(npoints, ts_bnd_len):
+def unimolecular_elimination_grid(npoints, ts_bnd_len, ts_zma, brk_name):
     """ Build forward 2D grid for elimination reaction
     """
     brk_coo, = automol.zmatrix.coordinates(ts_zma)[brk_name]

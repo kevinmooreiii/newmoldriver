@@ -3,9 +3,8 @@
 
 from types import SimpleNamespace
 
-# setting SORT_RXNS to False leads to missing channels
-# for now just leave them sorted
 
+# Set each keyword to their default values
 TEMPS = [500., 550., 600., 650., 700., 750., 800.,
          850., 900., 950., 1000., 1050., 1100., 1150.,
          1200., 1250., 1300., 1350., 1400., 1450., 1500.,
@@ -13,8 +12,6 @@ TEMPS = [500., 550., 600., 650., 700., 750., 800.,
          1900., 1950., 2000.]
 PRESSURES = [0.03, 0.1, 0.3, 1., 3., 10., 30., 100.]
 
-
-# Set each keyword to their default values
 PARAMS = {
     'TEMPS': TEMPS,
     'PRESSURES': PRESSURES,
@@ -78,7 +75,7 @@ PARAMS = {
     'RUN_PREFIX': '/lcrc/project/PACC/run',
     'SAVE_PREFIX': '/lcrc/project/PACC/save',
     'KICKOFF_SIZE': 0.1,
-    'KICKOFF_BACKWARD': 3.0
+    'KICKOFF_BACKWARD': False
 }
 
 
@@ -171,8 +168,9 @@ def _set_value_type(value):
         frmtd_value = False
     elif value.isdigit():
         frmtd_value = int(value)
-    elif '.' in value and value.replace('.', '').replace('-','').isdigit():
-        frmtd_value = float(value)
+    elif '.' in value:
+        if value.replace('.', '').replace('-', '').isdigit():
+            frmtd_value = float(value)
     else:
         frmtd_value = value
 

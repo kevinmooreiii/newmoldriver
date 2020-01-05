@@ -8,7 +8,7 @@ import autofile
 # New Libs
 from lib.submission import substr
 from lib.runner.script import run_script
-from routines import util
+from lib.filesystem import orb as fsorb
 
 
 def run_rates(
@@ -18,7 +18,7 @@ def run_rates(
         and then running MESS
     """
     ts_info = (tsdct['ich'], tsdct['chg'], tsdct['mul'])
-    orb_restr = util.orbital_restriction(ts_info, thy_info)
+    orb_restr = fsorb.orbital_restriction(ts_info, thy_info)
     ref_level = thy_info[1:3]
     ref_level.append(orb_restr)
     print('ref level test:', ref_level)

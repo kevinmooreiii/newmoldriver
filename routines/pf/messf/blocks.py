@@ -11,8 +11,8 @@ import mess_io
 # New Libs
 from lib.phydat import phycon
 from lib.runner.script import run_script
-from routines import util
-from routines.es import conformer
+from lib.filesystem import orb as fsorb
+from lib.filesystem import minc as fsmin
 from routines.pf.messf import models as pfmodels
 
 
@@ -59,7 +59,9 @@ def species_block(
     if 'ts_' in spc:
         saddle = True
         tors_names = spc_dct_i['tors_names']
-        if 'migration' in spc_dct_i['class'] or 'elimination' in spc_dct_i['class']:
+        mig = 'migration' in spc_dct_i['class']
+        elm = 'elimination' in spc_dct_i['class']
+        if mig or elm:
             dist_names.append(spc_dct_i['dist_info'][0])
             dist_names.append(spc_dct_i['dist_info'][3])
 
@@ -115,7 +117,7 @@ def vtst_with_no_saddle_block(
     """
 
     ts_info = ['', ts_dct['chg'], ts_dct['mul']]
-    orb_restr = util.orbital_restriction(ts_info, multi_info)
+    orb_restr = fsorb.orbital_restriction(ts_info, multi_info)
     multi_level = multi_info[0:3]
     multi_level.append(orb_restr)
 
@@ -247,9 +249,8 @@ def vtst_with_no_saddle_block(
 
 def pst_block(
         spc_dct_i, spc_dct_j, spc_model, pf_levels, projrot_script_str,
-        spc_save_fs, elec_levels=[[0., 1]], sym_factor=1.,
-        pst_params=[1.0, 6]
-        ):
+        spc_save_fs, elec_levels=((0., 1)), sym_factor=1.,
+        pst_params=(1.0, 6)):
     """ prepare a Phase Space Theory species block
     """
 
@@ -270,14 +271,17 @@ def pst_block(
     thy_save_fs_j = autofile.fs.theory(save_path_j)
 
     # Set the filesystem objects for the two species
-    harmfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, harm_level, saddle=False)
+    harmfs_i = set_model_filesys(
+        thy_save_fs_i, spc_info_i, harm_level, saddle=False)
     harm_cnf_save_fs_i, harm_cnf_save_path_i, harm_min_cnf_locs_i, harm_save_path_i = harmfs_i
     harmfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, harm_level, saddle=False)
     harm_cnf_save_fs_j, harm_cnf_save_path_j, harm_min_cnf_locs_j, harm_save_path_j = harmfs_j
 
     if sym_level:
-        symfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, sym_level, saddle=False)
-        symfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, sym_level, saddle=False)
+        symfs_i = set_model_filesys(
+            thy_save_fs_i, spc_info_i, sym_level, saddle=False)
+        symfs_j = set_model_filesys(
+            thy_save_fs_j, spc_info_j, sym_level, saddle=False)
         sym_cnf_save_fs_i, sym_cnf_save_path_i, sym_min_cnf_locs_i, sym_save_path_i = symfs_i
         sym_cnf_save_fs_j, sym_cnf_save_path_j, sym_min_cnf_locs_j, sym_save_path_j = symfs_j
 
@@ -631,20 +635,22 @@ def pst_block(
 
 
 def fake_species_block(
-        spc_dct_i, spc_dct_j, spc_info_i, spc_info_j, spc_model, pf_levels, projrot_script_str,
+        spc_dct_i, spc_dct_j, spc_info_i, spc_info_j, spc_model,
+        pf_levels, projrot_script_str,
         elec_levels=[[0., 1]], sym_factor=1.,
         save_prefix_i='spc_save_path', save_prefix_j='spc_save_path'):
-    """ prepare a fake species block corresponding to the van der Waals well between two fragments
+    """ prepare a fake species block corresponding to the
+        van der Waals well between two fragments
     """
     harm_level, tors_level, _, sym_level = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info_i, harm_level)
     har_levelp_i = harm_level[0:3]
     har_levelp_i.append(orb_restr)
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info_j, harm_level)
     har_levelp_j = harm_level[0:3]
     har_levelp_j.append(orb_restr)
@@ -696,10 +702,11 @@ def fake_species_block(
 
     if vib_model == 'HARM' and tors_model == 'RIGID':
         if harm_min_cnf_locs_i is not None:
-            harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(harm_min_cnf_locs_i)
+            harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
+                harm_min_cnf_locs_i)
             if harm_min_cnf_locs_j is not None:
-                harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(harm_min_cnf_locs_j)
-
+                harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
+                    harm_min_cnf_locs_j)
                 freqs = [30, 50, 70, 100, 200]
                 ntrans = 5
                 is_atom_i = automol.geom.is_atom(harm_geo_i)
@@ -718,15 +725,19 @@ def fake_species_block(
                     ntrans = 0
                 freqs = freqs[0:ntrans]
                 if not is_atom_i:
-                    hess_i = harm_cnf_save_fs_i.leaf.file.hessian.read(harm_min_cnf_locs_i)
-                    freqs_i = elstruct.util.harmonic_frequencies(harm_geo_i, hess_i, project=False)
+                    hess_i = harm_cnf_save_fs_i.leaf.file.hessian.read(
+                        harm_min_cnf_locs_i)
+                    freqs_i = elstruct.util.harmonic_frequencies(
+                        harm_geo_i, hess_i, project=False)
                     mode_start = 6
                     if automol.geom.is_linear(harm_geo_i):
                         mode_start = mode_start - 1
                     freqs += freqs_i[mode_start:]
                 if not is_atom_j:
-                    hess_j = harm_cnf_save_fs_j.leaf.file.hessian.read(harm_min_cnf_locs_j)
-                    freqs_j = elstruct.util.harmonic_frequencies(harm_geo_j, hess_j, project=False)
+                    hess_j = harm_cnf_save_fs_j.leaf.file.hessian.read(
+                        harm_min_cnf_locs_j)
+                    freqs_j = elstruct.util.harmonic_frequencies(
+                        harm_geo_j, hess_j, project=False)
                     mode_start = 6
                     if automol.geom.is_linear(harm_geo_j):
                         mode_start = mode_start - 1
@@ -735,7 +746,8 @@ def fake_species_block(
                 max_z_i = max(atom[1][2] for atom in harm_geo_i)
                 min_z_j = min(atom[1][2] for atom in harm_geo_j)
                 harm_geo = harm_geo_i
-                harm_geo_j = automol.geom.translated(harm_geo_j, [0., 0., max_z_i + 6. - min_z_j])
+                harm_geo_j = automol.geom.translated(
+                    harm_geo_j, [0., 0., max_z_i + 6. - min_z_j])
                 harm_geo += harm_geo_j
 
                 hind_rot_str = ""
@@ -750,11 +762,15 @@ def fake_species_block(
 
     if vib_model == 'HARM' and tors_model == '1DHR':
         if harm_min_cnf_locs_i is not None:
-            harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(harm_min_cnf_locs_i)
-            min_ene_i = harm_cnf_save_fs_i.leaf.file.energy.read(harm_min_cnf_locs_i)
+            harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
+                harm_min_cnf_locs_i)
+            min_ene_i = harm_cnf_save_fs_i.leaf.file.energy.read(
+                harm_min_cnf_locs_i)
             if harm_min_cnf_locs_j is not None:
-                harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(harm_min_cnf_locs_j)
-                min_ene_j = harm_cnf_save_fs_j.leaf.file.energy.read(harm_min_cnf_locs_j)
+                harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
+                    harm_min_cnf_locs_j)
+                min_ene_j = harm_cnf_save_fs_j.leaf.file.energy.read(
+                    harm_min_cnf_locs_j)
                 harm_geo_js = harm_geo_j
 
                 freqs_trans = [30, 50, 70, 100, 200]
@@ -777,15 +793,19 @@ def fake_species_block(
                 freqs_i = []
                 freqs_j = []
                 if not is_atom_i:
-                    hess_i = harm_cnf_save_fs_i.leaf.file.hessian.read(harm_min_cnf_locs_i)
-                    freqs_i = elstruct.util.harmonic_frequencies(harm_geo_i, hess_i, project=False)
+                    hess_i = harm_cnf_save_fs_i.leaf.file.hessian.read(
+                        harm_min_cnf_locs_i)
+                    freqs_i = elstruct.util.harmonic_frequencies(
+                        harm_geo_i, hess_i, project=False)
                     mode_start = 6
                     if automol.geom.is_linear(harm_geo_i):
                         mode_start = mode_start - 1
                     freqs_i = freqs_i[mode_start:]
                 if not is_atom_j:
-                    hess_j = harm_cnf_save_fs_j.leaf.file.hessian.read(harm_min_cnf_locs_j)
-                    freqs_j = elstruct.util.harmonic_frequencies(harm_geo_j, hess_j, project=False)
+                    hess_j = harm_cnf_save_fs_j.leaf.file.hessian.read(
+                        harm_min_cnf_locs_j)
+                    freqs_j = elstruct.util.harmonic_frequencies(
+                        harm_geo_j, hess_j, project=False)
                     mode_start = 6
                     if automol.geom.is_linear(harm_geo_j):
                         mode_start = mode_start - 1
@@ -794,7 +814,8 @@ def fake_species_block(
                 max_z_i = max(atom[1][2] for atom in harm_geo_i)
                 min_z_j = min(atom[1][2] for atom in harm_geo_j)
                 harm_geo = harm_geo_i
-                harm_geo_j = automol.geom.translated(harm_geo_j, [0., 0., max_z_i + 6. - min_z_j])
+                harm_geo_j = automol.geom.translated(
+                    harm_geo_j, [0., 0., max_z_i + 6. - min_z_j])
                 harm_geo += harm_geo_j
 
                 hind_rot_str = ""
@@ -809,9 +830,11 @@ def fake_species_block(
                     else:
                         print('No inf obj to identify torsional angles')
                         tors_names = []
-                    zma = tors_cnf_save_fs_i.leaf.file.zmatrix.read(tors_min_cnf_locs_i)
+                    zma = tors_cnf_save_fs_i.leaf.file.zmatrix.read(
+                        tors_min_cnf_locs_i)
 
-                    tors_geo = tors_cnf_save_fs_i.leaf.file.geometry.read(tors_min_cnf_locs_i)
+                    tors_geo = tors_cnf_save_fs_i.leaf.file.geometry.read(
+                        tors_min_cnf_locs_i)
                     gra = automol.zmatrix.graph(zma, remove_stereo=True)
                     coo_dct = automol.zmatrix.coordinates(zma, multi=False)
 
@@ -828,8 +851,9 @@ def fake_species_block(
                     tors_grids = [
                         numpy.linspace(*linspace) + val_dct[name]
                         for name, linspace in zip(tors_names, tors_linspaces)]
-                    tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
-                        zma, tors_names))
+                    tors_sym_nums = list(
+                        automol.zmatrix.torsional_symmetry_numbers(
+                            zma, tors_names))
                     for tors_name, tors_grid, sym_num in zip(tors_names, tors_grids, tors_sym_nums):
                         locs_lst = []
                         enes = []
@@ -852,20 +876,22 @@ def fake_species_block(
 
                         atm_key = axis[1]
                         group = list(
-                            automol.graph.branch_atom_keys(gra, atm_key, axis) - set(axis))
+                            automol.graph.branch_atom_keys(
+                                gra, atm_key, axis) - set(axis))
                         if not group:
                             for atm in axis:
                                 if atm != atm_key:
                                     atm_key = atm
                             group = list(
-                                automol.graph.branch_atom_keys(gra, atm_key, axis) - set(axis))
+                                automol.graph.branch_atom_keys(
+                                    gra, atm_key, axis) - set(axis))
 
                         group = list(numpy.add(group, 1))
                         axis = list(numpy.add(axis, 1))
                         if (atm_key+1) != axis[1]:
                             axis.reverse()
 
-                        #check for dummy transformations
+                        # Check for dummy transformations
                         atom_symbols = automol.zmatrix.symbols(zma)
                         dummy_idx = []
                         for atm_idx, atm in enumerate(atom_symbols):
@@ -877,7 +903,8 @@ def fake_species_block(
                                 if dummy < idx:
                                     remdummy[idx] += 1
                         hind_rot_str += mess_io.writer.rotor_hindered(
-                            group, axis, sym_num, pot, remdummy=remdummy, geom=harm_geo_i)
+                            group, axis, sym_num, pot,
+                            remdummy=remdummy, geom=harm_geo_i)
                         proj_rotors_str += projrot_io.writer.rotors(
                             axis, group, remdummy=remdummy)
                         sym_factor /= sym_num
@@ -921,9 +948,11 @@ def fake_species_block(
                     else:
                         print('No inf obj to identify torsional angles')
                         tors_names = []
-                    zma = tors_cnf_save_fs_j.leaf.file.zmatrix.read(tors_min_cnf_locs_j)
+                    zma = tors_cnf_save_fs_j.leaf.file.zmatrix.read(
+                        tors_min_cnf_locs_j)
 
-                    tors_geo = tors_cnf_save_fs_j.leaf.file.geometry.read(tors_min_cnf_locs_j)
+                    tors_geo = tors_cnf_save_fs_j.leaf.file.geometry.read(
+                        tors_min_cnf_locs_j)
                     gra = automol.zmatrix.graph(zma, remove_stereo=True)
                     coo_dct = automol.zmatrix.coordinates(zma, multi=False)
 
@@ -940,8 +969,9 @@ def fake_species_block(
                     tors_grids = [
                         numpy.linspace(*linspace) + val_dct[name]
                         for name, linspace in zip(tors_names, tors_linspaces)]
-                    tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
-                        zma, tors_names))
+                    tors_sym_nums = list(
+                        automol.zmatrix.torsional_symmetry_numbers(
+                            zma, tors_names))
                     for tors_name, tors_grid, sym_num in zip(tors_names, tors_grids, tors_sym_nums):
                         locs_lst = []
                         enes = []
@@ -949,7 +979,8 @@ def fake_species_block(
                             locs_lst.append([[tors_name], [grid_val]])
                         for locs in locs_lst:
                             if scn_save_fs.leaf.exists(locs):
-                                enes.append(scn_save_fs.leaf.file.energy.read(locs))
+                                enes.append(
+                                    scn_save_fs.leaf.file.energy.read(locs))
                             else:
                                 enes.append(10.)
                                 print('ERROR: missing grid value for torsional potential of {}'
@@ -957,27 +988,29 @@ def fake_species_block(
                         enes = numpy.subtract(enes, min_ene_j)
                         pot = list(enes*phycon.EH2KCAL)
 
-                        # Build a potential list from only successful calculations
+                        # Build potential lst from only successful calculations
                         pot = pfmodels.hrpot_spline_fitter(pot)
 
                         axis = coo_dct[tors_name][1:3]
 
                         atm_key = axis[1]
                         group = list(
-                            automol.graph.branch_atom_keys(gra, atm_key, axis) - set(axis))
+                            automol.graph.branch_atom_keys(
+                                gra, atm_key, axis) - set(axis))
                         if not group:
                             for atm in axis:
                                 if atm != atm_key:
                                     atm_key = atm
                             group = list(
-                                automol.graph.branch_atom_keys(gra, atm_key, axis) - set(axis))
+                                automol.graph.branch_atom_keys(
+                                    gra, atm_key, axis) - set(axis))
 
                         group = list(numpy.add(group, 1))
                         axis = list(numpy.add(axis, 1))
                         if (atm_key+1) != axis[1]:
                             axis.reverse()
 
-                        #check for dummy transformations
+                        # Check for dummy transformations
                         atom_symbols = automol.zmatrix.symbols(zma)
                         dummy_idx = []
                         for atm_idx, atm in enumerate(atom_symbols):
@@ -989,7 +1022,8 @@ def fake_species_block(
                                 if dummy < idx:
                                     remdummy[idx] += 1
                         hind_rot_str += mess_io.writer.rotor_hindered(
-                            group, axis, sym_num, pot, remdummy=remdummy, geom=harm_geo_js)
+                            group, axis, sym_num, pot,
+                            remdummy=remdummy, geom=harm_geo_js)
                         proj_rotors_str += projrot_io.writer.rotors(
                             axis, group, remdummy=remdummy)
                         sym_factor /= sym_num
@@ -1019,7 +1053,7 @@ def fake_species_block(
                             path+'/hrproj_freq.dat')
                         freqs_j = rthrproj_freqs
                     if not freqs_j:
-                        rtproj_freqs, imag_freq = projrot_io.reader.rpht_output(
+                        rtproj_freqs, _ = projrot_io.reader.rpht_output(
                             path+'/RTproj_freq.dat')
                         freqs_j = rtproj_freqs
 
@@ -1044,7 +1078,7 @@ def set_model_filesys(thy_save_fs, spc_info, level, saddle=False):
     """
     # Set the level for the model
     levelp = level[0:3]
-    levelp.append(util.orbital_restriction(spc_info, level))
+    levelp.append(fsorb.orbital_restriction(spc_info, level))
 
     # Get the save fileystem path
     save_path = thy_save_fs.leaf.path(levelp[1:4])
@@ -1055,7 +1089,7 @@ def set_model_filesys(thy_save_fs, spc_info, level, saddle=False):
 
     # Get the fs object and the locs
     cnf_save_fs = autofile.fs.conformer(save_path)
-    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
 
     # Get the save path for the conformers
     if min_cnf_locs:

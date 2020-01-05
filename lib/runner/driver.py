@@ -88,11 +88,12 @@ def run_job(
         method = thy_level[1]
         basis = thy_level[2]
         inf_obj = autofile.system.info.run(
-            job=job, prog=prog, version='', method=method, basis=basis, status=status)
+            job=job, prog=prog, version='',
+            method=method, basis=basis, status=status)
         inf_obj.utc_start_time = autofile.system.info.utc_time()
         run_fs.leaf.file.info.write(inf_obj, [job])
 
-        # Set the job runner based on requested by user; set special options as needed
+        # Set job runner based on user request; set special options as needed
         runner = JOB_RUNNER_DCT[job]
 
         if job == elstruct.Job.OPTIMIZATION:
@@ -165,10 +166,9 @@ def is_successful_output(out_str, job, prog):
 
     ret = False
     if elstruct.reader.has_normal_exit_message(prog, out_str):
-        message = elstruct.reader.check_convergence_messages(prog, error,
-                                                      success, out_str)
-        if elstruct.reader.check_convergence_messages(prog, error,
-                                                      success, out_str):
+        conv = elstruct.reader.check_convergence_messages(
+            prog, error, success, out_str)
+        if conv:
             ret = True
 
     return ret

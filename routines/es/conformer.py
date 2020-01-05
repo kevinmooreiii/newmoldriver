@@ -7,9 +7,11 @@ import elstruct
 import autofile
 
 # New libs
-from routines import util
+from routines.es import util
 from lib.phydat import phycon
 from lib.runner import driver
+from lib.runner import par as runpar
+from lib.filesystem import minc as fsmin
 
 
 def conformer_sampling(
@@ -73,7 +75,7 @@ def conformer_sampling(
     )
 
     # save information about the minimum energy conformer in top directory
-    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
         zma = cnf_save_fs.leaf.file.zmatrix.read(min_cnf_locs)
@@ -93,7 +95,7 @@ def single_conformer(spc_info, thy_level, filesys, overwrite,
         randomly sampled initial torsional angles
     """
     mc_nsamp = [False, 0, 0, 0, 0, 1]
-    sp_script_str, _, kwargs, _ = util.run_qchem_par(*thy_level[0:2])
+    sp_script_str, _, kwargs, _ = runpar.run_qchem_par(*thy_level[0:2])
     thy_save_fs = filesys[3]
     two_stage = False
     if saddle:
@@ -421,7 +423,7 @@ def save_conformers(cnf_run_fs, cnf_save_fs, saddle=False,
                     seen_enes.append(ene)
 
         # update the conformer trajectory file
-        util.traj_sort(cnf_save_fs)
+        fsmin.traj_sort(cnf_save_fs)
 
 
 def is_atom_closest_to_bond_atom(zma, idx_rad, bond_dist):

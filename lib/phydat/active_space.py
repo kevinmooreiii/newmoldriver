@@ -6,5 +6,3 @@
 ACT_SPACE_DCT = {
     'InChI=1S/O2/c1-2': [4, 6]
 }
-
-

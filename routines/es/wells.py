@@ -2,14 +2,27 @@
 Find a TS from the grid as well as associated vdW wells
 """
 
+import numpy
+import automol
+import elstruct
+import autofile
+from routines.es import util
+from routines.es import geom
+from lib.runner import runpar
+from lib.runner import driver
+from lib.filesystem import orb as fsorb
+from lib.phydat import phycon
+
 
 def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
-             nsamp_par, run_prefix, save_prefix, kickoff_size, kickoff_backward,
+             nsamp_par, run_prefix, save_prefix,
+             kickoff_size, kickoff_backward,
              projrot_script_str, overwrite):
-    """ find van der Waals structures for all the pairs of species in a reaction list
+    """ Find van der Waals structures for all the pairs of
+        species in a reaction list
     """
     new_vdws = []
-    _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(*thy_info[:2])
+    _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(*thy_info[:2])
     mul = spc_dct[ts_name]['low_mul']
     vdw_names_lst = []
     if vdw_params[0]:
@@ -19,7 +32,8 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
 
     for names, ts_mul, label in vdw_names_lst:
         if len(names) < 2:
-            print("Cannot find van der Waals well for unimolecular reactant or product")
+            print('Cannot find van der Waals well for unimolecular',
+                  'reactant or product')
         ichs = list(map(lambda name: spc_dct[name]['ich'], names))
         chgs = list(map(lambda name: spc_dct[name]['chg'], names))
         muls = list(map(lambda name: spc_dct[name]['mul'], names))
@@ -27,16 +41,16 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
         # theory
         prog = thy_info[0]
         method = thy_info[1]
-        _, opt_script_str, _, opt_kwargs = moldr.util.run_qchem_par(prog, method)
+        _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(prog, method)
 
-        geos = []
+        geos = [(), ()]
         ntaudof = 0.
-        for name, ich, chg, mul in zip(names, ichs, chgs, muls):
+        for i, (nam, ich, chg, mul) in enumerate(zip(names, ichs, chgs, muls)):
             spc_info = [ich, chg, mul]
-            orb_restr = moldr.util.orbital_restriction(spc_info, ini_thy_info)
+            orb_restr = fsorb.orbital_restriction(spc_info, ini_thy_info)
             ini_thy_level = ini_thy_info[0:3]
             ini_thy_level.append(orb_restr)
-            orb_restr = moldr.util.orbital_restriction(spc_info, thy_info)
+            orb_restr = fsorb.orbital_restriction(spc_info, thy_info)
             thy_level = thy_info[0:3]
             thy_level.append(orb_restr)
             spc_run_fs = autofile.fs.species(run_prefix)
@@ -60,22 +74,22 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
             cnf_run_fs = autofile.fs.conformer(thy_run_path)
             cnf_save_fs = autofile.fs.conformer(thy_save_path)
 
-            ini_fs = [None, ini_thy_save_fs]
-            fs = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
-                  cnf_run_fs, cnf_save_fs, None, None,
-                  None, None, run_fs]
-    # fs = [None, None, thy_run_fs, thy_save_fs,
-          # cnf_run_fs, cnf_save_fs, None, None,
-            geo = moldr.geom.reference_geometry(
-                spc_dct[name], thy_level, ini_thy_level, fs, ini_fs,
+            ini_filesys = [None, ini_thy_save_fs]
+            filesys = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
+                       cnf_run_fs, cnf_save_fs, None, None,
+                       None, None, run_fs]
+            geo = geom.reference_geometry(
+                spc_dct[nam], thy_level, ini_thy_level,
+                filesys, ini_filesys,
                 kickoff_size=kickoff_size,
                 kickoff_backward=kickoff_backward,
                 projrot_script_str=projrot_script_str,
                 overwrite=overwrite)
-            geos.append(geo)
+            geos[i] = geo
             gra = automol.geom.graph(geo)
-            ntaudof += len(automol.graph.rotational_bond_keys(gra, with_h_rotors=False))
-        nsamp = moldr.util.nsamp_init(nsamp_par, ntaudof)
+            ntaudof += len(
+                automol.graph.rotational_bond_keys(gra, with_h_rotors=False))
+        nsamp = util.nsamp_init(nsamp_par, ntaudof)
         geo1, geo2 = geos
         geo1 = automol.geom.mass_centered(geo1)
         geo2 = automol.geom.mass_centered(geo2)
@@ -97,20 +111,18 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
             print('vdw starting geometry')
             print(automol.geom.xyz_string(geo))
 
-   #  set up the filesystem
+            # Set up the filesystem
             ich = automol.inchi.recalculate(automol.inchi.join(ichs))
             chg = sum(chgs)
             mul = ts_mul
             spc_info = (ich, chg, mul)
-            #orb_restr = moldr.util.orbital_restriction(mul, thy_info[0:3] restrict_open_shell)
-            #orb_restr = restrict_open_shell
             spc_run_fs = autofile.fs.species(run_prefix)
             spc_run_fs.leaf.create(spc_info)
             spc_run_path = spc_run_fs.leaf.path(spc_info)
             spc_save_fs = autofile.fs.species(save_prefix)
             spc_save_fs.leaf.create(spc_info)
             spc_save_path = spc_save_fs.leaf.path(spc_info)
-            orb_restr = moldr.util.orbital_restriction(spc_info, thy_info)
+            orb_restr = fsorb.orbital_restriction(spc_info, thy_info)
             thy_level = thy_info[0:3]
             thy_level.append(orb_restr)
             thy_run_fs = autofile.fs.theory(spc_run_path)
@@ -120,10 +132,10 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
             thy_save_fs.leaf.create(thy_level[1:4])
             thy_save_path = thy_save_fs.leaf.path(thy_level[1:4])
             run_fs = autofile.fs.run(thy_run_path)
-   #  generate reference geometry
-   #  generate the z-matrix and sampling ranges
 
-            moldr.driver.run_job(
+            # Generate reference geometry
+            # Generate the z-matrix and sampling ranges
+            driver.run_job(
                 job=elstruct.Job.OPTIMIZATION,
                 geom=geo,
                 spc_info=spc_info,
@@ -134,8 +146,9 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
                 **opt_kwargs,
             )
 
-   #  save info for the initial geometry (from inchi or from save directory)
-            ret = moldr.driver.read_job(job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+            # Save info for the initial geometry (from ichi or fsave dir)
+            ret = driver.read_job(
+                job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
             if ret:
                 print('Saving reference geometry')
                 print(" - Save path: {}".format(thy_save_path))
@@ -161,16 +174,15 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
                     spc_dct[vdw_name]['mul'] = mul
                     spc_dct[vdw_name]['chg'] = chg
                     spc_dct[vdw_name]['dist_info'][1] = dist_cutoff
-                    fs = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
-                          cnf_run_fs, cnf_save_fs, None, None,
-                          None, None, run_fs]
-                    #Make a fake conformer
+
+                    # Make a fake conformer
                     cnf_save_fs = autofile.fs.conformer(thy_save_path)
                     cnf_run_fs = autofile.fs.conformer(thy_run_path)
                     cnf_save_fs.trunk.create()
                     cnf_run_fs.trunk.create()
                     tors_range_dct = {}
-                    cinf_obj = autofile.system.info.conformer_trunk(0, tors_range_dct)
+                    cinf_obj = autofile.system.info.conformer_trunk(
+                        0, tors_range_dct)
                     cinf_obj.nsamp = 1
                     cnf_save_fs.trunk.file.info.write(cinf_obj)
                     locs_lst = cnf_save_fs.leaf.existing()
@@ -193,13 +205,13 @@ def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
     return new_vdws
 
 
-def fake_conf(thy_level, fs, inf=[]):
+def fake_conf(thy_level, filesys, inf=()):
     """ generate data to be used for a fake well I think?
     """
-    cnf_save_fs = fs[5]
-    cnf_run_fs = fs[4]
-    thy_save_fs = fs[3]
-    run_fs = fs[-1]
+    cnf_save_fs = filesys[5]
+    cnf_run_fs = filesys[4]
+    thy_save_fs = filesys[3]
+    run_fs = filesys[-1]
     thy_save_path = thy_save_fs.leaf.path(thy_level[1:4])
     geo = thy_save_fs.leaf.file.geometry.read(thy_level[1:4])
     if inf:
@@ -227,24 +239,19 @@ def fake_conf(thy_level, fs, inf=[]):
         inf_obj, locs)
     cnf_run_fs.leaf.file.geometry_info.write(
         inf_obj, locs)
-    method = inf_obj.method
+    # method = inf_obj.method
     cnf_save_fs.leaf.file.energy.write(ene, locs)
     cnf_run_fs.leaf.file.energy.write(ene, locs)
     cnf_save_fs.leaf.file.geometry.write(geo, locs)
     cnf_run_fs.leaf.file.geometry.write(geo, locs)
 
 
-def fake_geo_gen(tsk, spcdic, es_dct, thy_level, fs,
-       spc_info, overwrite):
+def fake_geo_gen(tsk, thy_level, filesys):
     """ generate data to be used for a fake well I think?
     """
     if 'conf' in tsk:
-        fake_conf(thy_level, fs)
-
+        fake_conf(thy_level, filesys)
     if 'scan' in tsk:
         pass
     if 'tau' in tsk:
         pass
-
-
-

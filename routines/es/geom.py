@@ -9,10 +9,12 @@ import scripts
 import projrot_io
 
 # New Libs
+from routines.es import conformer
+from routines.es import wells
 from lib.phydat import phycon
-from lib.reaction import wells as lwells
 from lib.runner import driver
-from routines import util
+from lib.runner import par as runpar
+from lib.runner.script import run_script
 
 
 def reference_geometry(
@@ -95,7 +97,7 @@ def reference_geometry(
                     print('getting reference geometry from inchi')
         # Optimize from initial geometry to get reference geometry
         if not geo:
-            _, opt_script_str, _, opt_kwargs = util.run_qchem_par(
+            _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(
                 *thy_level[0:2])
             params = {
                 'spc_info': spc_info,
@@ -144,11 +146,11 @@ def reference_geometry(
             if ncp < 2:
                 zma = automol.geom.zmatrix(geo)
                 thy_save_fs.leaf.file.zmatrix.write(zma, thy_level[1:4])
-                scripts.es.run_single_conformer(
+                conformer.single_conformer(
                     spc_info, thy_level, filesys, overwrite)
             else:
                 print("Cannot create zmatrix for disconnected species")
-                lwells.fake_conf(thy_level, filesys, inf)
+                wells.fake_conf(thy_level, filesys, inf)
 
         if geo:
             inf_obj.status = autofile.system.RunStatus.SUCCESS
@@ -219,7 +221,7 @@ def remove_imag(
 
     print('the initial geometries will be checked for imaginary frequencies')
     spc_info = scripts.es.get_spc_info(spc_dct_i)
-    script_str, opt_script_str, kwargs, opt_kwargs = util.run_qchem_par(
+    script_str, opt_script_str, kwargs, opt_kwargs = runpar.run_qchem_par(
         *thy_level[0:2])
 
     imag, geo, disp_xyzs, hess = run_check_imaginary(
@@ -383,7 +385,7 @@ def projrot_frequencies(geo, hess, thy_level, thy_run_fs,
     with open(proj_file_path, 'w') as proj_file:
         proj_file.write(projrot_inp_str)
 
-    util.run_script(projrot_script_str, projrot_path)
+    run_script(projrot_script_str, projrot_path)
 
     imag_freq = ''
     if os.path.exists(projrot_path+'/hrproj_freq.dat'):

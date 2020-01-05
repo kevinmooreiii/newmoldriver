@@ -6,10 +6,9 @@ import os
 import sys
 import numpy
 import automol.geom
-import esdriver
-import ktpdriver
+from drivers import esdriver
+from drivers import ktpdriver
 
-from routines import util
 from routines.pf import get_high_level_energy
 from routines.pf import rates as messrates
 from lib.phydat import phycon
@@ -17,11 +16,8 @@ from lib.submission import substr
 from lib.filesystem import inf as finf
 from lib.filesystem import path as fpath
 from lib.filesystem import read as fread
-from lib.reaction.ts import ts_class
-
-
-KICKOFF_SIZE = 0.1
-KICKOFF_BACKWARD = False
+from lib.load import geo
+from lib.reaction import rxnid
 
 
 def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
@@ -40,6 +36,7 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                temps=[500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.],
                pressures=[0.03, 0.1, 0.3, 1., 3., 10., 30., 100.],
                assess_pdep=[0.3, 3.0, [500., 1000.0]],
+               kickoff=(0.1, False),
                driver='es_spc'):
     """ Run the ktp driver for the PESs
     """
@@ -119,7 +116,7 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             print(spc_dct[rct])
                             ts_chg += spc_dct[rct]['chg']
                         spc_dct[tsname]['chg'] = ts_chg
-                        mul_low, _, rad_rad = util.ts_mul_from_reaction_muls(
+                        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
                             rct_names_lst[idx], prd_names_lst[idx], spc_dct)
                         spc_dct[tsname]['mul'] = mul_low
                         spc_dct[tsname]['rad_rad'] = rad_rad
@@ -132,16 +129,15 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                         spc_esdriver(
                             rct_names_lst, prd_names_lst, tsk_info_lst,
                             spc_dct, run_prefix, save_prefix, vdw_params,
-                            pst_params=pst_params,
                             rad_rad_ts=rad_rad_ts,
                             mc_nsamp=mc_nsamp)
                     if driver == 'es_rxn':
-                        spc_esdriver(
+                        rxn_esdriver(
                             rct_names_lst, prd_names_lst, tsk_info_lst,
                             spc_dct, run_prefix, save_prefix, vdw_params,
-                            pst_params=pst_params,
                             rad_rad_ts=rad_rad_ts,
-                            mc_nsamp=mc_nsamp)
+                            mc_nsamp=mc_nsamp,
+                            kickoff=kickoff)
                     elif driver == 'ktp':
                         ktpdriver.run(
                             spc_dct,
@@ -153,7 +149,11 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             ene_coeff=ene_coeff,
                             options=options,
                             etrans=etrans,
-                            pst_params=pst_params)
+                            pst_params=pst_params,
+                            multi_info=multi_info,
+                            temps=temps,
+                            pressures=pressures,
+                            assess_pdep=assess_pdep)
 
 
 def get_user_input():
@@ -180,7 +180,7 @@ def build_geom_dct(data_path):
     """ Obtain dct containing geometries to use as input
     """
     geom_path = os.path.join(data_path, 'data', 'geoms')
-    geom_dct = util.geometry_dictionary(geom_path)
+    geom_dct = geo.geometry_dictionary(geom_path)
     return geom_dct
 
 
@@ -199,7 +199,6 @@ def etrans_lst(params):
 
 def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                  spc_dct, run_prefix, save_prefix, vdw_params,
-                 pst_params=[1.0, 6],
                  rad_rad_ts='pst',
                  mc_nsamp=[True, 10, 1, 3, 100]):
     """ Call the ESDriver Routines for species in the spc dct
@@ -216,16 +215,15 @@ def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
     esdriver.run(
         spc_tsk_lst, spc_run_lst, spc_dct,
         run_prefix, save_prefix, vdw_params,
-        pst_params=pst_params,
         rad_rad_ts=rad_rad_ts,
         mc_nsamp=mc_nsamp)
 
 
 def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                  spc_dct, run_prefix, save_prefix, vdw_params,
-                 pst_params=[1.0, 6],
                  rad_rad_ts='pst',
-                 mc_nsamp=[True, 10, 1, 3, 100]):
+                 mc_nsamp=[True, 10, 1, 3, 100],
+                 kickoff=(0.1, False)):
     """ Call the ESDriver Routines for reactions in the spc dct
     """
     # Format the task info list
@@ -242,16 +240,18 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
         for spc in spc_dct:
             if 'ts_' in spc:
                 spc_dct[spc] = set_sadpt_info(
-                    ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix)
+                    ts_tsk_lst, spc_dct, spc,
+                    run_prefix, save_prefix,
+                    kickoff)
         print('End transition state prep\n')
 
         # Execute ESDriver
         esdriver.run(
             ts_tsk_lst, rxn_lst, spc_dct,
             run_prefix, save_prefix, vdw_params,
-            pst_params=pst_params,
             rad_rad_ts=rad_rad_ts,
-            mc_nsamp=mc_nsamp)
+            mc_nsamp=mc_nsamp,
+            kickoff=kickoff)
 
 
 def form_spc_queue(rct_names_lst=(), prd_names_lst=()):
@@ -317,7 +317,7 @@ def format_run_rxn_lst(rct_names_lst, prd_names_lst):
     return run_lst
 
 
-def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
+def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix, kickoff):
     """ set the saddle point dct with info
     """
     es_ini_key = ts_tsk_lst[0][2]
@@ -327,7 +327,7 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
 
     # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
     rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
-        run_prefix, save_prefix, spc, spc_dct, thy_info, ini_thy_info)
+        save_prefix, spc, spc_dct, thy_info, ini_thy_info)
     spc_dct[spc]['rxn_ichs'] = rxn_ichs
     spc_dct[spc]['rxn_chgs'] = rxn_chgs
     spc_dct[spc]['rxn_muls'] = rxn_muls
@@ -335,6 +335,7 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
     spc_dct[spc]['high_mul'] = high_mul
 
     # Generate rxn_fs from rxn_info stored in spc_dct
+    [kickoff_size, kickoff_backward] = kickoff
     rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
         run_prefix, save_prefix, spc_dct[spc])
     spc_dct[spc]['rxn_fs'] = [
@@ -344,9 +345,9 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix):
         rxn_save_path]
     rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
         spc_dct[spc]['reacs'], spc_dct[spc]['prods'], spc_dct,
-        ini_thy_info, save_prefix, run_prefix, KICKOFF_SIZE,
-        KICKOFF_BACKWARD, substr.PROJROT)
-    ret = ts_class(
+        ini_thy_info, save_prefix, run_prefix, kickoff_size,
+        kickoff_backward, substr.PROJROT)
+    ret = rxnid.ts_class(
         rct_zmas, prd_zmas, spc_dct[spc]['rad_rad'],
         spc_dct[spc]['mul'], low_mul, high_mul,
         rct_cnf_save_fs, prd_cnf_save_fs, spc_dct[spc]['given_class'])

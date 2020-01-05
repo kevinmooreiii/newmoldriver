@@ -10,7 +10,7 @@ import autofile
 # New Libs
 from lib.submission import substr
 from lib.runner.script import run_script
-from routines import util
+from lib.filesystem import orb as fsorb
 
 
 # MESSPF
@@ -49,8 +49,8 @@ def run_thermp(pf_path, nasa_path):
         thermp_file_name='thermp.dat',
         pf_file_name='pf.dat'
         )
-    with open('thermp.out', 'r') as f:
-        lines = f.readlines()
+    with open('thermp.out', 'r') as thermfile:
+        lines = thermfile.readlines()
     line = lines[-1]
     hf298k = line.split()[-1]
     return hf298k
@@ -102,7 +102,7 @@ def get_thermo_paths(spc_save_path, spc_info, har_level):
     there is no obvious place to save this information for a random
     assortment of har_level, tors_level, vpt2_level
     """
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, har_level)
     har_levelp = har_level[1:3]
     har_levelp.append(orb_restr)

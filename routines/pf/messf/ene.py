@@ -12,7 +12,8 @@ import mess_io
 from lib.phydat import phycon
 from lib.submission import substr
 from lib.runner.script import run_script
-from routines import util
+from lib.filesystem import minc as fsmin
+from lib.filesystem import orb as fsorb
 from routines.pf.messf.models import hrpot_spline_fitter
 
 
@@ -27,7 +28,7 @@ def get_high_level_energy(
         spc_save_fs.leaf.create(spc_info)
         spc_save_path = spc_save_fs.leaf.path(spc_info)
 
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_low_level)
     thy_low_level = thy_low_level[1:3]
     thy_low_level.append(orb_restr)
@@ -41,7 +42,7 @@ def get_high_level_energy(
         ll_save_path = ll_save_fs.trunk.path()
 
     cnf_save_fs = autofile.fs.conformer(ll_save_path)
-    min_cnf_locs = util.min_energy_conformer_locators(
+    min_cnf_locs = fsmin.min_energy_conformer_locators(
         cnf_save_fs)
     if not min_cnf_locs:
         print('ERROR: No minimum conformer geometry for ',
@@ -49,7 +50,7 @@ def get_high_level_energy(
         return 0.0
     cnf_save_path = cnf_save_fs.leaf.path(min_cnf_locs)
 
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, thy_high_level)
     thy_high_level = thy_high_level[1:3]
     thy_high_level.append(orb_restr)
@@ -78,7 +79,7 @@ def get_zero_point_energy(
 
     thy_save_fs = autofile.fs.theory(save_prefix)
 
-    orb_restr = util.orbital_restriction(
+    orb_restr = fsorb.orbital_restriction(
         spc_info, har_level)
     har_levelp = har_level[0:3]
     har_levelp.append(orb_restr)
@@ -94,7 +95,7 @@ def get_zero_point_energy(
         saddle = True
 
     har_cnf_save_fs = autofile.fs.conformer(har_save_path)
-    har_min_cnf_locs = util.min_energy_conformer_locators(har_cnf_save_fs)
+    har_min_cnf_locs = fsmin.min_energy_conformer_locators(har_cnf_save_fs)
 
     # Set boolean to account for rad-rad reaction (not supported by vtst)
     rad_rad_ts = False
@@ -103,7 +104,7 @@ def get_zero_point_energy(
             rad_rad_ts = True
 
     if tors_level and not rad_rad_ts:
-        orb_restr = util.orbital_restriction(
+        orb_restr = fsorb.orbital_restriction(
             spc_info, tors_level)
         tors_levelp = tors_level[0:3]
         tors_levelp.append(orb_restr)
@@ -115,13 +116,13 @@ def get_zero_point_energy(
             tors_save_path = tors_save_fs.trunk.path()
 
         tors_cnf_save_fs = autofile.fs.conformer(tors_save_path)
-        tors_min_cnf_locs = util.min_energy_conformer_locators(
+        tors_min_cnf_locs = fsmin.min_energy_conformer_locators(
             tors_cnf_save_fs)
         if tors_min_cnf_locs:
             tors_cnf_save_path = tors_cnf_save_fs.leaf.path(tors_min_cnf_locs)
 
     if vpt2_level:
-        orb_restr = util.orbital_restriction(
+        orb_restr = fsorb.orbital_restriction(
             spc_info, vpt2_level)
         vpt2_levelp = vpt2_level[0:3]
         vpt2_levelp.append(orb_restr)
@@ -133,7 +134,7 @@ def get_zero_point_energy(
             anh_save_path = anh_save_fs.trunk.path()
 
         anh_cnf_save_fs = autofile.fs.conformer(anh_save_path)
-        # anh_min_cnf_locs = util.min_energy_conformer_locators(
+        # anh_min_cnf_locs = fsmin.min_energy_conformer_locators(
         # anh_cnf_save_fs)
 
     if saddle:

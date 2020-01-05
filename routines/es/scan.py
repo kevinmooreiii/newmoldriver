@@ -8,7 +8,9 @@ import autofile
 
 # New libs
 from lib.runner import driver
-from routines import util
+from lib.runner import par as runpar
+from lib.filesystem import minc as fsmin
+from lib.filesystem import orb as fsorb
 from routines.es import ts
 
 
@@ -18,7 +20,7 @@ def hindered_rotor_scans(
         brk_bnd_key=(), **opt_kwargs):
     """ Perform 1d scans over each of the torsional coordinates
     """
-    min_cnf_locs = util.min_energy_conformer_locators(cnf_save_fs)
+    min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         min_cnf_run_path = cnf_run_fs.leaf.path(min_cnf_locs)
         min_cnf_save_path = cnf_save_fs.leaf.path(min_cnf_locs)
@@ -213,7 +215,7 @@ def run_multiref_rscan(
     prog = multi_level[0]
     method = multi_level[1]
 
-    _, opt_script_str, _, opt_kwargs = util.run_qchem_par(prog, method)
+    _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(prog, method)
 
     if num_act_elc is None and num_act_orb is None:
         num_act_elc = high_mul - 1
@@ -549,7 +551,7 @@ def infinite_separation_energy(
 
     # get the multi reference energy for high spin state for ref point on scan
     hs_info = (ts_info[0], ts_info[1], high_mul)
-    orb_restr = util.orbital_restriction(hs_info, multi_info)
+    orb_restr = fsorb.orbital_restriction(hs_info, multi_info)
     multi_lvl = multi_info[0:3]
     multi_lvl.append(orb_restr)
 
@@ -562,7 +564,7 @@ def infinite_separation_energy(
     hs_mr_save_path = hs_save_fs.leaf.path(multi_lvl[1:4])
     run_mr_fs = autofile.fs.run(hs_mr_run_path)
 
-    mr_script_str, _, mr_kwargs, _ = util.run_qchem_par(prog, method)
+    mr_script_str, _, mr_kwargs, _ = runpar.run_qchem_par(prog, method)
 
     if num_act_elc is None and num_act_orb is None:
         num_act_elc = high_mul
@@ -633,7 +635,7 @@ def infinite_separation_energy(
 
     # file system for high spin single ireference calculation
     thy_info = ['molpro2015', 'ccsd(t)-f12', 'cc-pvdz-f12', 'RR']
-    orb_restr = util.orbital_restriction(hs_info, thy_info)
+    orb_restr = fsorb.orbital_restriction(hs_info, thy_info)
     thy_lvl = thy_info[0:3]
     thy_lvl.append(orb_restr)
 
@@ -644,7 +646,7 @@ def infinite_separation_energy(
     hs_sr_save_path = hs_save_fs.leaf.path(thy_lvl[1:4])
     run_sr_fs = autofile.fs.run(hs_sr_run_path)
 
-    sp_script_str, _, kwargs, _ = util.run_qchem_par(*thy_lvl[0:2])
+    sp_script_str, _, kwargs, _ = runpar.run_qchem_par(*thy_lvl[0:2])
     ret = driver.read_job(
         job='energy',
         run_fs=run_sr_fs,
@@ -660,7 +662,7 @@ def infinite_separation_energy(
     if not hs_save_fs.leaf.file.energy.exists(thy_lvl[1:4]) or overwrite:
         print(" - Running high spin single reference energy ...")
 
-        errors, options_mat = util.set_molpro_options_mat(hs_info, geo)
+        errors, options_mat = runpar.set_molpro_options_mat(hs_info, geo)
 
         driver.run_job(
             job='energy',
@@ -712,11 +714,11 @@ def infinite_separation_energy(
         spc_save_fs.leaf.create(spc_info)
         spc_save_path = spc_save_fs.leaf.path(spc_info)
 
-        orb_restr = util.orbital_restriction(spc_info, ini_thy_info)
+        orb_restr = fsorb.orbital_restriction(spc_info, ini_thy_info)
         ini_thy_lvl = ini_thy_info[0:3]
         ini_thy_lvl.append(orb_restr)
 
-        orb_restr = util.orbital_restriction(spc_info, thy_info)
+        orb_restr = fsorb.orbital_restriction(spc_info, thy_info)
         thy_lvl = thy_info[0:3]
         thy_lvl.append(orb_restr)
 
@@ -728,7 +730,7 @@ def infinite_separation_energy(
         ini_thy_save_path = ini_thy_save_fs.leaf.path(ini_thy_lvl[1:4])
         ini_cnf_run_fs = autofile.fs.conformer(ini_thy_run_path)
         ini_cnf_save_fs = autofile.fs.conformer(ini_thy_save_path)
-        min_cnf_locs = util.min_energy_conformer_locators(
+        min_cnf_locs = fsmin.min_energy_conformer_locators(
             ini_cnf_save_fs)
         min_cnf_run_path = ini_cnf_run_fs.leaf.path(min_cnf_locs)
         min_cnf_save_path = ini_cnf_save_fs.leaf.path(min_cnf_locs)

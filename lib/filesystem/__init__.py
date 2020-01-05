@@ -7,6 +7,7 @@ from lib.filesystem import inf
 from lib.filesystem import path
 from lib.filesystem import read
 from lib.filesystem import check
+from lib.filesystem import minc
 
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     'inf',
     'path',
     'read',
-    'check'
+    'check',
+    'minc'
 ]

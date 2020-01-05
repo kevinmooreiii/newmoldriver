@@ -2,7 +2,7 @@
 Functions to check the filesystem
 """
 
-from routines import util
+from lib.filesystem import minc as fsmin
 from lib import msg
 
 
@@ -13,7 +13,7 @@ def check_save(save_fs, tsk, obj):
     assert obj in ('conf', 'tau', 'scan')
     avail = True
     if obj == 'conf':
-        save_locs = util.min_energy_conformer_locators(save_fs)
+        save_locs = fsmin.min_energy_conformer_locators(save_fs)
     else:
         save_locs = [save_fs.leaf.existing()[0]]
     if not save_locs:
