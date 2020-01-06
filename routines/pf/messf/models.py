@@ -141,7 +141,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
              zpe_harm_no_tors_2, harm_zpe] = pfreqs2
 
             # Determine freqs and imag_freqs
-            freqs, imag_freq = determine_freqs(
+            freqs, imag_freq, zpe = determine_freqs_zpe(
                 freqs1, freqs2, imag_freq1, imag_freq2,
                 zpe_harm_no_tors, zpe_harm_no_tors_2,
                 harm_zpe, tors_zpe)
@@ -151,7 +151,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
         tors_geo, freqs, imag_freq, hind_rot_str = (), (), 0.0, ''
         raise ValueError
 
-    return tors_geo, freqs, imag_freq, hind_rot_str
+    return tors_geo, freqs, imag_freq, hind_rot_str, zpe
 
 
 def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
@@ -561,9 +561,9 @@ def projrot_freqs_2(save_path, pot, spc):
     return freqs_2, imag_freq_2, har_zpe, zpe_har_no_tors_2
 
 
-def determine_freqs(freqs1, freqs2, imag_freq1, imag_freq2,
-                    zpe_harm_no_tors, zpe_harm_no_tors_2,
-                    harm_zpe, tors_zpe):
+def determine_freqs_zpe(freqs1, freqs2, imag_freq1, imag_freq2,
+                        zpe_harm_no_tors, zpe_harm_no_tors_2,
+                        harm_zpe, tors_zpe):
     """ get the freqs ftom two methods
     """
     harm_tors_zpe = harm_zpe - zpe_harm_no_tors
@@ -571,15 +571,19 @@ def determine_freqs(freqs1, freqs2, imag_freq1, imag_freq2,
     del_tors_zpe = harm_tors_zpe - tors_zpe
     del_tors_zpe_2 = harm_tors_zpe_2 - tors_zpe
     if del_tors_zpe <= del_tors_zpe_2:
-        # zpe = zpe_harm_no_tors + tors_zpe
+        zpe = zpe_harm_no_tors + tors_zpe
         freqs = freqs1
         imag_freq = imag_freq1
     else:
-        # zpe = zpe_harm_no_tors_2 + tors_zpe
+        zpe = zpe_harm_no_tors_2 + tors_zpe
         freqs = freqs2
         imag_freq = imag_freq2
+    if abs(del_tors_zpe) > 0.2 and abs(del_tors_zpe_2) > 0.2:
+        print('Warning: There is a difference of ',
+              '{0:.2f} and {1:.2f}'.format(del_tors_zpe, del_tors_zpe_2),
+              'kcal/mol between harmonic and hindered torsional ZPVEs')
 
-    return freqs, imag_freq
+    return freqs, imag_freq, zpe
 
 
 def set_fake_freqs(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
@@ -633,17 +637,20 @@ def combine_geos_in_fake_well(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
     return harm_geo
 
 
-def is_atom(har_min_cnf_locs, har_cnf_save_fs):
-    """ Check if species is an atom
+def get_stoich(harm_min_cnf_locs_i, harm_min_cnf_locs_j,
+               harm_cnf_save_fs_i, harm_cnf_save_fs_j):
+    """ get the overall combined stoichiometry
     """
-    if har_min_cnf_locs is not None:
-        har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-        print('This is an atom')
-    return automol.geom.is_atom(har_geo)
+    if harm_min_cnf_locs_i is not None:
+        harm_geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(harm_min_cnf_locs_i)
+        if harm_min_cnf_locs_j is not None:
+            harm_geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(harm_min_cnf_locs_j)
 
+    form_i = automol.geom.formula(harm_geo_i)
+    form_j = automol.geom.formula(harm_geo_j)
+    form = automol.formula.join(form_i, form_j)
+    stoich = ''
+    for key, val in form.items():
+        stoich += key + str(val)
 
-def atom_mass(har_min_cnf_locs, har_cnf_save_fs):
-    """ write the atom string
-    """
-    har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-    return ptab.to_mass(har_geo[0][0])
+    return stoich
