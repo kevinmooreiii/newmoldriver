@@ -2,6 +2,7 @@
 """
 import os
 import numpy
+from qcelemental import periodictable as ptab
 import projrot_io
 import automol
 import elstruct
@@ -89,18 +90,19 @@ def species_block(
     else:
         if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
             geo, freqs, imag = pfmodels.vib_harm_tors_rigid(
-                spc, spc_info, harm_min_cnf_locs, harm_cnf_save_fs)
+                spc_info, harm_min_cnf_locs, harm_cnf_save_fs, saddle=saddle)
             hr_str = ""
+            symf = sym_factor
         elif vib_model == 'HARM' and tors_model == '1DHR':
-            geo, freqs, imag, hr_str, _ = pfmodels.vib_harm_tors_1dhr(
+            geo, freqs, imag, hr_str, _, symf = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs, harm_cnf_save_fs,
                 tors_min_cnf_locs, tors_cnf_save_fs,
                 tors_save_path, tors_cnf_save_path,
-                spc_dct_i, spc, spc_info,
+                spc_dct_i, spc_info,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor, elec_levels,
                 projrot_script_str,
-                saddle=False)
+                saddle=saddle)
         elif vib_model == 'HARM' and tors_model == 'MDHR':
             print('HARM and MDHR combination is not yet implemented')
         elif vib_model == 'HARM' and tors_model == 'TAU':
@@ -113,7 +115,7 @@ def species_block(
             print('VPT2 and TAU combination is not yet implemented')
 
         # Write the species string for the molecule
-        core = mess_io.writer.core_rigidrotor(geo, sym_factor)
+        core = mess_io.writer.core_rigidrotor(geo, symf)
         spc_str = mess_io.writer.molecule(
             core, freqs, elec_levels,
             hind_rot=hr_str)
@@ -332,44 +334,61 @@ def pst_block(
         sym_cnf_save_fs_j, sym_min_cnf_locs_j)
 
     # Get the stoichiometry
-    stoich = get_stoich(
+    stoich = pfmodels.get_stoich(
         harm_min_cnf_locs_i, harm_min_cnf_locs_j,
         harm_cnf_save_fs_i, harm_cnf_save_fs_j)
 
     spc_str = ''
     if vib_model == 'HARM' and tors_model == 'RIGID':
-        _, freqs_i, _ = pfmodels.vib_harm_tors_rigid(
-            spc, spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i)
-        _, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
-            spc, spc_info_j, harm_min_cnf_locs_j, harm_cnf_save_fs_j)
+        geo_i, freqs_i, _ = pfmodels.vib_harm_tors_rigid(
+            spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i, saddle=False)
+        geo_j, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
+            spc_info_j, harm_min_cnf_locs_j, harm_cnf_save_fs_j, saddle=False)
         freqs += freqs_i + freqs_j
         hind_rot_str = ""
 
     if vib_model == 'HARM' and tors_model == '1DHR':
-        _, freqs1, _, hr_str1 = pfmodels.vib_harm_tors_1dhr(
-            harm_min_cnf_locs_i, harm_cnf_save_fs_i,
-            tors_min_cnf_locs_i, tors_cnf_save_fs_i,
-            tors_save_path_i, tors_cnf_save_path_i,
-            spc_dct_i, spc, spc_info_i,
-            frm_bnd_key, brk_bnd_key,
-            sym_factor, elec_levels,
-            projrot_script_str,
-            saddle=False)
-        _, freqs2, _, hr_str2 = pfmodels.vib_harm_tors_1dhr(
-            harm_min_cnf_locs_j, harm_cnf_save_fs_j,
-            tors_min_cnf_locs_j, tors_cnf_save_fs_j,
-            tors_save_path_j, tors_cnf_save_path_j,
-            spc_dct_j, spc, spc_info_j,
-            frm_bnd_key, brk_bnd_key,
-            sym_factor, elec_levels,
-            projrot_script_str,
-            saddle=False)
-        freqs += list(freqs_i) + list(freqs_j)
-        hind_rot_str = hr_str1 + hr_str2
+        if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
+            geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
+                harm_min_cnf_locs_i)
+            freqs_i = []
+            hr_str_i = ''
+            symf_i = sym_factor_i
+        else:
+            geo_i, freqs_i, _, hr_str_i, _, symf_i = pfmodels.vib_harm_tors_1dhr(
+                harm_min_cnf_locs_i, harm_cnf_save_fs_i,
+                tors_min_cnf_locs_i, tors_cnf_save_fs_i,
+                tors_save_path_i, tors_cnf_save_path_i,
+                spc_dct_i, spc_info_i,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor_i, elec_levels,
+                projrot_script_str,
+                hind_rot_geo=True,
+                saddle=False)
+        if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
+            geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
+                harm_min_cnf_locs_j)
+            freqs_j = []
+            hr_str_j = ''
+            symf_j = sym_factor_j
+        else:
+            geo_j, freqs_j, _, hr_str_j, _, symf_j = pfmodels.vib_harm_tors_1dhr(
+                harm_min_cnf_locs_j, harm_cnf_save_fs_j,
+                tors_min_cnf_locs_j, tors_cnf_save_fs_j,
+                tors_save_path_j, tors_cnf_save_path_j,
+                spc_dct_j, spc_info_j,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor_j, elec_levels,
+                projrot_script_str,
+                hind_rot_geo=True,
+                saddle=False)
+        freqs = list(freqs_i) + list(freqs_j)
+        hind_rot_str = hr_str_i + hr_str_j
+        sym_factor = symf_i * symf_j
 
     # Write the MESS input strings
     core = mess_io.writer.core_phasespace(
-        harm_geo_i, harm_geo_j, sym_factor, stoich,
+        geo_i, geo_j, sym_factor, stoich,
         pot_prefactor=pst_params[0], pot_power_exp=pst_params[1])
     spc_str = mess_io.writer.molecule(
         core, freqs, elec_levels,
@@ -454,33 +473,46 @@ def fake_species_block(
 
     if vib_model == 'HARM' and tors_model == 'RIGID':
         _, freqs_i, _ = pfmodels.vib_harm_tors_rigid(
-            spc, spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i)
+            spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i, saddle=saddle)
         _, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
-            spc, spc_info_j, harm_min_cnf_locs_j, harm_cnf_save_fs_j)
+            spc_info_j, harm_min_cnf_locs_j, harm_cnf_save_fs_j, saddle=saddle)
         freqs += freqs_i + freqs_j
         hind_rot_str = ""
 
     if vib_model == 'HARM' and tors_model == '1DHR':
-        _, freqs1, _, hr_str1 = pfmodels.vib_harm_tors_1dhr(
-            harm_min_cnf_locs_i, harm_cnf_save_fs_i,
-            tors_min_cnf_locs_i, tors_cnf_save_fs_i,
-            tors_save_path_i, tors_cnf_save_path_i,
-            spc_dct_i, spc, spc_info_i,
-            frm_bnd_key, brk_bnd_key,
-            sym_factor, elec_levels,
-            projrot_script_str,
-            saddle=False)
-        _, freqs2, _, hr_str2 = pfmodels.vib_harm_tors_1dhr(
-            harm_min_cnf_locs_j, harm_cnf_save_fs_j,
-            tors_min_cnf_locs_j, tors_cnf_save_fs_j,
-            tors_save_path_j, tors_cnf_save_path_j,
-            spc_dct_j, spc, spc_info_j,
-            frm_bnd_key, brk_bnd_key,
-            sym_factor, elec_levels,
-            projrot_script_str,
-            saddle=False)
+        if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
+            freqs_i = []
+            hr_str_i = ''
+            symf_i = sym_factor_i
+        else:
+            _, freqs_i, _, hr_str_i, _, symf_i = pfmodels.vib_harm_tors_1dhr(
+                harm_min_cnf_locs_i, harm_cnf_save_fs_i,
+                tors_min_cnf_locs_i, tors_cnf_save_fs_i,
+                tors_save_path_i, tors_cnf_save_path_i,
+                spc_dct_i, spc_info_i,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor_i, elec_levels,
+                projrot_script_str,
+                hind_rot_geo=True,
+                saddle=False)
+        if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
+            freqs_j = []
+            hr_str_j = ''
+            symf_j = sym_factor_j
+        else:
+            _, freqs_j, _, hr_str_j, _, symf_j = pfmodels.vib_harm_tors_1dhr(
+                harm_min_cnf_locs_j, harm_cnf_save_fs_j,
+                tors_min_cnf_locs_j, tors_cnf_save_fs_j,
+                tors_save_path_j, tors_cnf_save_path_j,
+                spc_dct_j, spc_info_j,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor_j, elec_levels,
+                projrot_script_str,
+                hind_rot_geo=True,
+                saddle=False)
         freqs += list(freqs_i) + list(freqs_j)
-        hind_rot_str = hr_str1 + hr_str2
+        hind_rot_str = hr_str_i + hr_str_j
+        sym_factor = symf_i * symf_j
 
     core = mess_io.writer.core_rigidrotor(geo, sym_factor)
     spc_str = mess_io.writer.molecule(

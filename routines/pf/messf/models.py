@@ -18,7 +18,7 @@ from lib.phydat import phycon
 from lib.runner import script
 
 
-def vib_harm_tors_rigid(spc, spc_info, harm_min_cnf_locs, harm_cnf_save_fs):
+def vib_harm_tors_rigid(spc_info, harm_min_cnf_locs, harm_cnf_save_fs, saddle=False):
     """ Build the species string for a model of
         harmonic vibrational frequencies and rigid torsions
     """
@@ -31,7 +31,7 @@ def vib_harm_tors_rigid(spc, spc_info, harm_min_cnf_locs, harm_cnf_save_fs):
             harm_geo, hess, project=False)
         # Modify freqs lst and get imaginary frequencies
         mode_start = 6
-        if 'ts_' in spc:
+        if saddle:
             mode_start = mode_start + 1
             imag_freq = freqs[0]
         if automol.geom.is_linear(harm_geo):
@@ -48,10 +48,11 @@ def vib_harm_tors_rigid(spc, spc_info, harm_min_cnf_locs, harm_cnf_save_fs):
 def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                        tors_min_cnf_locs, tors_cnf_save_fs,
                        tors_save_path, tors_cnf_save_path,
-                       spc_dct_i, spc, spc_info,
+                       spc_dct_i, spc_info,
                        frm_bnd_key, brk_bnd_key,
                        sym_factor, elec_levels,
                        projrot_script_str,
+                       hind_rot_geo=False,
                        saddle=False):
     """ Build the species string for a model: Harm, 1DHR
     """
@@ -83,6 +84,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
 
             # Loop over the torsions
             pot = []
+            idx = 0
             tors_info = zip(tors_names, tors_grids, tors_sym_nums)
             for tors_name, tors_grid, sym_num in tors_info:
 
@@ -110,8 +112,9 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                 remdummy = check_dummy_trans(zma)
 
                 # Write the MESS and ProjRot strings for the rotor
+                hrgeo = harm_geo if hind_rot_geo else None
                 hind_rot_str += mess_io.writer.rotor_hindered(
-                    group, axis, sym_num, pot, remdummy=remdummy)
+                    group, axis, sym_num, pot, remdummy=remdummy, geom=hrgeo)
                 proj_rotors_str += projrot_io.writer.rotors(
                     axis, group, remdummy=remdummy)
 
@@ -119,7 +122,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                 sym_factor /= sym_num
 
                 # Increment index for the loop
-                # idx += 1
+                idx += 1
 
             # Calculate ZPVES of the hindered rotors
             tors_zpe = 0.0
@@ -136,7 +139,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
 
             # Now run the other version of ProjRot
             pfreqs2 = projrot_freqs_2(
-                tors_save_path, pot, spc)
+                tors_save_path, pot, saddle=saddle)
             [freqs2, imag_freq2,
              zpe_harm_no_tors_2, harm_zpe] = pfreqs2
 
@@ -151,7 +154,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
         tors_geo, freqs, imag_freq, hind_rot_str = (), (), 0.0, ''
         raise ValueError
 
-    return tors_geo, freqs, imag_freq, hind_rot_str, zpe
+    return tors_geo, freqs, imag_freq, hind_rot_str, zpe, sym_factor
 
 
 def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
@@ -233,7 +236,7 @@ def calc_tors_freqs_zpe(tors_geo, sym_factor, elec_levels,
                      "export OMP_NUM_THREADS=10\n"
                      "messpf pf.inp pf.out >> stdout.log &> stderr.log")
 
-    script.util.run_script(pf_script_str, pf_path)
+    script.run_script(pf_script_str, pf_path)
 
     with open(os.path.join(pf_path, 'pf.log'), 'r') as mess_file:
         output_string = mess_file.read()
@@ -525,7 +528,7 @@ def projrot_freqs_1(tors_geo, hess, pot,
     return freqs, imag_freq, zpe_har_no_tors
 
 
-def projrot_freqs_2(save_path, pot, spc):
+def projrot_freqs_2(save_path, pot, saddle=False):
     """ Get ProjRot frequencies via ProjRot 2
     """
 
@@ -551,7 +554,7 @@ def projrot_freqs_2(save_path, pot, spc):
     har_zpe = sum(rtproj_freqs)*phycon.WAVEN2KCAL/2.
     if not freqs_2:
         freqs_2 = rtproj_freqs
-    if 'ts_' in spc:
+    if saddle:
         if imag_freq_2:
             imag_freq_2 = imag_freq_2[0]
         else:

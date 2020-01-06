@@ -106,6 +106,8 @@ def get_zero_point_energy(
         brk_bnd_key = []
 
     # Get reference harmonic
+    print('harm min cnf locs')
+    print(harm_min_cnf_locs)
     harm_zpe = 0.0
     is_atom = False
     if not harm_min_cnf_locs:
@@ -114,44 +116,46 @@ def get_zero_point_energy(
         return harm_zpe, is_atom
     harm_geo = harm_cnf_save_fs.leaf.file.geometry.read(harm_min_cnf_locs)
     if automol.geom.is_atom(harm_geo):
-        harm_zpe = 0.0
+        zpe = 0.0
         is_atom = True
     else:
         hess = harm_cnf_save_fs.leaf.file.hessian.read(harm_min_cnf_locs)
         freqs = elstruct.util.harmonic_frequencies(
             harm_geo, hess, project=False)
 
+        saddle=False
         mode_start = 6
         if 'ts_' in spc:
             mode_start = mode_start + 1
+            saddle=True
         if automol.geom.is_linear(harm_geo):
             mode_start = mode_start - 1
         freqs = freqs[mode_start:]
 
         harm_zpe = sum(freqs)*phycon.WAVEN2KCAL/2.
 
-    # Determine the ZPVE based on the model
-    if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
-        ret = harm_zpe
-    elif vib_model == 'HARM' and tors_model == '1DHR':
-        _, _, _, _, ret = pfmodels.vib_harm_tors_1dhr(
-            harm_min_cnf_locs, harm_cnf_save_fs,
-            tors_min_cnf_locs, tors_cnf_save_fs,
-            tors_save_path, tors_cnf_save_path,
-            spc_dct_i, spc, spc_info,
-            frm_bnd_key, brk_bnd_key,
-            sym_factor, elec_levels,
-            projrot_script_str,
-            saddle=False)
-    elif vib_model == 'HARM' and tors_model == 'MDHR':
-        print('HARM and MDHR combination is not yet implemented')
-    elif vib_model == 'HARM' and tors_model == 'TAU':
-        print('HARM and TAU combination is not yet implemented')
-    elif vib_model == 'VPT2' and tors_model == 'RIGID':
-        print('VPT2 and RIGID combination is not yet implemented')
-    elif vib_model == 'VPT2' and tors_model == '1DHR':
-        print('VPT2 and 1DHR combination is not yet implemented')
-    elif vib_model == 'VPT2' and tors_model == 'TAU':
-        print('VPT2 and TAU combination is not yet implemented')
+        # Determine the ZPVE based on the model
+        if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
+            zpe = harm_zpe
+        elif vib_model == 'HARM' and tors_model == '1DHR':
+            _, _, _, _, zpe, _ = pfmodels.vib_harm_tors_1dhr(
+                harm_min_cnf_locs, harm_cnf_save_fs,
+                tors_min_cnf_locs, tors_cnf_save_fs,
+                tors_save_path, tors_cnf_save_path,
+                spc_dct_i, spc_info,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor, elec_levels,
+                projrot_script_str,
+                saddle=saddle)
+        elif vib_model == 'HARM' and tors_model == 'MDHR':
+            print('HARM and MDHR combination is not yet implemented')
+        elif vib_model == 'HARM' and tors_model == 'TAU':
+            print('HARM and TAU combination is not yet implemented')
+        elif vib_model == 'VPT2' and tors_model == 'RIGID':
+            print('VPT2 and RIGID combination is not yet implemented')
+        elif vib_model == 'VPT2' and tors_model == '1DHR':
+            print('VPT2 and 1DHR combination is not yet implemented')
+        elif vib_model == 'VPT2' and tors_model == 'TAU':
+            print('VPT2 and TAU combination is not yet implemented')
 
-    return ret, is_atom
+    return zpe, is_atom
