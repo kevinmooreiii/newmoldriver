@@ -22,6 +22,8 @@ from lib.reaction import rxnid
 
 def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                spc_dct, cla_dct,
+               thy_dct,
+               model_dct,
                tsk_info_lst,
                run_prefix, save_prefix,
                ene_coeff=[1.],
@@ -128,19 +130,22 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                     if driver == 'es_spc':
                         spc_esdriver(
                             rct_names_lst, prd_names_lst, tsk_info_lst,
-                            spc_dct, run_prefix, save_prefix, vdw_params,
+                            spc_dct, thy_dct,
+                            run_prefix, save_prefix, vdw_params,
                             rad_rad_ts=rad_rad_ts,
                             mc_nsamp=mc_nsamp)
                     if driver == 'es_rxn':
                         rxn_esdriver(
                             rct_names_lst, prd_names_lst, tsk_info_lst,
-                            spc_dct, run_prefix, save_prefix, vdw_params,
+                            spc_dct, thy_dct,
+                            run_prefix, save_prefix, vdw_params,
                             rad_rad_ts=rad_rad_ts,
                             mc_nsamp=mc_nsamp,
                             kickoff=kickoff)
                     elif driver == 'ktp':
                         ktpdriver.run(
                             spc_dct,
+                            thy_dct,
                             tsk_info_lst,
                             pes_rct_names_lst,
                             pes_prd_names_lst,
@@ -154,26 +159,6 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             temps=temps,
                             pressures=pressures,
                             assess_pdep=assess_pdep)
-
-
-def get_user_input():
-    """ Read the options from the command line
-    """
-    # Set mechanism and type to be read based on user input
-    data_path = sys.argv[1]
-    mechanism_name = sys.argv[2]
-    mech_type = sys.argv[3]
-    mech_path = os.path.join(data_path, 'data', mechanism_name)
-    mech_file = 'mech.json'
-
-    # Set further parameters for what reactions and PESs to be run
-    if len(sys.argv) > 4:
-        pesnums = sys.argv[4]
-    if len(sys.argv) > 5:
-        channels = sys.argv[5]
-    print('pesnums and params.channels:', pesnums, channels)
-
-    return data_path, mech_path, mech_type, mech_file, pesnums, channels
 
 
 def build_geom_dct(data_path):
@@ -198,7 +183,8 @@ def etrans_lst(params):
 
 
 def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
-                 spc_dct, run_prefix, save_prefix, vdw_params,
+                 spc_dct, thy_dct,
+                 run_prefix, save_prefix, vdw_params,
                  rad_rad_ts='pst',
                  mc_nsamp=[True, 10, 1, 3, 100]):
     """ Call the ESDriver Routines for species in the spc dct
@@ -213,14 +199,15 @@ def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
 
     # Execute ESDriver
     esdriver.run(
-        spc_tsk_lst, spc_run_lst, spc_dct,
+        spc_tsk_lst, spc_run_lst, spc_dct, thy_dct,
         run_prefix, save_prefix, vdw_params,
         rad_rad_ts=rad_rad_ts,
         mc_nsamp=mc_nsamp)
 
 
 def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
-                 spc_dct, run_prefix, save_prefix, vdw_params,
+                 spc_dct, thy_dct,
+                 run_prefix, save_prefix, vdw_params,
                  rad_rad_ts='pst',
                  mc_nsamp=[True, 10, 1, 3, 100],
                  kickoff=(0.1, False)):
@@ -240,14 +227,14 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
         for spc in spc_dct:
             if 'ts_' in spc:
                 spc_dct[spc] = set_sadpt_info(
-                    ts_tsk_lst, spc_dct, spc,
+                    ts_tsk_lst, spc_dct, spc, thy_dct,
                     run_prefix, save_prefix,
                     kickoff)
         print('End transition state prep\n')
 
         # Execute ESDriver
         esdriver.run(
-            ts_tsk_lst, rxn_lst, spc_dct,
+            ts_tsk_lst, rxn_lst, spc_dct, thy_dct,
             run_prefix, save_prefix, vdw_params,
             rad_rad_ts=rad_rad_ts,
             mc_nsamp=mc_nsamp,
@@ -317,13 +304,14 @@ def format_run_rxn_lst(rct_names_lst, prd_names_lst):
     return run_lst
 
 
-def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix, kickoff):
+def set_sadpt_info(ts_tsk_lst, spc_dct, spc, thy_dct,
+                   run_prefix, save_prefix, kickoff):
     """ set the saddle point dct with info
     """
     es_ini_key = ts_tsk_lst[0][2]
     es_run_key = ts_tsk_lst[0][1]
-    ini_thy_info = finf.get_es_info(es_ini_key)
-    thy_info = finf.get_es_info(es_run_key)
+    ini_thy_info = finf.get_es_info(es_ini_key, thy_dct)
+    thy_info = finf.get_es_info(es_run_key, thy_dct)
 
     # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
     rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
@@ -379,86 +367,50 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix, kickoff):
     return spc_dct[spc]
 
 
-def set_model_info(ts_tsk_lst):
+def set_pf_model_info(pf_model):
+    """ Set the PF model list based on the input
+    """
+    tors_model = pf_model['tors'] if pf_model['tors'] else 'RIGID'
+    vib_model = pf_model['vib'] if pf_model['vib'] else 'HARM'
+    sym_model = pf_model['sym'] if pf_model['sym'] else ''
+
+    pf_models = [tors_model, vib_model, sym_model]
+    return pf_models
+
+
+def set_es_model_info(es_model, thy_dct):
     """ Set the model info
     """
-    # Initialize the levels
-    geo_lvl = ''
-    harm_lvl = ''
-    anharm_lvl = ''
-    tors_lvl = ''
-    sym_lvl = ''
-    # Initialize the reference levels
-    geo_lvl_ref = ''
-    harm_lvl_ref = ''
-    anharm_lvl_ref = ''
-    tors_lvl_ref = ''
-    sym_lvl_ref = ''
 
-    # Set model levels
-    ts_model = ['RIGID', 'HARM', '']
-    geom = False
-    hess = False
-    for tsk in ts_tsk_lst:
-        if 'samp' in tsk[0] or 'find' in tsk[0]:
-            geo_lvl = tsk[1]
-            geom = True
-            if 'find' in tsk[0]:
-                geo_lvl_ref = geo_lvl
-        if 'grad' in tsk[0] or 'hess' in tsk[0]:
-            harm_lvl = tsk[1]
-            harm_lvl_ref = tsk[2]
-            if 'hess' in tsk[0]:
-                hess = True
-            if not geom:
-                geo_lvl = tsk[1]
-        if 'hr' in tsk[0] or 'tau' in tsk[0]:
-            tors_lvl = tsk[1]
-            tors_lvl_ref = tsk[2]
-            if 'md' in tsk[0]:
-                ts_model[0] = 'MDHR'
-            if 'tau' in tsk[0]:
-                ts_model[0] = 'TAU'
-            else:
-                ts_model[0] = '1DHR'
-        if 'anharm' in tsk[0] or 'vpt2' in tsk[0]:
-            anharm_lvl = tsk[1]
-            anharm_lvl_ref = tsk[2]
-            ts_model[1] = 'ANHARM'
-            if not hess:
-                geo_lvl = tsk[1]
-        if 'sym' in tsk[0]:
-            sym_lvl = tsk[1]
-            sym_lvl_ref = tsk[2]
-            if 'samp' in tsk[0]:
-                ts_model[2] = 'SAMPLING'
-            if '1DHR' in tsk[0]:
-                ts_model[2] = '1DHR'
+    # Read the ES models from the dictionary
+    # geo_lvl = es_model['geo'][0] if es_model['geo'] else None
+    geo_lvl_ref = es_model['geo'][1] if es_model['geo'] else None
+    harm_lvl = es_model['harm'][0] if es_model['harm'] else None
+    harm_lvl_ref = es_model['harm'][1] if es_model['harm'] else None
+    anharm_lvl = es_model['anharm'][0] if es_model['anharm'] else None
+    anharm_lvl_ref = es_model['anharm'][1] if es_model['anharm'] else None
+    tors_lvl = es_model['tors'][0] if es_model['tors'] else None
+    tors_lvl_ref = es_model['tors'][1] if es_model['tors'] else None
+    sym_lvl = es_model['sym'][0] if es_model['sym'] else None
+    sym_lvl_ref = es_model['sym'][1] if es_model['sym'] else None
 
     # Set the theory info objects
-    harm_thy_info = finf.get_thy_info(harm_lvl)
-    tors_thy_info = None
-    anharm_thy_info = None
-    sym_thy_info = None
-    geo_ref_thy_info = finf.get_thy_info(geo_lvl_ref)
-    harm_ref_thy_info = None
-    tors_ref_thy_info = None
-    anharm_ref_thy_info = None
-    sym_ref_thy_info = None
-    if tors_lvl:
-        tors_thy_info = finf.get_thy_info(tors_lvl)
-    if anharm_lvl:
-        anharm_thy_info = finf.get_thy_info(anharm_lvl)
-    if sym_lvl:
-        sym_thy_info = finf.get_thy_info(sym_lvl)
-    if harm_lvl_ref:
-        harm_ref_thy_info = finf.get_thy_info(harm_lvl_ref)
-    if tors_lvl_ref:
-        tors_ref_thy_info = finf.get_thy_info(tors_lvl_ref)
-    if anharm_lvl_ref:
-        anharm_ref_thy_info = finf.get_thy_info(anharm_lvl_ref)
-    if sym_lvl_ref:
-        sym_ref_thy_info = finf.get_thy_info(sym_lvl_ref)
+    harm_thy_info = finf.get_thy_info(harm_lvl, thy_dct)
+    geo_ref_thy_info = finf.get_thy_info(geo_lvl_ref, thy_dct)
+    tors_thy_info = (finf.get_thy_info(tors_lvl, thy_dct)
+                     if tors_lvl else None)
+    anharm_thy_info = (finf.get_thy_info(anharm_lvl, thy_dct)
+                       if anharm_lvl else None)
+    sym_thy_info = (finf.get_thy_info(sym_lvl, thy_dct)
+                    if sym_lvl else None)
+    harm_ref_thy_info = (finf.get_thy_info(harm_lvl_ref, thy_dct)
+                         if harm_lvl_ref else None)
+    tors_ref_thy_info = (finf.get_thy_info(tors_lvl_ref, thy_dct)
+                         if tors_lvl_ref else None)
+    anharm_ref_thy_info = (finf.get_thy_info(anharm_lvl_ref, thy_dct)
+                           if anharm_lvl_ref else None)
+    sym_ref_thy_info = (finf.get_thy_info(sym_lvl_ref, thy_dct)
+                        if sym_lvl_ref else None)
 
     # Combine levels into a list
     pf_levels = [
@@ -469,16 +421,13 @@ def set_model_info(ts_tsk_lst):
         anharm_ref_thy_info, sym_ref_thy_info,
         geo_ref_thy_info]
 
-    return pf_levels, ref_levels, ts_model
+    return pf_levels, ref_levels
 
 
 def set_pes_formula(spc_dct):
     """ Set pes formula using zma
     """
     for spc_2 in spc_dct:
-        print('TEST PES FORM')
-        print(spc_2)
-        print(spc_dct[spc_2])
         if 'original_zma' in spc_dct[spc_2]:
             pes_formula = automol.geom.formula(
                 automol.zmatrix.geometry(spc_dct[spc_2]['original_zma']))
@@ -488,7 +437,7 @@ def set_pes_formula(spc_dct):
     return pes_formula
 
 
-def get_high_energy(ts_tsk_lst, spc_info, save_path, saddle, ene_coeff):
+def get_high_energy(ts_tsk_lst, thy_dct, spc_info, save_path, saddle, ene_coeff):
     """
     """
     spc_ene = 0.0
@@ -501,8 +450,8 @@ def get_high_energy(ts_tsk_lst, spc_info, save_path, saddle, ene_coeff):
                 break
             ene_lvl = tsk[1]
             ene_lvl_ref = tsk[2]
-            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref)
-            ene_thy_info = finf.get_thy_info(ene_lvl)
+            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref, thy_dct)
+            ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
             ene = get_high_level_energy(
                 spc_info=spc_info,
                 thy_low_level=ene_ref_thy_info,
@@ -515,7 +464,7 @@ def get_high_energy(ts_tsk_lst, spc_info, save_path, saddle, ene_coeff):
     return spc_ene
 
 
-def get_ckin_ene_lvl_str(ts_tsk_lst, ene_coeff):
+def get_ckin_ene_lvl_str(ts_tsk_lst, thy_dct, ene_coeff):
     """ Write the comment lines for the enrgy lvls for ckin
     """
     ene_strl = []
@@ -529,8 +478,8 @@ def get_ckin_ene_lvl_str(ts_tsk_lst, ene_coeff):
                 break
             ene_lvl = tsk[1]
             ene_lvl_ref = tsk[2]
-            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref)
-            ene_thy_info = finf.get_thy_info(ene_lvl)
+            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref, thy_dct)
+            ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
             ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
                 ene_coeff[ene_idx],
                 ene_thy_info[3],

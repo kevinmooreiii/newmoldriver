@@ -2,29 +2,22 @@
 """
 
 import autoparse.find as apf
-from ptt import read_inp_str
-from ptt import end_section_wname2
-from ptt import build_keyword_dct
-from keywords import THY_REQUIRED_KEYWORDS, THY_SUPPORTED_KEYWORDS
+from lib.load.ptt import read_inp_str
+from lib.load.ptt import end_section_wname2
+from lib.load.ptt import build_keyword_dct
+from lib.load.keywords import THY_REQUIRED_KEYWORDS, THY_SUPPORTED_KEYWORDS
 
 
 THEORY_INP = 'inp/theory.dat'
 
 
-def read_theory_file():
-    """ Read the theory input file into a string
-    """
-    return read_inp_str(THEORY_INP)
-
-
-# FUNCTION TO READ IN A STRING FOR A SPECIFIC LEVEL #
-
-def read_theory_sections(thy_inp_str):
+def build_thy_dct(job_path):
     """ species input
     """
     # Obtain the species string
+    thy_str = read_inp_str(job_path, THY_INP)
     thy_sections = apf.all_captures(
-        end_section_wname2('level'), thy_inp_str)
+        end_section_wname2('level'), thy_str)
     # Make sure some section has been defined
     assert thy_sections is not None
 

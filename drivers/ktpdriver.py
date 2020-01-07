@@ -10,7 +10,8 @@ from lib.filesystem import build as fbuild
 from lib.runner import rates as raterunner
 
 
-def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
+def run(spc_dct, thy_dct, model_dct, tsk_info_lst,
+        rct_names_lst, prd_names_lst,
         run_prefix, save_prefix, ene_coeff=(1.),
         options=(True, True, True, False),
         etrans=(200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0),
@@ -42,7 +43,8 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
     _, ts_tsk_lst = lmech.format_tsk_lst(tsk_info_lst)
 
     # Get the levels in lists from the user
-    pf_levels, ref_levels, ts_model = lmech.set_model_info(ts_tsk_lst)
+    pf_levels, ref_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)
+    ts_model = lmech.set_pf_model_info(model_dct['pf'])
 
     # Run the rates
     if runrates:
@@ -57,7 +59,8 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
             print(spc_dct)
             if 'ts_' in spc:
                 spc_dct[spc] = lmech.set_sadpt_info(
-                    ts_tsk_lst, spc_dct, spc, run_prefix, save_prefix,
+                    ts_tsk_lst, spc_dct, spc, thy_dct,
+                    run_prefix, save_prefix,
                     kickoff=(0.1, False))
                 spc_save_path = spc_dct[spc]['rxn_fs'][3]
                 saddle = True
@@ -77,9 +80,9 @@ def run(spc_dct, tsk_info_lst, rct_names_lst, prd_names_lst,
 
             # Set ene and string
             spc_dct[spc]['ene'] = lmech.get_high_energy(
-                ts_tsk_lst, spc_info, save_path, saddle, ene_coeff)
+                ts_tsk_lst, thy_dct, spc_info, save_path, saddle, ene_coeff)
             ene_str = lmech.get_ckin_ene_lvl_str(
-                ts_tsk_lst, ene_coeff)
+                ts_tsk_lst, thy_dct, ene_coeff)
 
         # Write the strings for the MESS input file
         rct_ichs = spc_dct['ts_0']['rxn_ichs'][0]

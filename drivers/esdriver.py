@@ -8,21 +8,18 @@ from lib.filesystem import inf as finf
 from lib.filesystem import check as fcheck
 from lib.filesystem import path as fpath
 from lib.submission import substr
-from lib.submission import theolvls
 from lib.reaction import ts as lts
 from lib import msg
 
 
-def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
+def run(tsk_info_lst, rxn_lst, spc_dct, thy_dct,
+        run_prefix, save_prefix,
         vdw_params=(False, False, True),
         rad_rad_ts='vtst',
         mc_nsamp=(True, 10, 1, 3, 100),
         kickoff=(0.1, False)):
     """ driver for all electronic structure tasks
     """
-
-    # Set the es_dct
-    es_dct = theolvls.ES_DCT
 
     # Prepare species queue
     spc_queue = lmech.form_spc_queue_2(rxn_lst)
@@ -35,8 +32,8 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
 
         # Task and theory information
         [tsk, es_run_key, es_ini_key, overwrite] = tsk_info
-        ini_thy_info = finf.get_es_info(es_ini_key)
-        thy_info = finf.get_es_info(es_run_key)
+        ini_thy_info = finf.get_es_info(es_ini_key, thy_dct)
+        thy_info = finf.get_es_info(es_run_key, thy_dct)
 
         # If task is to find the transition state, find all TSs for rxn lst
         if tsk in ('find_ts', 'find_vdw'):
@@ -84,7 +81,7 @@ def run(tsk_info_lst, rxn_lst, spc_dct, run_prefix, save_prefix,
                         vdws = routines.es.wells.find_vdw(
                             sadpt, spc_dct, thy_info, ini_thy_info,
                             vdw_params,
-                            es_dct[es_run_key]['mc_nsamp'], run_prefix,
+                            thy_dct[es_run_key]['mc_nsamp'], run_prefix,
                             save_prefix, 0.1, False,
                             substr.PROJROT, overwrite)
                         spc_queue.extend(vdws)

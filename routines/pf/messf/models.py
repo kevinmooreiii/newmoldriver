@@ -5,7 +5,6 @@
 import os
 import numpy
 from scipy.interpolate import interp1d
-from qcelemental import periodictable as ptab
 import elstruct
 import automol
 import mess_io

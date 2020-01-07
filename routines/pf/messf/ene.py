@@ -61,7 +61,7 @@ def get_high_level_energy(
 
 
 def get_zero_point_energy(
-        spc, spc_dct_i, pf_levels, spc_model, pf_script_str,
+        spc, spc_dct_i, pf_levels, spc_model,
         elec_levels=((0., 1)), sym_factor=1.0,
         save_prefix='spc_save_path'):
     """ compute the ZPE including torsional and anharmonic corrections
@@ -72,7 +72,7 @@ def get_zero_point_energy(
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
 
     # Prepare the sets of file systems
-    harm_level, tors_level, vpt2_level, _ = pf_levels
+    harm_level, tors_level, _, _ = pf_levels
     tors_model, vib_model, _ = spc_model
 
     # Set theory filesystem used throughout
@@ -80,22 +80,22 @@ def get_zero_point_energy(
 
     # Set boolean to account for rad-rad reaction (not supported by vtst)
     rad_rad_ts = False
+    saddle = False
     if 'ts_' in spc:
         if spc_dct_i['rad_rad']:
             rad_rad_ts = True
+        saddle = True
 
     # Set the filesystem objects for various species models
     harmfs = set_model_filesys(
-        thy_save_fs, spc_info, harm_level, saddle=('ts_' in spc))
-    harm_cnf_save_fs, harm_cnf_save_path, harm_min_cnf_locs, harm_save_path = harmfs
+        thy_save_fs, spc_info, harm_level, saddle=saddle)
+    [harm_cnf_save_fs, _,
+     harm_min_cnf_locs, _] = harmfs
     if tors_level and not rad_rad_ts:
         torsfs = set_model_filesys(
-            thy_save_fs, spc_info, tors_level, saddle=('ts_' in spc))
-        tors_cnf_save_fs, tors_cnf_save_path, tors_min_cnf_locs, tors_save_path = torsfs
-    if vpt2_level:
-        vpt2fs = set_model_filesys(
-            thy_save_fs, spc_info, vpt2_level, saddle=('ts_' in spc))
-        vpt2_cnf_save_fs, vpt2_cnf_save_path, vpt2_min_cnf_locs, vpt2_save_path = vpt2fs
+            thy_save_fs, spc_info, tors_level, saddle=saddle)
+        [tors_cnf_save_fs, tors_cnf_save_path,
+         tors_min_cnf_locs, tors_save_path] = torsfs
 
     # if saddle:
     if 'ts_' in spc:
@@ -106,8 +106,6 @@ def get_zero_point_energy(
         brk_bnd_key = []
 
     # Get reference harmonic
-    print('harm min cnf locs')
-    print(harm_min_cnf_locs)
     harm_zpe = 0.0
     is_atom = False
     if not harm_min_cnf_locs:
@@ -123,11 +121,11 @@ def get_zero_point_energy(
         freqs = elstruct.util.harmonic_frequencies(
             harm_geo, hess, project=False)
 
-        saddle=False
+        saddle = False
         mode_start = 6
         if 'ts_' in spc:
             mode_start = mode_start + 1
-            saddle=True
+            saddle = True
         if automol.geom.is_linear(harm_geo):
             mode_start = mode_start - 1
         freqs = freqs[mode_start:]

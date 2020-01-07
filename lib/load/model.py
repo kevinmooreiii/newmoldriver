@@ -2,26 +2,21 @@
 """
 
 import autoparse.find as apf
-from ptt import read_inp_str
-from ptt import paren_section
-from ptt import end_section_wname2
-from ptt import build_keyword_dct
-from keywords import MODEL_SUPPORTED_DCT
+from lib.load.ptt import read_inp_str
+from lib.load.ptt import paren_section
+from lib.load.ptt import end_section_wname2
+from lib.load.ptt import build_keyword_dct
+from lib.load.keywords import MODEL_SUPPORTED_DCT
 
 MODEL_INP = 'inp/models.dat'
 
 
-def read_model_file():
-    """ Read the model input file into a string
-    """
-    return read_inp_str(MODEL_INP)
-
-
 # FUNCTION TO READ IN A STRING FOR A SPECIFIC LEVEL #
 
-def read_models_sections(model_inp_str):
+def read_models_sections(job_path):
     """ species input
     """
+    run_str = read_inp_str(job_path, MODEL_INP)
     # Obtain the species string
     model_sections = apf.all_captures(
         end_section_wname2('model'), model_inp_str)

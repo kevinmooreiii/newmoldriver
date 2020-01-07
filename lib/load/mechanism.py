@@ -11,18 +11,13 @@ from lib.load.ptt import read_inp_str
 MECH_INP = 'inp/mechanism.dat'
 
 
-def read_theory_file():
-    """ Read the mechanism input file into a string
-    """
-    return read_inp_str(MECH_INP)
-
-
-def parse_mechanism_file(mech_str, mech_type, spc_dct,
+def parse_mechanism_file(job_path, mech_type, spc_dct,
                          check_stereo=False, sort_rxns=False,
                          rad_rad_sort=False):
     """ Get the reactions and species from the mechanism input
     """
     # parsing moved to the input parsing module I am writing
+    mech_str = read_inp_str(job_path, MECH_INP)
     if mech_type.lower() == 'chemkin':
         pes_dct = _parse_chemkin(
             mech_str, spc_dct, sort_rxns)

@@ -14,9 +14,10 @@ KEYWORD_KEYVALUE_PATTERN = (
     app.capturing(app.one_or_more(app.NONSPACE)))
 
 
-def read_inp_str(input_file):
+def read_inp_str(filepath, filename):
     """ read the run parameters from a file
     """
+    input_file = os.path.join(filepath, filename)
     with open(input_file, 'r') as inp_file:
         inp_lines = inp_file.readlines()
     inp_str = ''.join(
@@ -73,8 +74,11 @@ def keyword_pattern(string):
 def parse_idx_inp(idx_str):
     """ parse idx string
     """
+    idx_str = idx_str.strip()
+    if idx_str.isdigit():
+        idxs = [int(idx_str), int(idx_str)]
     if '-' in idx_str:
-        [idx_begin, idx_end] = idx_str.strip().split('-')
+        [idx_begin, idx_end] = idx_str.split('-')
         idxs = list(range(int(idx_begin), int(idx_end)+1))
     return idxs
 

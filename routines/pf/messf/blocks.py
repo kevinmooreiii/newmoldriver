@@ -1,17 +1,13 @@
 """ drivers
 """
-import os
 import numpy
 from qcelemental import periodictable as ptab
-import projrot_io
 import automol
-import elstruct
 import autofile
 import mess_io
 
 # New Libs
 from lib.phydat import phycon
-from lib.runner.script import run_script
 from lib.filesystem import orb as fsorb
 from lib.filesystem import minc as fsmin
 from routines.pf.messf import models as pfmodels

@@ -5,6 +5,9 @@
 def orbital_restriction(spc_info, thy_level):
     """ orbital restriction logical
     """
+    print('orb test')
+    print(spc_info)
+    print(thy_level)
     mul = spc_info[2]
     if thy_level[3] == 'RR':
         orb_restr = True

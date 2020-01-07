@@ -7,19 +7,18 @@ import autofile
 from automol.mult.ts import _low as tslow
 from automol.mult.ts import _high as tshigh
 from lib.phydat import phycon
-from lib.submission import theolvls
 from lib.filesystem import read as fsread
 
 
-def get_thy_info(method):
+def get_thy_info(method, thy_dct):
     """ convert theory level dictionary to theory information array
     """
-    lvldic = theolvls.ES_DCT[method]
+    method_dct = thy_dct[method]
     err_msg = ''
     info = ['program', 'method', 'basis', 'orb_res']
     for i, inf in enumerate(info):
-        if inf in lvldic:
-            info[i] = lvldic[inf]
+        if inf in method_dct:
+            info[i] = method_dct[inf]
         else:
             err_msg = inf
     if err_msg:
@@ -27,14 +26,14 @@ def get_thy_info(method):
     return info
 
 
-def get_es_info(method):
+def get_es_info(method, thy_dct):
     """
     Turn es dictionary in theory info array
     """
     if method == 'input':
         ret = ['input_geom', None, None, None]
     else:
-        ret = get_thy_info(method)
+        ret = get_thy_info(method, thy_dct)
     return ret
 
 

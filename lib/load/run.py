@@ -2,41 +2,36 @@
 """
 
 import autoparse.find as apf
-from ptt import read_inp_str
-from ptt import parse_idx_inp
-from ptt import paren_section
-from ptt import end_section
-from ptt import keyword_pattern
-from ptt import end_section_wname2
-from ptt import build_keyword_dct
-from ptt import remove_empty_lines
-from keywords import RUN_INP_REQUIRED_KEYWORDS
+from lib.load.ptt import read_inp_str
+from lib.load.ptt import parse_idx_inp
+from lib.load.ptt import paren_section
+from lib.load.ptt import end_section
+from lib.load.ptt import keyword_pattern
+from lib.load.ptt import end_section_wname2
+from lib.load.ptt import build_keyword_dct
+from lib.load.ptt import remove_empty_lines
+from lib.load.keywords import RUN_INP_REQUIRED_KEYWORDS
 
 RUN_INP = 'inp/run.dat'
 
 
-# READ THE RUN.DAT FILE INTO A STRING #
-def read_run_file():
-    """ Read the run input file into a string
-    """
-    return read_inp_str(RUN_INP)
-
 
 # PARSE THE INPUT SECTION OF THE FILE #
-def input_block(inp_str):
-    """ Read the string that has the global model information
-    """
-    return remove_empty_lines(apf.first_capture(end_section('input'), inp_str))
-
-
-def build_run_input_keyword_dct(thy_str):
+def build_run_inp_dct(job_path):
     """ Build a dictionary for all the theory keywords
     """
-    keyword_dct = build_keyword_dct(thy_str)
+    run_str = read_inp_str(job_path, RUN_INP)
+    keyword_dct = build_keyword_dct(inp_block(run_str))
     assert keyword_dct
     assert check_run_keyword_dct(keyword_dct)
 
     return keyword_dct
+
+
+def inp_block(inp_str):
+    """ Read the string that has the global model information
+    """
+    return remove_empty_lines(apf.first_capture(end_section('input'), inp_str))
 
 
 def check_run_keyword_dct(dct):
@@ -47,20 +42,15 @@ def check_run_keyword_dct(dct):
     return req_keys_def
 
 
-# PARSE THE RUN SECTION OF THE FILE #
-def object_block(inp_str):
-    """ Read the string that has the global model information
-    """
-    return remove_empty_lines(apf.first_capture(end_section('obj'), inp_str))
-
-
-def objects_lst(section_str):
+# PARSE THE OBJ SECTION OF THE FILE #
+def objects_lst(job_path):
     """ Get the sections for the run block
     """
-
+    run_str = read_inp_str(job_path, RUN_INP)
+    obj_str = object_block(run_str)
     # Read one of a set of objects to run calcs on (only one supported)
-    pes_block_str = apf.first_capture(paren_section('pes'), section_str)
-    spc_block_str = apf.first_capture(paren_section('spc'), section_str)
+    pes_block_str = apf.first_capture(paren_section('pes'), obj_str)
+    spc_block_str = apf.first_capture(paren_section('spc'), obj_str)
     # ts_block_str = apf.first_capture(paren_section('ts'), section_str)
     # wells_block_str = apf.first_capture(paren_section('wells'), section_str)
     if pes_block_str is not None:
@@ -75,8 +65,13 @@ def objects_lst(section_str):
     #     obj_str = wells_block_str
     else:
         raise ValueError
-
     return run_lst
+
+
+def object_block(inp_str):
+    """ Read the string that has the global model information
+    """
+    return remove_empty_lines(apf.first_capture(end_section('obj'), inp_str))
 
 
 # put a length criterion which can be done

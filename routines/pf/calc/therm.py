@@ -3,8 +3,6 @@
 """
 
 import thermo
-
-# New
 from lib.phydat import phycon
 
 

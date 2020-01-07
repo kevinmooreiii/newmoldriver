@@ -10,16 +10,11 @@ from lib.phydat import phycon, symm, eleclvl
 SPC_INP = 'inp/species.dat'
 
 
-def read_species_file():
-    """ Read the species input file into a string
-    """
-    return read_inp_str(SPC_INP)
-
-
-def build_spc_dct(spc_str, spc_type):
+def build_spc_dct(job_path, spc_type):
     """ Get a dictionary of all the input species
         indexed by InChi string
     """
+    spc_str = read_inp_str(job_path, SPC_INP)
     if spc_type == 'csv':
         spc_dct = csv_dct(spc_str, check_stereo=False)
     else:

@@ -7,7 +7,9 @@
 RUN_INP_REQUIRED_KEYWORDS = [
     'ids',
     'spc',
-    'mech'
+    'mech',
+    'run_prefix',
+    'save_prefix'
 ]
 
 # Proc section
