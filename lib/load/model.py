@@ -2,10 +2,7 @@
 """
 
 import autoparse.find as apf
-from lib.load.ptt import read_inp_str
-from lib.load.ptt import paren_section
-from lib.load.ptt import end_section_wname2
-from lib.load.ptt import build_keyword_dct
+from lib.load import ptt
 from lib.load.keywords import MODEL_SUPPORTED_DCT
 
 MODEL_INP = 'inp/models.dat'
@@ -16,10 +13,10 @@ MODEL_INP = 'inp/models.dat'
 def read_models_sections(job_path):
     """ species input
     """
-    run_str = read_inp_str(job_path, MODEL_INP)
+    mod_str = ptt.read_inp_str(job_path, MODEL_INP)
     # Obtain the species string
     model_sections = apf.all_captures(
-        end_section_wname2('model'), model_inp_str)
+        ptt.end_section_wname2('model'), mod_str)
     # Make sure some section has been defined
     assert model_sections is not None
 
@@ -37,17 +34,19 @@ def build_model_keyword_dct(model_str):
     """ Build a dictionary for all the models keywords
     """
     # Grab the various sections required for each model
-    pf_str = apf.first_capture(paren_section('pf'), model_str)
-    es_str = apf.first_capture(paren_section('es'), model_str)
-    etransfer_str = apf.first_capture(paren_section('etransfer'), model_str)
+    pf_str = apf.first_capture(ptt.paren_section('pf'), model_str)
+    es_str = apf.first_capture(ptt.paren_section('es'), model_str)
+    etrans_str = apf.first_capture(ptt.paren_section('etransfer'), model_str)
+    options_str = apf.first_capture(ptt.paren_section('options'), model_str)
     assert pf_str is not None
     assert es_str is not None
-    assert etransfer_str is not None
+    assert options_str is not None
 
     # Get the dictionary for each section and check them
-    pf_dct = build_keyword_dct(pf_str)
-    es_dct = build_keyword_dct(es_str)
-    etransfer_dct = build_keyword_dct(etransfer_str)
+    pf_dct = ptt.build_keyword_dct(pf_str)
+    es_dct = ptt.build_keyword_dct(es_str)
+    etransfer_dct = ptt.build_keyword_dct(etrans_str)
+    options_dct = ptt.build_keyword_dct(options_str)
     # assert check_model_dct(keyword_dct)
 
     # Combine dcts into single model dct
@@ -55,6 +54,7 @@ def build_model_keyword_dct(model_str):
     model_dct['pf'] = pf_dct
     model_dct['es'] = es_dct
     model_dct['etransfer'] = etransfer_dct
+    model_dct['options'] = options_dct
 
     return model_dct
 

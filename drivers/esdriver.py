@@ -93,11 +93,10 @@ def run(tsk_info_lst, rxn_lst, spc_dct, thy_dct,
             msg.tsk_msg(tsk, thy_info, ini_thy_info, spc)
 
             # Build the species filesys objs
-            spc_fs = fpath.set_spc_fs(
-                spc_dct, spc, run_prefix, save_prefix, rad_rad_ts)
             [spc_info,
              spc_run_fs, spc_save_fs,
-             spc_run_path, spc_save_path] = spc_fs
+             spc_run_path, spc_save_path] = fpath.set_spc_fs(
+                 spc_dct, spc, run_prefix, save_prefix, rad_rad_ts)
 
             # Build the input and main run filesystem objects
             filesys, thy_level = fpath.set_fs(

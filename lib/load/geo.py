@@ -21,4 +21,3 @@ def geometry_dictionary(geom_path):
                     print('Warning: Dupilicate xyz geometry for ', ich)
                 geom_dct[ich] = geo
     return geom_dct
-

@@ -1,9 +1,11 @@
 """ read species
 """
 
+import os
 import chemkin_io
 import automol
-from lib.load.ptt import read_inp_str
+import autofile
+from lib.load import ptt
 from lib.phydat import phycon, symm, eleclvl
 
 
@@ -14,7 +16,7 @@ def build_spc_dct(job_path, spc_type):
     """ Get a dictionary of all the input species
         indexed by InChi string
     """
-    spc_str = read_inp_str(job_path, SPC_INP)
+    spc_str = ptt.read_inp_str(job_path, SPC_INP)
     if spc_type == 'csv':
         spc_dct = csv_dct(spc_str, check_stereo=False)
     else:
@@ -80,9 +82,10 @@ def read_spc_amech():
     return None
 
 
-def modify_spc_dct(spc_dct, geom_dct, hind_inc):
+def modify_spc_dct(job_path, spc_dct, hind_inc):
     """ Modify the species dct
     """
+    geom_dct = geometry_dictionary(job_path)
     mod_spc_dct = {}
     for spc in spc_dct:
         # Set the ich and mult
@@ -104,3 +107,21 @@ def modify_spc_dct(spc_dct, geom_dct, hind_inc):
         mod_spc_dct[spc]['hind_inc'] = hind_inc * phycon.DEG2RAD
 
     return mod_spc_dct
+
+
+def geometry_dictionary(job_path):
+    """ read in dictionary of saved geometries
+    """
+    geom_path = os.path.join(job_path, 'data', 'geoms')
+    geom_dct = {}
+    for dir_path, _, file_names in os.walk(geom_path):
+        for file_name in file_names:
+            file_path = os.path.join(dir_path, file_name)
+            if file_path.endswith('.xyz'):
+                xyz_str = autofile.file.read_file(file_path)
+                geo = automol.geom.from_xyz_string(xyz_str)
+                ich = automol.geom.inchi(geo)
+                if ich in geom_dct:
+                    print('Warning: Dupilicate xyz geometry for ', ich)
+                geom_dct[ich] = geo
+    return geom_dct

@@ -1,6 +1,7 @@
 """ Library of patterns to simplify the parsing of input files
 """
 
+import os
 import autoparse.find as apf
 import autoparse.pattern as app
 
@@ -11,7 +12,8 @@ KEYWORD_KEYVALUE_PATTERN = (
     app.zero_or_more(app.SPACE) +
     '=' +
     app.zero_or_more(app.SPACE) +
-    app.capturing(app.one_or_more(app.NONSPACE)))
+    app.capturing(app.LINE_FILL)
+)
 
 
 def read_inp_str(filepath, filename):
@@ -64,14 +66,16 @@ def end_section_wname2(string):
 def keyword_pattern(string):
     """ Generates the key pattern string
     """
-    return (string +
-            app.zero_or_more(app.SPACE) +
-            '=' +
-            app.zero_or_more(app.SPACE) +
-            app.capturing(app.one_or_more(app.NONSPACE)))
+    value = (string +
+             app.zero_or_more(app.SPACE) +
+             '=' +
+             app.zero_or_more(app.SPACE) +
+             app.capturing(app.one_or_more(app.NONSPACE)))
+    return _set_value_type(value)
 
 
 def parse_idx_inp(idx_str):
+
     """ parse idx string
     """
     idx_str = idx_str.strip()
@@ -83,15 +87,6 @@ def parse_idx_inp(idx_str):
     return idxs
 
 
-def remove_comment_lines(section_str):
-    """ Remove lines of comments from strings of a section
-    """
-    section_lines = section_str.splitlines()
-    cleaned_str = ''.join([line for line in section_lines
-                           if '#' not in line])
-    return cleaned_str
-
-
 # Build a keyword dictionary
 def build_keyword_dct(section_str):
     """ Take a section with keywords defined and build
@@ -101,9 +96,22 @@ def build_keyword_dct(section_str):
     for line in section_str.splitlines():
         # Put a cleaner somehwere to get rid of blank lines
         if line.strip() != '':
-            [word, val] = apf.first_capture(KEYWORD_KEYVALUE_PATTERN, line)
-            keyword_dct[word] = val
+            key_val = apf.first_capture(KEYWORD_KEYVALUE_PATTERN, line)
+            formtd_key, formtd_val = format_param_vals(key_val)
+            keyword_dct[formtd_key] = formtd_val
     return keyword_dct
+
+
+def build_keyword_lst(section_str):
+    """ build lst
+    """
+    keyword_lst = []
+    for line in section_str.splitlines():
+        # Put a cleaner somehwere to get rid of blank lines
+        tmp = line.strip()
+        if tmp != '':
+            keyword_lst.append(tmp)
+    return keyword_lst
 
 
 # Helper functions
@@ -114,6 +122,57 @@ def remove_empty_lines(string):
                       if line.strip()])
 
 
+def remove_comment_lines(section_str):
+    """ Remove lines of comments from strings of a section
+    """
+    section_lines = section_str.splitlines()
+    cleaned_str = ''.join([line for line in section_lines
+                           if '#' not in line])
+    return cleaned_str
+
+
+# Functions from read_dat file
+def format_param_vals(pvals):
+    """ format param vals string
+    """
+    [keyword, value] = pvals
+
+    frmtd_keyword = keyword.strip().lower()
+
+    value = value.strip()
+    # Format values if it is a list (of string(s), boolean(s), int(s))
+    if all(sym in value for sym in ('[', ']', ',')):
+        value = value.replace('[', '').replace(']', '')
+        value = value.split(',')
+        frmtd_value = []
+        # Set string in list to boolean or integer if needed
+        for elm in value:
+            frmtd_value.append(_set_value_type(elm.strip()))
+    else:
+        # Format values if it has singular value
+        frmtd_value = _set_value_type(value)
+
+    return frmtd_keyword, frmtd_value
+
+
+def _set_value_type(value):
+    """ set type of value
+        right now we handle True/False boolean, int, float, and string
+    """
+
+    if value == 'True':
+        frmtd_value = True
+    elif value == 'False':
+        frmtd_value = False
+    elif value.isdigit():
+        frmtd_value = int(value)
+    elif '.' in value:
+        if value.replace('.', '').replace('-', '').isdigit():
+            frmtd_value = float(value)
+    else:
+        frmtd_value = value
+
+    return frmtd_value
 # def get_key_str(inp_str, lvl, key):
 #     """ Find the value for a given key
 #     """

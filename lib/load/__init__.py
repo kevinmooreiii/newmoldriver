@@ -6,6 +6,7 @@ from lib.load import model
 from lib.load import theory
 from lib.load import species
 from lib.load import mechanism
+from lib.load import tsks
 from lib.load import ptt
 from lib.load import keywords
 
@@ -16,6 +17,7 @@ __all__ = [
     'theory',
     'species',
     'mechanism',
+    'tsks',
     'ptt',
     'keywords'
 ]

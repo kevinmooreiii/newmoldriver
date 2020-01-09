@@ -5,7 +5,7 @@ Read the mechanism file
 import numpy
 import chemkin_io
 import automol
-from lib.load.ptt import read_inp_str
+from lib.load import ptt
 
 
 MECH_INP = 'inp/mechanism.dat'
@@ -17,7 +17,7 @@ def parse_mechanism_file(job_path, mech_type, spc_dct,
     """ Get the reactions and species from the mechanism input
     """
     # parsing moved to the input parsing module I am writing
-    mech_str = read_inp_str(job_path, MECH_INP)
+    mech_str = ptt.read_inp_str(job_path, MECH_INP)
     if mech_type.lower() == 'chemkin':
         pes_dct = _parse_chemkin(
             mech_str, spc_dct, sort_rxns)
@@ -136,6 +136,7 @@ def determine_connected_pes_channels(pes_dct, pesnums_lst):
     """ Sort the PES lst and set the connected channels
     """
     conn_chn_lst = []
+    print(pesnums_lst)
     for pes_idx, pes in enumerate(pes_dct, start=1):
         if pes_idx in pesnums_lst:
             # Set the names list needed below
@@ -190,8 +191,6 @@ def determine_connected_pes_channels(pes_dct, pesnums_lst):
             conn_chn_lst.append(connchnls)
 
     return conn_chn_lst
-
-
 # def parse_json():
 #     """ parse a json file mechanism file
 #     """

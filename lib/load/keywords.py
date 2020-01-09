@@ -9,12 +9,14 @@ RUN_INP_REQUIRED_KEYWORDS = [
     'spc',
     'mech',
     'run_prefix',
-    'save_prefix'
+    'save_prefix',
+    'sort_rxns',
+    'check_stereo',
+    'rad_rad_sort'
 ]
 
 # Proc section
 RUN_SUPPORTED_KEYWORDS = [
-    'check',
     'sort',
     'es',
     'thermo',
@@ -27,7 +29,9 @@ OPTIONS_SUPPORTED_KEYWORDS = [
     'check_stereo',
     'overwrite',
     'ref_mols',
-    'es_job_set'
+    'es_job_set',
+    'hind_inc',
+    'mc_nsamp'
 ]
 
 # SUPPORTED

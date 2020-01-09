@@ -161,25 +161,17 @@ def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
                             assess_pdep=assess_pdep)
 
 
-def build_geom_dct(data_path):
-    """ Obtain dct containing geometries to use as input
-    """
-    geom_path = os.path.join(data_path, 'data', 'geoms')
-    geom_dct = geo.geometry_dictionary(geom_path)
-    return geom_dct
-
-
-def etrans_lst(params):
+def etrans_lst(etrans_dct):
     """ set the etrans list
     """
-    return [params.EXP_FACTOR,
-            params.EXP_POWER,
-            params.EXP_CUTOFF,
-            params.EPS1,
-            params.EPS2,
-            params.SIG1,
-            params.SIG2,
-            params.MASS1]
+    return [etrans_dct['exp_factor'],
+            etrans_dct['exp_power'],
+            etrans_dct['exp_cutoff'],
+            etrans_dct['eps1'],
+            etrans_dct['eps2'],
+            etrans_dct['sig1'],
+            etrans_dct['sig2'],
+            etrans_dct['mass1']]
 
 
 def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
