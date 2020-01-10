@@ -106,7 +106,6 @@ DSARRFIT = ("#!/usr/bin/env bash\n"
             "dsarrfit.x_cfg")
 
 # Electronic structure
-MOLPRO_PATH_STR = ('/home/sjklipp/bin/molpro')
 G09 = ("#!/usr/bin/env bash\n"
        "g09 run.inp run.out >> stdout.log &> stderr.log")
 PSI4 = ("#!/usr/bin/env bash\n"

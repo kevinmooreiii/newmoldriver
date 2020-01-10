@@ -10,16 +10,15 @@ from lib.filesystem import build as fbuild
 from lib.runner import rates as raterunner
 
 
-def run(spc_dct, thy_dct, model_dct, tsk_info_lst,
-        rct_names_lst, prd_names_lst,
-        run_prefix, save_prefix, ene_coeff=(1.),
-        options=(True, True, True, False),
-        etrans=(200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0),
-        pst_params=(1.0, 6),
-        multi_info=('molpro2015', 'caspt2', 'cc-pVDZ', 'RR'),
-        temps=(500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.),
-        pressures=(0.03, 0.1, 0.3, 1., 3., 10., 30., 100.),
-        assess_pdep=(0.3, 10.0, (500.0))):
+def run(spc_dct,
+        thy_dct,
+        tsk_info_lst,
+        pes_rct_names_lst,
+        pes_prd_names_lst,
+        model_dct,
+        run_options_dct,
+        run_inp_dct,
+        rate_jobs=rate_jobs):
     """ main driver for generation of full set of rate constants on a single PES
     """
 
@@ -28,9 +27,8 @@ def run(spc_dct, thy_dct, model_dct, tsk_info_lst,
     spc_save_fs = autofile.fs.species(save_prefix)
 
     # Determine whether to just run MESS or run Rates+Fits
-    runmess = options[2]
-    runrates = options[3] if runmess else False
-    runfits = True
+    runrates = rate_jobs[0]
+    runfits = rate_jobs[1]
 
     # Get the reactant and product speceies in a list to be run
     spc_queue = lmech.form_spc_queue(rct_names_lst, prd_names_lst)

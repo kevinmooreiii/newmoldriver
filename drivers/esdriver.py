@@ -26,6 +26,9 @@ def run(tsk_info_lst, rxn_lst, spc_dct, thy_dct,
 
     # Prepare prefix filesystem
     fbuild.prefix_filesystem(run_prefix, save_prefix)
+    
+    # Build the es tsks if needed
+    es_tsk_lst = loadrun.build_run_es_tsks_lst(run_es_tsks, model_dct)
 
     # Loop over Tasks
     for tsk_info in tsk_info_lst:

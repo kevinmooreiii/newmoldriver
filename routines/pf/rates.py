@@ -39,9 +39,10 @@ def rate_headers(
 
 
 def make_all_species_data(rxn_lst, spc_dct, save_prefix, model_info,
-                          pf_info, projrot_script_str):
+                          pf_info):
     """ generate the MESS species blocks for all the species
     """
+    projrot_script_str = ''
     species = {}
     spc_save_fs = autofile.fs.species(save_prefix)
     for idx, rxn in enumerate(rxn_lst):
@@ -113,7 +114,7 @@ def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
 
 def make_channel_pfs(
         tsname, rxn, species_data, spc_dct, idx_dct, strs, first_ground_ene,
-        spc_save_fs, spc_model, pf_levels, multi_info, projrot_script_str,
+        spc_save_fs, spc_model, pf_levels, multi_info,
         pst_params=(1.0, 6),
         rad_rad_ts='pst'):
     """ make the partition function strings for each of the channels
@@ -122,6 +123,7 @@ def make_channel_pfs(
     It also includes a special treatment for abstraction to include phase space
     blocks and coupling bimolecular fragments to fake van der Waals wells
     """
+    projrot_script_str = ''
     bim_str, well_str, ts_str = strs
 
     # Find the number of uni and bimolecular wells already in the dictionary

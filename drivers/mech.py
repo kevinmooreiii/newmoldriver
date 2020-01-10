@@ -2,183 +2,102 @@
 better home
 """
 
-import os
-import sys
-import numpy
 import automol.geom
 from drivers import esdriver
 from drivers import ktpdriver
-
 from routines.pf import get_high_level_energy
 from routines.pf import rates as messrates
-from lib.phydat import phycon
-from lib.submission import substr
 from lib.filesystem import inf as finf
 from lib.filesystem import path as fpath
 from lib.filesystem import read as fread
-from lib.load import geo
 from lib.reaction import rxnid
 
 
-def run_driver(pes_dct, pesnums_lst, channels, connchnls_lst,
+def run_driver(pes_dct, conn_chnls_dct,
                spc_dct, cla_dct,
                thy_dct,
                model_dct,
-               tsk_info_lst,
-               run_prefix, save_prefix,
-               ene_coeff=[1.],
-               vdw_params=[False, False, True],
-               options=[True, True, True, False],
-               etrans=[200.0, 0.85, 15.0, 57.0, 200.0, 3.74, 5.5, 28.0],
-               pst_params=[1.0, 6],
-               rad_rad_ts='vtst',
-               hind_inc=30.0,
-               mc_nsamp=[True, 10, 1, 3, 100],
-               multi_info=['molpro2015', 'caspt2', 'cc-pVDZ', 'RR'],
-               temps=[500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.],
-               pressures=[0.03, 0.1, 0.3, 1., 3., 10., 30., 100.],
-               assess_pdep=[0.3, 3.0, [500., 1000.0]],
-               kickoff=(0.1, False),
+               run_jobs_dct,
+               run_opts_dct,
+               es_tsk_lst,
+               run_inp_dct,
+               run_options_dct,
                driver='es_spc'):
     """ Run the ktp driver for the PESs
     """
-
+    pes_chns = pes_dct.keys()
     for pes_idx, pes in enumerate(pes_dct, start=1):
-        # Only run the PESs that the user has specified
-        if pes_idx in pesnums_lst:
-            # Build the names list
-            pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
-            pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
-            pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
-            if isinstance(channels, str):
-                if channels == 'all':
-                    print(len(pes_rxn_name_lst))
-                    pes_chns = numpy.arange(len(pes_rxn_name_lst)+1)
-                elif '-' in channels:
-                    start, end = channels.split('-')
-                    pes_chns = numpy.arange(int(start), int(end)+1)
-                elif '[' in channels:
-                    nums = channels.replace('[', '').replace(']', '')
-                    pes_chns = [int(num) for num in nums.split(',')]
 
-            # Print out the channel that is being run
-            for cidx, cvals in enumerate(connchnls_lst[pes_idx-1].values()):
-                print('PES{}_{}: {} surface'.format(
-                    str(pes_idx), str(cidx+1), pes))
-                for cval in cvals:
-                    print(pes_rxn_name_lst[cval])
+        # Build the names list
+        pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
+        pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
 
-            # Run the KTPDriver over the channels
-            for cidx, cvals in enumerate(connchnls_lst[pes_idx-1].values()):
-                print('ktp on PES{}_{}: {} for following channels...'.format(
-                    str(pes_idx), str(cidx+1), pes))
-                run_pes = False
-                rct_names_lst = []
-                prd_names_lst = []
-                rxn_name_lst = []
-                for chn_idx, _ in enumerate(pes_rxn_name_lst):
-                    if chn_idx+1 in pes_chns and chn_idx in cvals:
-                        run_pes = True
-                        rct_names_lst.append(pes_rct_names_lst[chn_idx])
-                        prd_names_lst.append(pes_prd_names_lst[chn_idx])
-                        rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
-                        print('running channel {}: {} = {}'.format(
-                            str(chn_idx+1),
-                            ' + '.join(pes_rct_names_lst[chn_idx]),
-                            ' + '.join(pes_prd_names_lst[chn_idx])))
-                if run_pes:
-                    rxn_lst = []
-                    for rxn, _ in enumerate(rct_names_lst):
-                        rxn_lst.append(
-                            {'species': [],
-                             'reacs': list(rct_names_lst[rxn]),
-                             'prods': list(prd_names_lst[rxn])})
-                    ts_idx = 0
-                    for idx, rxn in enumerate(rxn_lst):
-                        reacs = rxn['reacs']
-                        prods = rxn['prods']
-                        tsname = 'ts_{:g}'.format(ts_idx)
-                        spc_dct[tsname] = {}
-                        rname = rxn_name_lst[idx]
-                        rname_eq = '='.join(rname.split('=')[::-1])
-                        if rname in cla_dct:
-                            spc_dct[tsname]['given_class'] = cla_dct[rname]
-                        elif rname_eq in cla_dct:
-                            spc_dct[tsname]['given_class'] = cla_dct[rname_eq]
-                            reacs = rxn['prods']
-                            prods = rxn['reacs']
-                        else:
-                            spc_dct[tsname]['given_class'] = None
-                        if reacs and prods:
-                            spc_dct[tsname]['reacs'] = reacs
-                            spc_dct[tsname]['prods'] = prods
-                        spc_dct[tsname]['ich'] = ''
-                        ts_chg = 0
-                        for rct in rct_names_lst[idx]:
-                            print(spc_dct[rct])
-                            ts_chg += spc_dct[rct]['chg']
-                        spc_dct[tsname]['chg'] = ts_chg
-                        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
-                            rct_names_lst[idx], prd_names_lst[idx], spc_dct)
-                        spc_dct[tsname]['mul'] = mul_low
-                        spc_dct[tsname]['rad_rad'] = rad_rad
-                        spc_dct[tsname]['hind_inc'] = (
-                            hind_inc * phycon.DEG2RAD)
-                        ts_idx += 1
+        # Select names from the names list corresponding to chnls to run
+        for cvals in enumerate(conn_chnls_dct[pes_idx]):
+            run_pes = False
+            rct_names_lst = []
+            prd_names_lst = []
+            rxn_name_lst = []
+            for chn_idx, _ in enumerate(pes_rxn_name_lst):
+                if chn_idx+1 in pes_chns and chn_idx in cvals:
+                    run_pes = True
+                    rct_names_lst.append(pes_rct_names_lst[chn_idx])
+                    prd_names_lst.append(pes_prd_names_lst[chn_idx])
+                    rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
+                    print('running channel {}: {} = {}'.format(
+                        str(chn_idx+1),
+                        ' + '.join(pes_rct_names_lst[chn_idx]),
+                        ' + '.join(pes_prd_names_lst[chn_idx])))
+            if run_pes:
+                rxn_lst = []
+                for rxn, _ in enumerate(rct_names_lst):
+                    rxn_lst.append(
+                        {'species': [],
+                         'reacs': list(rct_names_lst[rxn]),
+                         'prods': list(prd_names_lst[rxn])})
 
-                    # Run the appropriate driver
-                    if driver == 'es_spc':
-                        spc_esdriver(
-                            rct_names_lst, prd_names_lst, tsk_info_lst,
-                            spc_dct, thy_dct,
-                            run_prefix, save_prefix, vdw_params,
-                            rad_rad_ts=rad_rad_ts,
-                            mc_nsamp=mc_nsamp)
-                    if driver == 'es_rxn':
-                        rxn_esdriver(
-                            rct_names_lst, prd_names_lst, tsk_info_lst,
-                            spc_dct, thy_dct,
-                            run_prefix, save_prefix, vdw_params,
-                            rad_rad_ts=rad_rad_ts,
-                            mc_nsamp=mc_nsamp,
-                            kickoff=kickoff)
-                    elif driver == 'ktp':
-                        ktpdriver.run(
-                            spc_dct,
-                            thy_dct,
-                            tsk_info_lst,
-                            pes_rct_names_lst,
-                            pes_prd_names_lst,
-                            run_prefix,
-                            save_prefix,
-                            ene_coeff=ene_coeff,
-                            options=options,
-                            etrans=etrans,
-                            pst_params=pst_params,
-                            multi_info=multi_info,
-                            temps=temps,
-                            pressures=pressures,
-                            assess_pdep=assess_pdep)
+                # Add the stationary points to the spc dcts
+                ts_dct = build_spc_dct_for_sadpts(
+                    rxn_lst, rxn_name_lst,
+                    rct_names_lst, prd_names_lst, cla_dct)
+                spc_dct.update(ts_dct)
+
+                # Run the appropriate driver
+                if driver == 'es_spc':
+                    spc_esdriver(
+                        rct_names_lst, prd_names_lst, es_tsk_lst,
+                        spc_dct, thy_dct,
+                        model_dct
+                        run_optons_dct,
+                        run_inp_dct)
+                if driver == 'es_rxn':
+                    rxn_esdriver(
+                        rct_names_lst, prd_names_lst, es_tsk_lst,
+                        spc_dct, thy_dct,
+                        model_dct,
+                        run_options_dct,
+                        run_inp_dct)
+                elif driver == 'ktp':
+                    rate_jobs = [run_jobs_dct['rates'],
+                                 run_jobs_dct['params']]
+                    ktpdriver.run(
+                        spc_dct,
+                        thy_dct,
+                        tsk_info_lst,
+                        pes_rct_names_lst,
+                        pes_prd_names_lst,
+                        model_dct,
+                        run_options_dct,
+                        run_inp_dct,
+                        rate_jobs=rate_jobs)
 
 
-def etrans_lst(etrans_dct):
-    """ set the etrans list
-    """
-    return [etrans_dct['exp_factor'],
-            etrans_dct['exp_power'],
-            etrans_dct['exp_cutoff'],
-            etrans_dct['eps1'],
-            etrans_dct['eps2'],
-            etrans_dct['sig1'],
-            etrans_dct['sig2'],
-            etrans_dct['mass1']]
-
-
-def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
+def spc_esdriver(rct_names_lst, prd_names_lst, es_tsk_lst,
                  spc_dct, thy_dct,
-                 run_prefix, save_prefix, vdw_params,
-                 rad_rad_ts='pst',
-                 mc_nsamp=[True, 10, 1, 3, 100]):
+                 model_dct
+                 run_optons_dct,
+                 run_inp_dct):
     """ Call the ESDriver Routines for species in the spc dct
     """
 
@@ -199,10 +118,9 @@ def spc_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
 
 def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
                  spc_dct, thy_dct,
-                 run_prefix, save_prefix, vdw_params,
-                 rad_rad_ts='pst',
-                 mc_nsamp=[True, 10, 1, 3, 100],
-                 kickoff=(0.1, False)):
+                 model_dct,
+                 run_options_dct,
+                 run_inp_dct):
     """ Call the ESDriver Routines for reactions in the spc dct
     """
     # Format the task info list
@@ -231,6 +149,45 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
             rad_rad_ts=rad_rad_ts,
             mc_nsamp=mc_nsamp,
             kickoff=kickoff)
+
+
+def build_spc_dct_for_sadpts(rxn_lst, rxn_name_lst,
+                             rct_names_lst, prd_names_lst, cla_dct):
+    """ build dct
+    """
+    ts_dct = {}
+    ts_idx = 0
+    for idx, rxn in enumerate(rxn_lst):
+        reacs = rxn['reacs']
+        prods = rxn['prods']
+        tsname = 'ts_{:g}'.format(ts_idx)
+        ts_dct[tsname] = {}
+        rname = rxn_name_lst[idx]
+        rname_eq = '='.join(rname.split('=')[::-1])
+        if rname in cla_dct:
+            ts_dct[tsname]['given_class'] = cla_dct[rname]
+        elif rname_eq in cla_dct:
+            ts_dct[tsname]['given_class'] = cla_dct[rname_eq]
+            reacs = rxn['prods']
+            prods = rxn['reacs']
+        else:
+            ts_dct[tsname]['given_class'] = None
+        if reacs and prods:
+            ts_dct[tsname]['reacs'] = reacs
+            ts_dct[tsname]['prods'] = prods
+        ts_dct[tsname]['ich'] = ''
+        ts_chg = 0
+        for rct in rct_names_lst[idx]:
+            print(ts_dct[rct])
+            ts_chg += ts_dct[rct]['chg']
+        ts_dct[tsname]['chg'] = ts_chg
+        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
+            rct_names_lst[idx], prd_names_lst[idx], ts_dct)
+        ts_dct[tsname]['mul'] = mul_low
+        ts_dct[tsname]['rad_rad'] = rad_rad
+        ts_idx += 1
+
+    return ts_dct
 
 
 def form_spc_queue(rct_names_lst=(), prd_names_lst=()):
@@ -326,7 +283,7 @@ def set_sadpt_info(ts_tsk_lst, spc_dct, spc, thy_dct,
     rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
         spc_dct[spc]['reacs'], spc_dct[spc]['prods'], spc_dct,
         ini_thy_info, save_prefix, run_prefix, kickoff_size,
-        kickoff_backward, substr.PROJROT)
+        kickoff_backward)
     ret = rxnid.ts_class(
         rct_zmas, prd_zmas, spc_dct[spc]['rad_rad'],
         spc_dct[spc]['mul'], low_mul, high_mul,
@@ -429,8 +386,9 @@ def set_pes_formula(spc_dct):
     return pes_formula
 
 
-def get_high_energy(ts_tsk_lst, thy_dct, spc_info, save_path, saddle, ene_coeff):
-    """
+def get_high_energy(ts_tsk_lst, thy_dct, spc_info,
+                    save_path, saddle, ene_coeff):
+    """ calc high energy
     """
     spc_ene = 0.0
     ene_idx = 0
@@ -494,8 +452,7 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
     """
     first_ground_ene = 0.
     species = messrates.make_all_species_data(
-        rxn_lst, spc_dct, save_prefix, ts_model, pf_levels,
-        substr.PROJROT)
+        rxn_lst, spc_dct, save_prefix, ts_model, pf_levels)
     for idx, rxn in enumerate(rxn_lst):
         tsname = 'ts_{:g}'.format(idx)
         tsform = automol.geom.formula(
@@ -508,7 +465,7 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
         mess_strs, first_ground_ene = messrates.make_channel_pfs(
             tsname, rxn, species, spc_dct, idx_dct, mess_strs,
             first_ground_ene, spc_save_fs, ts_model, pf_levels,
-            multi_info, substr.PROJROT,
+            multi_info,
             pst_params=pst_params)
     well_str, bim_str, ts_str = mess_strs
     ts_str += '\nEnd\n'

@@ -73,7 +73,10 @@ def csv_dct(spc_str, check_stereo):
         spc_dct[name]['mul'] = mul_dct[name]
         spc_names.append(name)
 
-    return spc_dct
+    # Add other things to the species dct
+    mod_spc_dct = modify_spc_dct(job_path, spc_dct)
+
+    return mod_spc_dct
 
 
 def read_spc_amech():
@@ -82,7 +85,7 @@ def read_spc_amech():
     return None
 
 
-def modify_spc_dct(job_path, spc_dct, hind_inc):
+def modify_spc_dct(job_path, spc_dct):
     """ Modify the species dct
     """
     geom_dct = geometry_dictionary(job_path)
@@ -104,7 +107,7 @@ def modify_spc_dct(job_path, spc_dct, hind_inc):
             mod_spc_dct[spc]['sym'] = symm.DCT[(ich, mul)]
         if ich in geom_dct:
             mod_spc_dct[spc]['geo_obj'] = geom_dct[ich]
-        mod_spc_dct[spc]['hind_inc'] = hind_inc * phycon.DEG2RAD
+        # mod_spc_dct[spc]['hind_inc'] = hind_inc * phycon.DEG2RAD
 
     return mod_spc_dct
 

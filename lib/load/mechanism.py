@@ -11,7 +11,7 @@ from lib.load import ptt
 MECH_INP = 'inp/mechanism.dat'
 
 
-def parse_mechanism_file(job_path, mech_type, spc_dct,
+def parse_mechanism_file(job_path, mech_type, spc_dct, pesnums,
                          check_stereo=False, sort_rxns=False,
                          rad_rad_sort=False):
     """ Get the reactions and species from the mechanism input
@@ -19,7 +19,7 @@ def parse_mechanism_file(job_path, mech_type, spc_dct,
     # parsing moved to the input parsing module I am writing
     mech_str = ptt.read_inp_str(job_path, MECH_INP)
     if mech_type.lower() == 'chemkin':
-        pes_dct = _parse_chemkin(
+        formulas, rct_names, prd_names, rxn_names = _parse_chemkin(
             mech_str, spc_dct, sort_rxns)
     # elif mech_type.lower() == 'json':
     #     spc_dct, rct_names, prd_names, rxn_name, form_strs = _parse_json(
@@ -27,7 +27,19 @@ def parse_mechanism_file(job_path, mech_type, spc_dct,
     else:
         raise NotImplementedError
 
-    return pes_dct
+    # Build the total PES dct
+    pes_dct = build_pes_dct(formulas, rct_names, prd_names, rxn_names)
+
+    # Print the channels
+    print_pes_channels(pes_dct)
+
+    # Reduce the PES dct to only what the user requests
+    run_pes_dct = reduce_pes_dct_to_run(pes_dct, pesnums)
+
+    # Get a dct for all of the connected channels
+    conn_chnls_dct = determine_connected_pes_channels(run_pes_dct)
+
+    return run_pes_dct, conn_chnls_dct
 
 
 def _parse_chemkin(mech_str, spc_dct, sort_rxns):
@@ -73,13 +85,10 @@ def _parse_chemkin(mech_str, spc_dct, sort_rxns):
         formula_str_lst, rct_names_lst, prd_names_lst, rxn_name_lst = zip(
             *rxn_info_lst)
 
-    # Build the total PES dct
-    pes_dct = build_pes_dct(
-        formula_str_lst, rct_names_lst, prd_names_lst, rxn_name_lst)
-
-    return pes_dct
+    return formula_str_lst, rct_names_lst, prd_names_lst, rxn_name_lst
 
 
+# FUNTIONS FOR THE PES DICT OBJECTS CONTAINING INFO FOR THE REACTIONS ON PES
 def build_pes_dct(formula_str_lst, rct_names_lst,
                   prd_names_lst, rxn_name_lst):
     """ Build a dictionary of the PESs
@@ -101,96 +110,90 @@ def build_pes_dct(formula_str_lst, rct_names_lst,
     return pes_dct
 
 
+def reduct_pes_dct_to_run(pes_dct, pesnums):
+    """ get a pes dictionary containing only the PESs the user is running
+    """
+    run_pes_dct = {}
+    for pes_idx, formula in enumerate(pes_dct, start=1):
+        if pes_idx in pesnums:
+            run_pes_dct[formula] = pes_dct[formula]
+    return run_pes_dct
+
+
 def print_pes_channels(pes_dct):
     """ Print the PES
     """
-    for pes_idx, pes in enumerate(pes_dct, start=1):
-        print('pes test:', pes_idx, pes)
-        pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
-        pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
-        pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
+    for pes_idx, formula in enumerate(pes_dct, start=1):
+        print('PES:', pes_idx, formula)
+        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
+        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
         for chn_idx, _ in enumerate(pes_rxn_name_lst):
             print('channel {}: {} = {}'.format(
-                chn_idx+1, ' + '.join(pes_rct_names_lst[chn_idx]),
+                chn_idx+1,
+                ' + '.join(pes_rct_names_lst[chn_idx]),
                 ' + '.join(pes_prd_names_lst[chn_idx])))
 
 
-def get_pes_nums(pes_dct, pesnums):
-    """ take user input of pes nums and convert them to int list
+# FUNTIONS FOR THE CHANNELS DICT OBJECTS
+def determine_connected_pes_channels(pes_dct):
+    """ Determine all the connected reaction channels for each PES
+        Build a dictionary for each PES with lists of connected channels:
+            dct[PES_FORMULA] = [ [SUB_PES_1], [SUB_PES_2], ... , [SUB_PES_N] ]
+            where each SUB_PES = [n1, n2, ... , nN],
+            where n1 to nN correspond to ixds for channels that are
+            connected to each other
+        For efficiency we only determine channels for PESs we wish to run.
     """
-    for pes_idx, _ in enumerate(pes_dct, start=1):
-        if isinstance(pesnums, str):
-            if pesnums == 'all':
-                pesnums_lst = numpy.arange(len(pes_dct)+1)
-            elif '-' in pesnums:
-                start, end = pesnums.split('-')
-                pesnums_lst = numpy.arange(int(start), int(end)+1)
-            elif '[' in pesnums:
-                nums = pesnums.replace('[', '').replace(']', '').split(',')
-                pesnums_lst = [int(num) for num in nums]
+    conn_chn_dct = {}
+    for pes_idx, formula in enumerate(pes_dct, start=1):
+        # Set the names lists for the rxns and species needed below
+        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
+        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
 
-    return pesnums_lst
+        # Split up channels into a connected sub-pes within a formula
+        subpes_idx = 0
+        conndct = {}
+        connchnls = {}
+        for chnl_idx, _ in enumerate(pes_rxn_name_lst):
+            connected_to = []
+            chnl_species = [list(pes_rct_names_lst[chnl_idx]),
+                            list(pes_prd_names_lst[chnl_idx])]
+            for conn_chnls_idx in conndct:
+                for spc_pair in chnl_species:
+                    if len(spc_pair) == 1:
+                        if spc_pair in conndct[conn_chnls_idx]:
+                            if conn_chnls_idx not in connected_to:
+                                connected_to.append(conn_chnls_idx)
+                        elif spc_pair[::-1] in conndct[conn_chnls_idx]:
+                            if conn_chnls_idx not in connected_to:
+                                connected_to.append(conn_chnls_idx)
+            if not connected_to:
+                conndct[subpes_idx] = chnl_species
+                connchnls[subpes_idx] = [chnl_idx]
+                subpes_idx += 1
+            else:
+                conndct[connected_to[0]].extend(chnl_species)
+                connchnls[connected_to[0]].append(chnl_idx)
+                if len(connected_to) > 1:
+                    for cidx, cval in enumerate(connected_to):
+                        if cidx > 0:
+                            conn_specs = conndct.pop(cval, None)
+                            conn_chnls = connchnls.pop(cval, None)
+                            conndct[connected_to[0]].extend(conn_specs)
+                            connchnls[connected_to[0]].extend(conn_chnls)
+                for cidx in conndct:
+                    conndct[cidx].sort()
+                    conndct[cidx] = [
+                        conndct[cidx][i] for i in
+                        range(len(conndct[cidx])) if i == 0 or
+                        conndct[cidx][i] != conndct[cidx][i-1]]
 
+        # Add connected channels list to the dictionary
+        conn_chn_dct[pes_idx] = connchnls
 
-def determine_connected_pes_channels(pes_dct, pesnums_lst):
-    """ Sort the PES lst and set the connected channels
-    """
-    conn_chn_lst = []
-    print(pesnums_lst)
-    for pes_idx, pes in enumerate(pes_dct, start=1):
-        if pes_idx in pesnums_lst:
-            # Set the names list needed below
-            pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
-            pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
-            pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
-
-            # Split up sub-pes within a formula
-            subpes_idx = 0
-            conndct = {}
-            connchnls = {}
-            for chnl_idx, _ in enumerate(pes_rxn_name_lst):
-                connected_to = []
-                chnl_species = [list(pes_rct_names_lst[chnl_idx]),
-                                list(pes_prd_names_lst[chnl_idx])]
-                for conn_chnls_idx in conndct:
-                    for spc_pair in chnl_species:
-                        if len(spc_pair) == 1:
-                            if spc_pair in conndct[conn_chnls_idx]:
-                                if conn_chnls_idx not in connected_to:
-                                    connected_to.append(conn_chnls_idx)
-                            elif spc_pair[::-1] in conndct[conn_chnls_idx]:
-                                if conn_chnls_idx not in connected_to:
-                                    connected_to.append(conn_chnls_idx)
-                if not connected_to:
-                    conndct[subpes_idx] = chnl_species
-                    connchnls[subpes_idx] = [chnl_idx]
-                    subpes_idx += 1
-                else:
-                    conndct[connected_to[0]].extend(chnl_species)
-                    connchnls[connected_to[0]].append(chnl_idx)
-                    if len(connected_to) > 1:
-                        for cidx, cval in enumerate(connected_to):
-                            if cidx > 0:
-                                conn_specs = conndct.pop(cval, None)
-                                conn_chnls = connchnls.pop(cval, None)
-                                conndct[connected_to[0]].extend(conn_specs)
-                                connchnls[connected_to[0]].extend(conn_chnls)
-                    for cidx in conndct:
-                        conndct[cidx].sort()
-                        conndct[cidx] = [
-                            conndct[cidx][i] for i in
-                            range(len(conndct[cidx])) if i == 0 or
-                            conndct[cidx][i] != conndct[cidx][i-1]]
-
-            for cidx, cvals in enumerate(connchnls.values()):
-                print('PES{}_{}: {} surface'.format(
-                    str(pes_idx), str(cidx+1), pes))
-                for cval in cvals:
-                    print(pes_rxn_name_lst[cval])
-
-            conn_chn_lst.append(connchnls)
-
-    return conn_chn_lst
+    return conn_chn_dct
 # def parse_json():
 #     """ parse a json file mechanism file
 #     """

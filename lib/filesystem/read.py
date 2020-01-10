@@ -7,6 +7,7 @@ from automol.zmatrix.ts import _shifted_standard_forms_with_gaphs as shift_gra
 import autofile
 from lib.filesystem import orb as fsorb
 from lib.filesystem import minc as fsmin
+# from lib.runner import sub
 
 
 def reaction_energy(save_prefix, rxn_ich, rxn_chg, rxn_mul, thy_level):
@@ -43,9 +44,10 @@ def reagent_energies(save_prefix, rgt_ichs, rgt_chgs, rgt_muls, thy_level):
 
 def get_zmas(
         reacs, prods, spc_dct, ini_thy_info, save_prefix, run_prefix,
-        kickoff_size, kickoff_backward, projrot_script_str):
+        kickoff_size, kickoff_backward):
     """get the zmats for reactants and products using the initial level of theory
     """
+    projrot_script_str = ''
     if len(reacs) > 2:
         ich = spc_dct[reacs[-1]]['ich']
         ichgeo = automol.inchi.geometry(ich)
