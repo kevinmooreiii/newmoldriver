@@ -7,7 +7,7 @@ import autofile
 
 # New Libs
 from lib.phydat import phycon
-from lib.submission import substr
+from lib.runner import script
 from lib.filesystem import minc as fsmin
 from lib.filesystem import orb as fsorb
 import routines.pf.messf.models as pfmodels
@@ -68,7 +68,7 @@ def get_zero_point_energy(
     """
 
     # Set up input
-    projrot_script_str = substr.PROJROT
+    projrot_script_str = script.PROJROT
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
 
     # Prepare the sets of file systems

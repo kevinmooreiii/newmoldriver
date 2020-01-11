@@ -6,8 +6,7 @@ import os
 import autofile
 
 # New Libs
-from lib.submission import substr
-from lib.runner.script import run_script
+from lib.runner import script
 from lib.filesystem import orb as fsorb
 
 
@@ -40,5 +39,5 @@ def run_rates(
     print(mess_path)
     with open(os.path.join(mess_path, 'mess.inp'), 'w') as mess_file:
         mess_file.write(mess_inp_str)
-    run_script(substr.MESSRATE, mess_path)
+    script.run_script(script.MESSRATE, mess_path)
     return mess_path

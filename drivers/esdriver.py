@@ -7,31 +7,37 @@ from lib.filesystem import build as fbuild
 from lib.filesystem import inf as finf
 from lib.filesystem import check as fcheck
 from lib.filesystem import path as fpath
-from lib.submission import substr
 from lib.reaction import ts as lts
 from lib import msg
 
 
-def run(tsk_info_lst, rxn_lst, spc_dct, thy_dct,
-        run_prefix, save_prefix,
-        vdw_params=(False, False, True),
-        rad_rad_ts='vtst',
-        mc_nsamp=(True, 10, 1, 3, 100),
-        kickoff=(0.1, False)):
+def run(rxn_lst, spc_dct,
+        es_tsk_lst,
+        thy_dct, model_dct,
+        run_options_dct, run_inp_dct):
     """ driver for all electronic structure tasks
     """
+    # Pull stuff from dcts for now
+    run_prefix = run_inp_dct['run_prefix']
+    save_prefix = run_inp_dct['save_prefix']
+    vdw_params = model_dct['options']['vdw_params']
+    rad_rad_ts = model_dct['pf']['ts_barrierless']
+    mc_nsamp = run_options_dct['mc_nsamp']
+    kickoff = run_options_dct['kickoff']
 
     # Prepare species queue
     spc_queue = lmech.form_spc_queue_2(rxn_lst)
 
     # Prepare prefix filesystem
     fbuild.prefix_filesystem(run_prefix, save_prefix)
-    
+
     # Build the es tsks if needed
-    es_tsk_lst = loadrun.build_run_es_tsks_lst(run_es_tsks, model_dct)
+    # es_tsk_lst = loadrun.build_run_es_tsks_lst(es_tsk_lst, model_dct)
+    # print('in esdriver')
+    # print(es_tsk_lst)
 
     # Loop over Tasks
-    for tsk_info in tsk_info_lst:
+    for tsk_info in es_tsk_lst:
 
         # Task and theory information
         [tsk, es_run_key, es_ini_key, overwrite] = tsk_info
@@ -86,7 +92,7 @@ def run(tsk_info_lst, rxn_lst, spc_dct, thy_dct,
                             vdw_params,
                             thy_dct[es_run_key]['mc_nsamp'], run_prefix,
                             save_prefix, 0.1, False,
-                            substr.PROJROT, overwrite)
+                            overwrite)
                         spc_queue.extend(vdws)
             continue
 

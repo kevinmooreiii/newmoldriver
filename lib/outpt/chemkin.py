@@ -7,28 +7,26 @@ import automol
 import thermo
 
 
-def run_ckin_header(pf_info, ref_info, spc_model):
+def run_ckin_header(pf_info, spc_model):
     """ prepare chemkin header info and convert pac 99 format to chemkin format
     """
     tors_model, vib_model, _ = spc_model
-    har_info, tors_info, vpt2_info, _, sp_str, = pf_info
-    har_ref_info, tors_ref_info, vpt2_ref_info, _, _ = ref_info
+    geo_info, ene_info, har_info, anh_info, sym_info, tors_info, sp_str, = pf_info
 
     # Convert the pac99 polynomial to chemkin polynomial
-    chemkin_header_str = '! tors model: {0}\n'.format(tors_model)
     chemkin_header_str += '! vib model: {0}\n'.format(vib_model)
+    chemkin_header_str = '! tors model: {0}\n'.format(tors_model)
     if har_info:
-        chemkin_header_str += '! har level: {}{}/{}//{}{}/{}\n'.format(
-            har_info[3], har_info[1], har_info[2],
-            har_ref_info[3], har_ref_info[1], har_ref_info[2])
+        chemkin_header_str += '! ene//geo level: {}{}/{}//{}{}/{}\n'.format(
+            ene_info[3], ene_info[1], ene_info[2],
+            geo_info[3], geo_info[1], geo_info[2])
     if tors_info:
         chemkin_header_str += '! tors level: {}{}/{}//{}{}/{}\n'.format(
-            tors_info[3], tors_info[1], tors_info[2],
-            tors_ref_info[3], tors_ref_info[1], tors_ref_info[2])
+            tors_info[1][3], tors_info[1][1], tors_info[1][2],
+            tors_info[0][3], tors_info[0][1], tors_info[0][2],
     if vpt2_info:
-        chemkin_header_str += '! vpt2 level: {}{}/{}//{}{}/{}\n'.format(
+        chemkin_header_str += '! vpt2 level: {}{}/{}\n'.format(
             vpt2_info[3], vpt2_info[1], vpt2_info[2],
-            vpt2_ref_info[3], vpt2_ref_info[1], vpt2_ref_info[2])
     if sp_str:
         chemkin_header_str += sp_str
 

@@ -10,6 +10,7 @@ from routines.es import util
 from routines.es import geom
 from lib.runner import runpar
 from lib.runner import driver
+from lib.runner import script
 from lib.filesystem import orb as fsorb
 from lib.phydat import phycon
 
@@ -17,10 +18,11 @@ from lib.phydat import phycon
 def find_vdw(ts_name, spc_dct, thy_info, ini_thy_info, vdw_params,
              nsamp_par, run_prefix, save_prefix,
              kickoff_size, kickoff_backward,
-             projrot_script_str, overwrite):
+             overwrite):
     """ Find van der Waals structures for all the pairs of
         species in a reaction list
     """
+    projrot_script_str = script.PROJROT
     new_vdws = []
     _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(*thy_info[:2])
     mul = spc_dct[ts_name]['low_mul']

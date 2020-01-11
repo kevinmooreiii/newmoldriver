@@ -39,10 +39,9 @@ from routines.es.ts import multiref_wavefunction_guess
 from routines.es.wells import find_vdw
 from routines.es.wells import fake_conf
 from routines.es.wells import fake_geo_gen
-from routines.es.util import nsamp_init
 from routines.es.find import find_ts
+from routines.es.util import nsamp_init
 from lib.phydat import phycon
-from lib.submission import substr
 from lib.runner import par as runpar
 from lib.filesystem import minc as fsmin
 
@@ -85,6 +84,7 @@ __all__ = [
     'find_vdw',
     'fake_conf',
     'fake_geo_gen',
+    'find_ts',
     'nsamp_init'
 ]
 
@@ -190,7 +190,6 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
             spc, thy_level, ini_thy_level, filesys, ini_filesys,
             kickoff_size=kickoff_size,
             kickoff_backward=kickoff_backward,
-            projrot_script_str=substr.PROJROT,
             overwrite=overwrite)
     else:
         geo = sadpt_reference_geometry(

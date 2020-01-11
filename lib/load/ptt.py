@@ -141,7 +141,7 @@ def format_param_vals(pvals):
 
     value = value.strip()
     # Format values if it is a list (of string(s), boolean(s), int(s))
-    if all(sym in value for sym in ('[', ']', ',')):
+    if all(sym in value for sym in ('[', ']')):
         value = value.replace('[', '').replace(']', '')
         value = value.split(',')
         frmtd_value = []
@@ -159,7 +159,6 @@ def _set_value_type(value):
     """ set type of value
         right now we handle True/False boolean, int, float, and string
     """
-
     if value == 'True':
         frmtd_value = True
     elif value == 'False':

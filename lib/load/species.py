@@ -6,7 +6,7 @@ import chemkin_io
 import automol
 import autofile
 from lib.load import ptt
-from lib.phydat import phycon, symm, eleclvl
+from lib.phydat import symm, eleclvl
 
 
 SPC_INP = 'inp/species.dat'
@@ -22,7 +22,10 @@ def build_spc_dct(job_path, spc_type):
     else:
         raise NotImplementedError
 
-    return spc_dct
+    # Add other things to the species dct
+    mod_spc_dct = modify_spc_dct(job_path, spc_dct)
+
+    return mod_spc_dct
 
 
 def csv_dct(spc_str, check_stereo):
@@ -73,10 +76,7 @@ def csv_dct(spc_str, check_stereo):
         spc_dct[name]['mul'] = mul_dct[name]
         spc_names.append(name)
 
-    # Add other things to the species dct
-    mod_spc_dct = modify_spc_dct(job_path, spc_dct)
-
-    return mod_spc_dct
+    return spc_dct
 
 
 def read_spc_amech():
@@ -107,7 +107,10 @@ def modify_spc_dct(job_path, spc_dct):
             mod_spc_dct[spc]['sym'] = symm.DCT[(ich, mul)]
         if ich in geom_dct:
             mod_spc_dct[spc]['geo_obj'] = geom_dct[ich]
-        # mod_spc_dct[spc]['hind_inc'] = hind_inc * phycon.DEG2RAD
+        # if 'hind_inc' not in spc_dct:
+        #     mod_spc_dct[spc]['hind_inc'] = 30.0 * phycon.DEG2RAD
+        # else:
+        #     mod_spc_dct[spc]['hind_inc'] = spc_dct[spc]['hind_inc']
 
     return mod_spc_dct
 

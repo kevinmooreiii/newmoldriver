@@ -2,7 +2,6 @@
 Read the mechanism file
 """
 
-import numpy
 import chemkin_io
 import automol
 from lib.load import ptt
@@ -12,8 +11,7 @@ MECH_INP = 'inp/mechanism.dat'
 
 
 def parse_mechanism_file(job_path, mech_type, spc_dct, pesnums,
-                         check_stereo=False, sort_rxns=False,
-                         rad_rad_sort=False):
+                         sort_rxns=False):
     """ Get the reactions and species from the mechanism input
     """
     # parsing moved to the input parsing module I am writing
@@ -79,7 +77,6 @@ def _parse_chemkin(mech_str, spc_dct, sort_rxns):
         zip(formula_str_lst, rct_names_lst, prd_names_lst, rxn_name_lst))
 
     # Sort the reactions if desired
-    print('sort_rxns test:', sort_rxns)
     if sort_rxns:
         rxn_info_lst.sort()
         formula_str_lst, rct_names_lst, prd_names_lst, rxn_name_lst = zip(
@@ -110,12 +107,13 @@ def build_pes_dct(formula_str_lst, rct_names_lst,
     return pes_dct
 
 
-def reduct_pes_dct_to_run(pes_dct, pesnums):
+def reduce_pes_dct_to_run(pes_dct, pesnums):
     """ get a pes dictionary containing only the PESs the user is running
     """
     run_pes_dct = {}
-    for pes_idx, formula in enumerate(pes_dct, start=1):
-        if pes_idx in pesnums:
+    for pes_idx, formula in enumerate(pes_dct):
+        if pes_idx+1 in pesnums:
+            print('formula', formula)
             run_pes_dct[formula] = pes_dct[formula]
     return run_pes_dct
 
@@ -123,8 +121,8 @@ def reduct_pes_dct_to_run(pes_dct, pesnums):
 def print_pes_channels(pes_dct):
     """ Print the PES
     """
-    for pes_idx, formula in enumerate(pes_dct, start=1):
-        print('PES:', pes_idx, formula)
+    for pes_idx, formula in enumerate(pes_dct):
+        print('PES:', pes_idx+1, formula)
         pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
         pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
         pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
@@ -146,7 +144,7 @@ def determine_connected_pes_channels(pes_dct):
         For efficiency we only determine channels for PESs we wish to run.
     """
     conn_chn_dct = {}
-    for pes_idx, formula in enumerate(pes_dct, start=1):
+    for pes_idx, formula in enumerate(pes_dct):
         # Set the names lists for the rxns and species needed below
         pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
         pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
@@ -191,7 +189,7 @@ def determine_connected_pes_channels(pes_dct):
                         conndct[cidx][i] != conndct[cidx][i-1]]
 
         # Add connected channels list to the dictionary
-        conn_chn_dct[pes_idx] = connchnls
+        conn_chn_dct[formula] = connchnls
 
     return conn_chn_dct
 # def parse_json():

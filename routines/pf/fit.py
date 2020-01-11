@@ -15,7 +15,7 @@ from lib.phydat import phycon
 
 
 def fit_rates(spc_dct, pes_formula, idx_dct,
-              pf_levels, ref_levels, ts_model,
+              pf_levels, ts_model,
               ene_str, mess_path, assess_pdep):
     """ Parse the MESS output and fit the rates to
         Arrhenius expressions written as CHEMKIN strings
@@ -23,7 +23,7 @@ def fit_rates(spc_dct, pes_formula, idx_dct,
 
     pf_levels.append(ene_str)
     chemkin_header_str = ''
-    chemkin_header_str = cout.run_ckin_header(pf_levels, ref_levels, ts_model)
+    chemkin_header_str = cout.run_ckin_header(pf_levels, ts_model)
     chemkin_header_str += '\n'
     chemkin_poly_str = chemkin_header_str
     starting_path = os.getcwd()
@@ -62,7 +62,8 @@ def perform_fits(spc_dct, name_i, name_j, lab_i, lab_j,
     """ Read the rates for each channel and perform the fits
     """
     # Unpack assess pdep
-    [plow, phigh, assess_pdep_temps] = assess_pdep
+    [plow, phigh, assess_tlow, assess_thigh] = assess_pdep
+    assess_pdep_temps = [assess_tlow, assess_thigh]
 
     # Run
     ene = 0.0

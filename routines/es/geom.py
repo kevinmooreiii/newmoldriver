@@ -14,13 +14,12 @@ from routines.es import wells
 from lib.phydat import phycon
 from lib.runner import driver
 from lib.runner import par as runpar
-from lib.runner.script import run_script
+from lib.runner import script
 
 
 def reference_geometry(
         spc_dct_i, thy_level, ini_thy_level, filesys, ini_filesys,
-        kickoff_size=0.1, kickoff_backward=False,
-        projrot_script_str='RPHt.exe', overwrite=False):
+        kickoff_size=0.1, kickoff_backward=False, overwrite=False):
     """ determine what to use as the reference geometry for all future runs
     If ini_thy_info refers to geometry dictionary then use that,
     otherwise values are from a hierarchy of:
@@ -28,7 +27,7 @@ def reference_geometry(
     From the hierarchy an optimization is performed followed by a check for
     an imaginary frequency and then a conformer file system is set up.
     """
-
+    projrot_script_str = script.PROJROT
     ret = None
 
     thy_run_fs = filesys[2]
@@ -213,11 +212,12 @@ def run_initial_geometry_opt(
 def remove_imag(
         spc_dct_i, geo, thy_level, thy_run_fs, run_fs, kickoff_size=0.1,
         kickoff_backward=False,
-        projrot_script_str='RPHt.exe',
         overwrite=False):
     """ if there is an imaginary frequency displace geometry along the imaginary
     mode and then reoptimize
     """
+
+    projrot_script_str = script.PROJROT
 
     print('the initial geometries will be checked for imaginary frequencies')
     spc_info = scripts.es.get_spc_info(spc_dct_i)
@@ -251,10 +251,11 @@ def remove_imag(
 
 def run_check_imaginary(
         spc_info, geo, thy_level, thy_run_fs, script_str,
-        projrot_script_str='RPHt.exe',
         overwrite=False, **kwargs):
     """ check if species has an imaginary frequency
     """
+    projrot_script_str = script.PROJROT
+
     thy_run_fs.leaf.create(thy_level[1:4])
     thy_run_path = thy_run_fs.leaf.path(thy_level[1:4])
 
@@ -361,10 +362,11 @@ def save_initial_geometry(
         thy_save_fs.leaf.file.zmatrix.write(zma, thy_level[1:4])
 
 
-def projrot_frequencies(geo, hess, thy_level, thy_run_fs,
-                        projrot_script_str='RPHt.exe'):
+def projrot_frequencies(geo, hess, thy_level, thy_run_fs):
     """ Get the projected frequencies from projrot code
     """
+    projrot_script_str = script.PROJROT
+
     # Write the string for the ProjRot input
     thy_run_fs.leaf.create(thy_level[1:4])
     thy_run_path = thy_run_fs.leaf.path(thy_level[1:4])
@@ -385,7 +387,7 @@ def projrot_frequencies(geo, hess, thy_level, thy_run_fs,
     with open(proj_file_path, 'w') as proj_file:
         proj_file.write(projrot_inp_str)
 
-    run_script(projrot_script_str, projrot_path)
+    script.run_script(projrot_script_str, projrot_path)
 
     imag_freq = ''
     if os.path.exists(projrot_path+'/hrproj_freq.dat'):

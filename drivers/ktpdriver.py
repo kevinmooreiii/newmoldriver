@@ -13,14 +13,23 @@ from lib.runner import rates as raterunner
 def run(spc_dct,
         thy_dct,
         tsk_info_lst,
-        pes_rct_names_lst,
-        pes_prd_names_lst,
+        rct_names_lst,
+        prd_names_lst,
         model_dct,
-        run_options_dct,
         run_inp_dct,
-        rate_jobs=rate_jobs):
+        rate_jobs=(True, True)):
     """ main driver for generation of full set of rate constants on a single PES
     """
+    # Pull stuff from dcts for now
+    run_prefix = run_inp_dct['run_prefix']
+    save_prefix = run_inp_dct['save_prefix']
+    etrans = model_dct['etransfer']
+    ene_coeff = model_dct['options']['ene_coeff']
+    temps = model_dct['options']['temps']
+    pressures = model_dct['options']['pressures']
+    pst_params = model_dct['options']['pst_params']
+    multi_info = model_dct['options']['multi_info']
+    assess_pdep = model_dct['options']['assess_pdep']
 
     # Prepare filesystem
     fbuild.prefix_filesystem(run_prefix, save_prefix)
@@ -41,8 +50,8 @@ def run(spc_dct,
     _, ts_tsk_lst = lmech.format_tsk_lst(tsk_info_lst)
 
     # Get the levels in lists from the user
-    pf_levels, ref_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)
-    ts_model = lmech.set_pf_model_info(model_dct['pf'])
+    pf_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)
+    pf_model = lmech.set_pf_model_info(model_dct['pf'])
 
     # Run the rates
     if runrates:
@@ -99,11 +108,11 @@ def run(spc_dct,
         # Run mess to produce rate output
         mess_path = raterunner.run_rates(
             header_str, energy_trans_str, well_str, bim_str, ts_str,
-            spc_dct['ts_0'], ref_levels[4],
+            spc_dct['ts_0'], pf_levels[0],
             spc_dct['ts_0']['rxn_fs'][3])
 
     if runfits:
         # Fit rate output to modified Arrhenius forms, print in ChemKin format
         fit_rates(spc_dct, pes_formula, idx_dct,
-                  pf_levels, ref_levels, ts_model,
+                  pf_levels, ts_model,
                   ene_str, mess_path, assess_pdep)

@@ -10,7 +10,6 @@ import autofile.fs
 from lib.phydat import phycon
 from lib.filesystem import build as fbuild
 from lib.filesystem import inf as finf
-from lib.submission import substr
 from lib.runner import therm as thmrunner
 from lib.outpt import chemkin as cout
 from lib.calc import therm as calctherm
@@ -83,7 +82,6 @@ def run(tsk_info_lst, spcdct, ref,
                 spc_info=spc_info,
                 spc_model=spc_model,
                 pf_levels=pf_levels,
-                projrot_script_str=substr.PROJROT,
                 save_prefix=spc_save_path,
                 )
             spc_str = spc_block[0]

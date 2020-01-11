@@ -11,6 +11,7 @@ import autofile
 
 # New libs
 from lib.phydat import phycon
+from lib.runner import script
 from routines.pf.messf import blocks
 
 
@@ -42,7 +43,7 @@ def make_all_species_data(rxn_lst, spc_dct, save_prefix, model_info,
                           pf_info):
     """ generate the MESS species blocks for all the species
     """
-    projrot_script_str = ''
+    projrot_script_str = script.PROJROT
     species = {}
     spc_save_fs = autofile.fs.species(save_prefix)
     for idx, rxn in enumerate(rxn_lst):
@@ -123,7 +124,7 @@ def make_channel_pfs(
     It also includes a special treatment for abstraction to include phase space
     blocks and coupling bimolecular fragments to fake van der Waals wells
     """
-    projrot_script_str = ''
+    projrot_script_str = script.PROJROT
     bim_str, well_str, ts_str = strs
 
     # Find the number of uni and bimolecular wells already in the dictionary

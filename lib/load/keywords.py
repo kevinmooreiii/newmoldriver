@@ -2,8 +2,7 @@
   Libraries to check for allowed and supported keywords
 """
 
-# Run.dat keywords
-# input section
+# Run Keywords
 RUN_INP_REQUIRED_KEYWORDS = [
     'ids',
     'spc',
@@ -14,8 +13,6 @@ RUN_INP_REQUIRED_KEYWORDS = [
     'check_stereo',
     'rad_rad_sort'
 ]
-
-# Proc section
 RUN_SUPPORTED_KEYWORDS = [
     'sort',
     'es',
@@ -24,7 +21,6 @@ RUN_SUPPORTED_KEYWORDS = [
     'fits',
     'poly'
 ]
-
 OPTIONS_SUPPORTED_KEYWORDS = [
     'check_stereo',
     'overwrite',
@@ -34,7 +30,7 @@ OPTIONS_SUPPORTED_KEYWORDS = [
     'mc_nsamp'
 ]
 
-# SUPPORTED
+# Model keywords
 MODEL_SUPPORTED_DCT = {
     'ene': ['sp', 'composite'],
     'vib': ['harm'],
@@ -57,13 +53,11 @@ ES_TSK_SUPPORTED_LST = [
     'run_irc'
 ]
 
-# Set the required keywords
+# Species keywords
 SPC_REQUIRED_KEYWORDS = [
     'mult',
     'charge',
 ]
-
-# Set the supported keywords for minima
 SPC_SUPPORTED_KEYWORDS = [
     'charge',
     'mult',
@@ -78,18 +72,19 @@ SPC_SUPPORTED_KEYWORDS = [
     'geom'
 ]
 
-# Lists of Required Keywords and Supported keywords
+# Theory Keywords
 THY_REQUIRED_KEYWORDS = [
     'program',
     'method',
-    'basis'
+    'basis',
+    'orb_res'
 ]
 THY_SUPPORTED_KEYWORDS = [
     'program',
     'method',
     'basis',
-    'ncycles',
     'orb_res',
+    'ncycles',
     'mem',
     'nprocs',
     'econv',

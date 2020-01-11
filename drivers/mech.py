@@ -17,30 +17,29 @@ def run_driver(pes_dct, conn_chnls_dct,
                spc_dct, cla_dct,
                thy_dct,
                model_dct,
-               run_jobs_dct,
-               run_opts_dct,
                es_tsk_lst,
+               run_jobs_lst,
                run_inp_dct,
                run_options_dct,
                driver='es_spc'):
     """ Run the ktp driver for the PESs
     """
-    pes_chns = pes_dct.keys()
-    for pes_idx, pes in enumerate(pes_dct, start=1):
+    for formula in pes_dct:
 
         # Build the names list
-        pes_rct_names_lst = pes_dct[pes]['rct_names_lst']
-        pes_prd_names_lst = pes_dct[pes]['prd_names_lst']
-        pes_rxn_name_lst = pes_dct[pes]['rxn_name_lst']
+        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
+        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
 
         # Select names from the names list corresponding to chnls to run
-        for cvals in enumerate(conn_chnls_dct[pes_idx]):
+        # conn_chnls_dct[formula] = {sub_pes_idx: [channel_idxs]}
+        for cvals in conn_chnls_dct[formula].values():
             run_pes = False
             rct_names_lst = []
             prd_names_lst = []
             rxn_name_lst = []
             for chn_idx, _ in enumerate(pes_rxn_name_lst):
-                if chn_idx+1 in pes_chns and chn_idx in cvals:
+                if chn_idx in cvals:
                     run_pes = True
                     rct_names_lst.append(pes_rct_names_lst[chn_idx])
                     prd_names_lst.append(pes_prd_names_lst[chn_idx])
@@ -59,7 +58,7 @@ def run_driver(pes_dct, conn_chnls_dct,
 
                 # Add the stationary points to the spc dcts
                 ts_dct = build_spc_dct_for_sadpts(
-                    rxn_lst, rxn_name_lst,
+                    spc_dct, rxn_lst, rxn_name_lst,
                     rct_names_lst, prd_names_lst, cla_dct)
                 spc_dct.update(ts_dct)
 
@@ -68,8 +67,8 @@ def run_driver(pes_dct, conn_chnls_dct,
                     spc_esdriver(
                         rct_names_lst, prd_names_lst, es_tsk_lst,
                         spc_dct, thy_dct,
-                        model_dct
-                        run_optons_dct,
+                        model_dct,
+                        run_options_dct,
                         run_inp_dct)
                 if driver == 'es_rxn':
                     rxn_esdriver(
@@ -79,24 +78,23 @@ def run_driver(pes_dct, conn_chnls_dct,
                         run_options_dct,
                         run_inp_dct)
                 elif driver == 'ktp':
-                    rate_jobs = [run_jobs_dct['rates'],
-                                 run_jobs_dct['params']]
+                    rate_jobs = [bool('rates' in run_jobs_lst),
+                                 bool('params' in run_jobs_lst)]
                     ktpdriver.run(
                         spc_dct,
                         thy_dct,
-                        tsk_info_lst,
+                        es_tsk_lst,
                         pes_rct_names_lst,
                         pes_prd_names_lst,
                         model_dct,
-                        run_options_dct,
                         run_inp_dct,
                         rate_jobs=rate_jobs)
 
 
 def spc_esdriver(rct_names_lst, prd_names_lst, es_tsk_lst,
                  spc_dct, thy_dct,
-                 model_dct
-                 run_optons_dct,
+                 model_dct,
+                 run_options_dct,
                  run_inp_dct):
     """ Call the ESDriver Routines for species in the spc dct
     """
@@ -106,25 +104,31 @@ def spc_esdriver(rct_names_lst, prd_names_lst, es_tsk_lst,
     spc_run_lst = format_run_spc_lst(spc_queue)
 
     # Format the task info list
-    spc_tsk_lst, _ = format_tsk_lst(tsk_info_lst)
+    spc_tsk_lst, _ = format_tsk_lst(es_tsk_lst)
 
+    print('in spc_es_driver')
+    print(spc_tsk_lst)
     # Execute ESDriver
-    esdriver.run(
-        spc_tsk_lst, spc_run_lst, spc_dct, thy_dct,
-        run_prefix, save_prefix, vdw_params,
-        rad_rad_ts=rad_rad_ts,
-        mc_nsamp=mc_nsamp)
+    esdriver.run(spc_run_lst, spc_dct,
+                 spc_tsk_lst,
+                 thy_dct, model_dct,
+                 run_options_dct, run_inp_dct)
 
 
-def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
+def rxn_esdriver(rct_names_lst, prd_names_lst, es_tsk_lst,
                  spc_dct, thy_dct,
                  model_dct,
                  run_options_dct,
                  run_inp_dct):
     """ Call the ESDriver Routines for reactions in the spc dct
     """
+    # Pull stuff from dcts for now
+    run_prefix = run_inp_dct['run_prefix']
+    save_prefix = run_inp_dct['save_prefix']
+    kickoff = run_options_dct['kickoff']
+
     # Format the task info list
-    _, ts_tsk_lst = format_tsk_lst(tsk_info_lst)
+    _, ts_tsk_lst = format_tsk_lst(es_tsk_lst)
 
     # Form the reaction list
     rxn_lst = format_run_rxn_lst(rct_names_lst, prd_names_lst)
@@ -143,15 +147,13 @@ def rxn_esdriver(rct_names_lst, prd_names_lst, tsk_info_lst,
         print('End transition state prep\n')
 
         # Execute ESDriver
-        esdriver.run(
-            ts_tsk_lst, rxn_lst, spc_dct, thy_dct,
-            run_prefix, save_prefix, vdw_params,
-            rad_rad_ts=rad_rad_ts,
-            mc_nsamp=mc_nsamp,
-            kickoff=kickoff)
+        esdriver.run(rxn_lst, spc_dct,
+                     ts_tsk_lst,
+                     thy_dct, model_dct,
+                     run_options_dct, run_inp_dct)
 
 
-def build_spc_dct_for_sadpts(rxn_lst, rxn_name_lst,
+def build_spc_dct_for_sadpts(spc_dct, rxn_lst, rxn_name_lst,
                              rct_names_lst, prd_names_lst, cla_dct):
     """ build dct
     """
@@ -178,11 +180,11 @@ def build_spc_dct_for_sadpts(rxn_lst, rxn_name_lst,
         ts_dct[tsname]['ich'] = ''
         ts_chg = 0
         for rct in rct_names_lst[idx]:
-            print(ts_dct[rct])
-            ts_chg += ts_dct[rct]['chg']
+            print(spc_dct[rct])
+            ts_chg += spc_dct[rct]['chg']
         ts_dct[tsname]['chg'] = ts_chg
         mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
-            rct_names_lst[idx], prd_names_lst[idx], ts_dct)
+            rct_names_lst[idx], prd_names_lst[idx], spc_dct)
         ts_dct[tsname]['mul'] = mul_low
         ts_dct[tsname]['rad_rad'] = rad_rad
         ts_idx += 1
@@ -330,47 +332,82 @@ def set_pf_model_info(pf_model):
 def set_es_model_info(es_model, thy_dct):
     """ Set the model info
     """
+    # Read the ES models from the model dictionary
+    geo_lvl = es_model['geo'] if es_model['geo'] else None
+    ene_lvl = es_model['ene'] if es_model['ene'] else None
+    harm_lvl = es_model['harm'] if es_model['harm'] else None
+    anharm_lvl = es_model['anharm'] if es_model['anharm'] else None
+    sym_lvl = es_model['sym'] if es_model['sym'] else None
 
-    # Read the ES models from the dictionary
-    # geo_lvl = es_model['geo'][0] if es_model['geo'] else None
-    geo_lvl_ref = es_model['geo'][1] if es_model['geo'] else None
-    harm_lvl = es_model['harm'][0] if es_model['harm'] else None
-    harm_lvl_ref = es_model['harm'][1] if es_model['harm'] else None
-    anharm_lvl = es_model['anharm'][0] if es_model['anharm'] else None
-    anharm_lvl_ref = es_model['anharm'][1] if es_model['anharm'] else None
-    tors_lvl = es_model['tors'][0] if es_model['tors'] else None
-    tors_lvl_ref = es_model['tors'][1] if es_model['tors'] else None
-    sym_lvl = es_model['sym'][0] if es_model['sym'] else None
-    sym_lvl_ref = es_model['sym'][1] if es_model['sym'] else None
+    # Torsional Scan which needs a reference for itself
+    tors_lvl_sp = es_model['tors'][0] if es_model['tors'] else None
+    tors_lvl_scn = es_model['tors'][1] if es_model['tors'] else None
 
     # Set the theory info objects
+    geo_thy_info = finf.get_thy_info(geo_lvl, thy_dct)
+    ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
     harm_thy_info = finf.get_thy_info(harm_lvl, thy_dct)
-    geo_ref_thy_info = finf.get_thy_info(geo_lvl_ref, thy_dct)
-    tors_thy_info = (finf.get_thy_info(tors_lvl, thy_dct)
-                     if tors_lvl else None)
     anharm_thy_info = (finf.get_thy_info(anharm_lvl, thy_dct)
                        if anharm_lvl else None)
     sym_thy_info = (finf.get_thy_info(sym_lvl, thy_dct)
                     if sym_lvl else None)
-    harm_ref_thy_info = (finf.get_thy_info(harm_lvl_ref, thy_dct)
-                         if harm_lvl_ref else None)
-    tors_ref_thy_info = (finf.get_thy_info(tors_lvl_ref, thy_dct)
+    tors_sp_thy_info = (finf.get_thy_info(tors_lvl_sp, thy_dct)
+                        if tors_lvl else None)
+    tors_scn_thy_info = (finf.get_thy_info(tors_lvl_scn, thy_dct)
                          if tors_lvl_ref else None)
-    anharm_ref_thy_info = (finf.get_thy_info(anharm_lvl_ref, thy_dct)
-                           if anharm_lvl_ref else None)
-    sym_ref_thy_info = (finf.get_thy_info(sym_lvl_ref, thy_dct)
-                        if sym_lvl_ref else None)
 
     # Combine levels into a list
     pf_levels = [
-        harm_thy_info, tors_thy_info,
-        anharm_thy_info, sym_thy_info]
-    ref_levels = [
-        harm_ref_thy_info, tors_ref_thy_info,
-        anharm_ref_thy_info, sym_ref_thy_info,
-        geo_ref_thy_info]
+        geo_thy_info,
+        ene_thy_info,
+        harm_thy_info,
+        anharm_thy_info,
+        sym_thy_info,
+        [tors_sp_thy_info, tors_scn_thy_info]
+    ]
 
-    return pf_levels, ref_levels
+    return es_levels
+
+    # # Read the ES models from the dictionary
+    # # geo_lvl = es_model['geo'][0] if es_model['geo'] else None
+    # geo_lvl_ref = es_model['geo'][1] if es_model['geo'] else None
+    # harm_lvl = es_model['harm'][0] if es_model['harm'] else None
+    # harm_lvl_ref = es_model['harm'][1] if es_model['harm'] else None
+    # anharm_lvl = es_model['anharm'][0] if es_model['anharm'] else None
+    # anharm_lvl_ref = es_model['anharm'][1] if es_model['anharm'] else None
+    # tors_lvl = es_model['tors'][0] if es_model['tors'] else None
+    # tors_lvl_ref = es_model['tors'][1] if es_model['tors'] else None
+    # sym_lvl = es_model['sym'][0] if es_model['sym'] else None
+    # sym_lvl_ref = es_model['sym'][1] if es_model['sym'] else None
+
+    # # Set the theory info objects
+    # harm_thy_info = finf.get_thy_info(harm_lvl, thy_dct)
+    # geo_ref_thy_info = finf.get_thy_info(geo_lvl_ref, thy_dct)
+    # tors_thy_info = (finf.get_thy_info(tors_lvl, thy_dct)
+    #                  if tors_lvl else None)
+    # anharm_thy_info = (finf.get_thy_info(anharm_lvl, thy_dct)
+    #                    if anharm_lvl else None)
+    # sym_thy_info = (finf.get_thy_info(sym_lvl, thy_dct)
+    #                 if sym_lvl else None)
+    # harm_ref_thy_info = (finf.get_thy_info(harm_lvl_ref, thy_dct)
+    #                      if harm_lvl_ref else None)
+    # tors_ref_thy_info = (finf.get_thy_info(tors_lvl_ref, thy_dct)
+    #                      if tors_lvl_ref else None)
+    # anharm_ref_thy_info = (finf.get_thy_info(anharm_lvl_ref, thy_dct)
+    #                        if anharm_lvl_ref else None)
+    # sym_ref_thy_info = (finf.get_thy_info(sym_lvl_ref, thy_dct)
+    #                     if sym_lvl_ref else None)
+
+    # # Combine levels into a list
+    # pf_levels = [
+    #     harm_thy_info, tors_thy_info,
+    #     anharm_thy_info, sym_thy_info]
+    # ref_levels = [
+    #     harm_ref_thy_info, tors_ref_thy_info,
+    #     anharm_ref_thy_info, sym_ref_thy_info,
+    #     geo_ref_thy_info]
+
+    # return pf_levels, ref_levels
 
 
 def set_pes_formula(spc_dct):
