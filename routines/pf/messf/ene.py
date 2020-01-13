@@ -72,7 +72,11 @@ def get_zero_point_energy(
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
 
     # Prepare the sets of file systems
-    harm_level, tors_level, _, _ = pf_levels
+    print('get zero models')
+    for x in pf_levels:
+        print(x)
+    [geo_levels, ene_levels, harm_levels,
+     vpt2_levels, _, tors_levels] = pf_levels
     tors_model, vib_model, _ = spc_model
 
     # Set theory filesystem used throughout
@@ -88,12 +92,12 @@ def get_zero_point_energy(
 
     # Set the filesystem objects for various species models
     harmfs = set_model_filesys(
-        thy_save_fs, spc_info, harm_level, saddle=saddle)
+        thy_save_fs, spc_info, harm_levels, saddle=saddle)
     [harm_cnf_save_fs, _,
      harm_min_cnf_locs, _] = harmfs
-    if tors_level and not rad_rad_ts:
+    if tors_levels and not rad_rad_ts:
         torsfs = set_model_filesys(
-            thy_save_fs, spc_info, tors_level, saddle=saddle)
+            thy_save_fs, spc_info, tors_levels[0], saddle=saddle)
         [tors_cnf_save_fs, tors_cnf_save_path,
          tors_min_cnf_locs, tors_save_path] = torsfs
 
@@ -133,9 +137,14 @@ def get_zero_point_energy(
         harm_zpe = sum(freqs)*phycon.WAVEN2KCAL/2.
 
         # Determine the ZPVE based on the model
-        if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
+        print(vib_model)
+        print(tors_model)
+        print(rad_rad_ts)
+        if (vib_model == 'harm' and tors_model == 'rigid') or rad_rad_ts:
+            print('HARM_RIGID')
             zpe = harm_zpe
-        elif vib_model == 'HARM' and tors_model == '1DHR':
+        elif vib_model == 'harm' and tors_model == '1dhr':
+            print('HARM_1DHR')
             _, _, _, _, zpe, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs, harm_cnf_save_fs,
                 tors_min_cnf_locs, tors_cnf_save_fs,
@@ -145,15 +154,15 @@ def get_zero_point_energy(
                 sym_factor, elec_levels,
                 projrot_script_str,
                 saddle=saddle)
-        elif vib_model == 'HARM' and tors_model == 'MDHR':
+        elif vib_model == 'harm' and tors_model == 'mdhr':
             print('HARM and MDHR combination is not yet implemented')
-        elif vib_model == 'HARM' and tors_model == 'TAU':
+        elif vib_model == 'harm' and tors_model == 'tau':
             print('HARM and TAU combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == 'RIGID':
+        elif vib_model == 'vpt2' and tors_model == 'rigid':
             print('VPT2 and RIGID combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == '1DHR':
+        elif vib_model == 'vpt2' and tors_model == '1dhr':
             print('VPT2 and 1DHR combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == 'TAU':
+        elif vib_model == 'vpt2' and tors_model == 'tau':
             print('VPT2 and TAU combination is not yet implemented')
 
     return zpe, is_atom

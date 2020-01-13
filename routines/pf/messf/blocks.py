@@ -20,7 +20,8 @@ def species_block(
     """
 
     # Unpack the models and levels
-    harm_level, tors_level, vpt2_level, sym_level = pf_levels
+    [geo_level, ene_level, harm_level,
+     vpt2_level, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # Set theory filesystem used throughout
@@ -42,7 +43,7 @@ def species_block(
         sym_cnf_save_fs, sym_cnf_save_path, sym_min_cnf_locs, sym_save_path = symfs
     if tors_level and not rad_rad_ts:
         torsfs = set_model_filesys(
-            thy_save_fs, spc_info, tors_level, saddle=('ts_' in spc))
+            thy_save_fs, spc_info, tors_level[0], saddle=('ts_' in spc))
         tors_cnf_save_fs, tors_cnf_save_path, tors_min_cnf_locs, tors_save_path = torsfs
     if vpt2_level:
         vpt2fs = set_model_filesys(
@@ -84,12 +85,12 @@ def species_block(
         spc_str = mess_io.writer.atom(
             mass, elec_levels)
     else:
-        if (vib_model == 'HARM' and tors_model == 'RIGID') or rad_rad_ts:
+        if (vib_model == 'harm' and tors_model == 'rigid') or rad_rad_ts:
             geo, freqs, imag = pfmodels.vib_harm_tors_rigid(
                 spc_info, harm_min_cnf_locs, harm_cnf_save_fs, saddle=saddle)
             hr_str = ""
             symf = sym_factor
-        elif vib_model == 'HARM' and tors_model == '1DHR':
+        elif vib_model == 'harm' and tors_model == '1dhr':
             geo, freqs, imag, hr_str, _, symf = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs, harm_cnf_save_fs,
                 tors_min_cnf_locs, tors_cnf_save_fs,
@@ -99,15 +100,15 @@ def species_block(
                 sym_factor, elec_levels,
                 projrot_script_str,
                 saddle=saddle)
-        elif vib_model == 'HARM' and tors_model == 'MDHR':
+        elif vib_model == 'harm' and tors_model == 'mdhr':
             print('HARM and MDHR combination is not yet implemented')
-        elif vib_model == 'HARM' and tors_model == 'TAU':
+        elif vib_model == 'harm' and tors_model == 'tau':
             print('HARM and TAU combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == 'RIGID':
+        elif vib_model == 'vpt2' and tors_model == 'rigid':
             print('VPT2 and RIGID combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == '1DHR':
+        elif vib_model == 'vpt2' and tors_model == '1dhr':
             print('VPT2 and 1DHR combination is not yet implemented')
-        elif vib_model == 'VPT2' and tors_model == 'TAU':
+        elif vib_model == 'vpt2' and tors_model == 'tau':
             print('VPT2 and TAU combination is not yet implemented')
 
         # Write the species string for the molecule
@@ -267,7 +268,8 @@ def pst_block(
     """
 
     # Unpack the models and levels
-    harm_level, tors_level, vpt2_level, sym_level = pf_levels
+    [geo_level, ene_level, harm_level,
+     vpt2_level, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
@@ -298,8 +300,8 @@ def pst_block(
         sym_cnf_save_fs_j, sym_cnf_save_path_j, sym_min_cnf_locs_j, sym_save_path_j = symfs_j
 
     if tors_level:
-        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level, saddle=False)
-        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level, saddle=False)
+        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
+        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
         tors_cnf_save_fs_i, tors_cnf_save_path_i, tors_min_cnf_locs_i, tors_save_path_i = torsfs_i
         tors_cnf_save_fs_j, tors_cnf_save_path_j, tors_min_cnf_locs_j, tors_save_path_j = torsfs_j
 
@@ -335,7 +337,7 @@ def pst_block(
         harm_cnf_save_fs_i, harm_cnf_save_fs_j)
 
     spc_str = ''
-    if vib_model == 'HARM' and tors_model == 'RIGID':
+    if vib_model == 'harm' and tors_model == 'rigid':
         geo_i, freqs_i, _ = pfmodels.vib_harm_tors_rigid(
             spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i, saddle=False)
         geo_j, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
@@ -343,7 +345,7 @@ def pst_block(
         freqs += freqs_i + freqs_j
         hind_rot_str = ""
 
-    if vib_model == 'HARM' and tors_model == '1DHR':
+    if vib_model == 'harm' and tors_model == '1dhr':
         if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
             geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
                 harm_min_cnf_locs_i)
@@ -401,7 +403,8 @@ def fake_species_block(
     """ prepare a fake species block corresponding to the
         van der Waals well between two fragments
     """
-    harm_level, tors_level, _, sym_level = pf_levels
+    [geo_level, ene_level, harm_level,
+     vpt2_level, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
@@ -431,8 +434,8 @@ def fake_species_block(
         sym_cnf_save_fs_j, sym_cnf_save_path_j, sym_min_cnf_locs_j, sym_save_path_j = symfs_j
 
     if tors_level:
-        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level, saddle=False)
-        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level, saddle=False)
+        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
+        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
         tors_cnf_save_fs_i, tors_cnf_save_path_i, tors_min_cnf_locs_i, tors_save_path_i = torsfs_i
         tors_cnf_save_fs_j, tors_cnf_save_path_j, tors_min_cnf_locs_j, tors_save_path_j = torsfs_j
 
@@ -467,7 +470,7 @@ def fake_species_block(
         harm_min_cnf_locs_i, harm_min_cnf_locs_j,
         harm_cnf_save_fs_i, harm_cnf_save_fs_j)
 
-    if vib_model == 'HARM' and tors_model == 'RIGID':
+    if vib_model == 'harm' and tors_model == 'rigid':
         _, freqs_i, _ = pfmodels.vib_harm_tors_rigid(
             spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i, saddle=saddle)
         _, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
@@ -475,7 +478,7 @@ def fake_species_block(
         freqs += freqs_i + freqs_j
         hind_rot_str = ""
 
-    if vib_model == 'HARM' and tors_model == '1DHR':
+    if vib_model == 'harm' and tors_model == '1dhr':
         if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
             freqs_i = []
             hr_str_i = ''

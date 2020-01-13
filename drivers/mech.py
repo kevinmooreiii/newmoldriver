@@ -352,12 +352,12 @@ def set_es_model_info(es_model, thy_dct):
     sym_thy_info = (finf.get_thy_info(sym_lvl, thy_dct)
                     if sym_lvl else None)
     tors_sp_thy_info = (finf.get_thy_info(tors_lvl_sp, thy_dct)
-                        if tors_lvl else None)
+                        if tors_lvl_sp else None)
     tors_scn_thy_info = (finf.get_thy_info(tors_lvl_scn, thy_dct)
-                         if tors_lvl_ref else None)
+                         if tors_lvl_scn else None)
 
     # Combine levels into a list
-    pf_levels = [
+    es_levels = [
         geo_thy_info,
         ene_thy_info,
         harm_thy_info,

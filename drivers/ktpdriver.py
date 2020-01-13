@@ -83,7 +83,7 @@ def run(spc_dct,
 
             # Cacluate the ZPVE and set in the dict
             spc_dct[spc]['zpe'], _ = calczpe.get_zpe(
-                spc, spc_dct[spc], spc_save_path, pf_levels, ts_model)
+                spc, spc_dct[spc], spc_save_path, pf_levels, pf_model)
 
             # Set ene and string
             spc_dct[spc]['ene'] = lmech.get_high_energy(
@@ -94,14 +94,14 @@ def run(spc_dct,
         # Write the strings for the MESS input file
         rct_ichs = spc_dct['ts_0']['rxn_ichs'][0]
         header_str, energy_trans_str = messrates.rate_headers(
-            rct_ichs, temps, pressures, *etrans)
+            rct_ichs, temps, pressures, **etrans)
 
         # Write the MESS strings for all the PES channels
         mess_strs = ['', '', '']
         idx_dct = {}
         well_str, bim_str, ts_str = lmech.write_channel_mess_strs(
             spc_dct, rxn_lst, pes_formula,
-            ts_model, pf_levels, multi_info, pst_params,
+            pf_model, pf_levels, multi_info, pst_params,
             spc_save_fs, save_prefix,
             idx_dct, mess_strs)
 
@@ -114,5 +114,5 @@ def run(spc_dct,
     if runfits:
         # Fit rate output to modified Arrhenius forms, print in ChemKin format
         fit_rates(spc_dct, pes_formula, idx_dct,
-                  pf_levels, ts_model,
+                  pf_levels, pf_model,
                   ene_str, mess_path, assess_pdep)
