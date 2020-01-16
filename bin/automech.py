@@ -20,6 +20,9 @@ JOB_PATH = sys.argv[1]
 # Parse the run input
 RUN_INP_DCT = loadrun.build_run_inp_dct(JOB_PATH)
 RUN_LST = loadrun.objects_lst(JOB_PATH)
+print(RUN_LST)
+import sys
+sys.exit()
 [PESNUMS, CHANNELS, MODEL] = RUN_LST[0]
 
 RUN_OPTIONS_DCT = loadrun.build_run_glob_opts_dct(JOB_PATH)
@@ -42,7 +45,7 @@ PES_DCT, CHNLS_DCT = loadmech.parse_mechanism_file(
     sort_rxns=RUN_INP_DCT['sort_rxns'])
 
 # Do some extra work to prepare the info to pass to the drivers
-RUN_ES_TSK_LST = loadrun.build_run_es_tsks_lst(RUN_ES_TSK_STR, MODEL_DCT)
+RUN_ES_TSK_LST = loadrun.build_run_es_tsks_lst(RUN_ES_TSK_STR, MODEL_DCT, THY_DCT)
 print('first RUN_ES_TSK_LST')
 print(RUN_ES_TSK_LST)
 

@@ -2,11 +2,12 @@
     an outlined procedure
 """
 
+from lib.filesystem import inf as finf
 from lib.load import ptt
 from lib.load.keywords import ES_TSK_SUPPORTED_LST
 
 
-def es_tsk_lst(es_tsk_str, model_dct, saddle=False):
+def es_tsk_lst(es_tsk_str, model_dct, thy_dct, saddle=False):
     """ Set the sequence of electronic structure tasks for a given
         species or PESs
     """
@@ -19,8 +20,14 @@ def es_tsk_lst(es_tsk_str, model_dct, saddle=False):
 
     # Ensure that all the tasks are in the supported tasks
     # :assert check_es_tsks_supported(tsk_lst)
+    mod_tsk_lst = []
+    for tsk_info in es_tsk_lst:
+        [tsk, es_run_key, es_ini_key, overwrite] = tsk_info
+        ini_thy_info = finf.get_es_info(es_ini_key, thy_dct)
+        thy_info = finf.get_es_info(es_run_key, thy_dct)
+        mod_tsk_info_lst.append([tsk, thy_info, ini_thy_info, overwrite])
 
-    return tsk_lst
+    return mod_tsk_lst
 
 
 def es_tsks_from_lst(es_tsks_str):
@@ -59,31 +66,31 @@ def es_tsks_from_models(model_dct, saddle=False):  # barrierless=False):
         setting up the electronic structure calculations
     """
 
-    # Make the assumption that we will pass saddle to these functions?
+    # Initialize task list
+    tsk_lst = []
 
-    # Initialize task lst based on saddle or not
+    # Tasks for getting the geoms for minima, ts, and wells
+    tsk_lst.append('find_min')
+    tsk_lst.append('min_samp')
     if saddle:
-        tsk_lst = ['find_ts']
-    else:
-        tsk_lst = ['find_geom']
+        tsk_lst.append('find_ts')
+        tsk_lst.append('ts_samp')
+    if wells:
+        tsk_lst.append('find_wells')
+        tsk_lst.append('well_samp')
 
-    # Append conformer things
-    tsk_lst.append('conf_samp')
-    tsk_lst.append('conf_hess')
-
-    # Add tasks based on model choice
-    if model_dct['sym'] == 'sampling':
-        tsk_lst.append('sym_samp')
+    # Add hindered rotor calculations if requested
     if model_dct['tors'] == '1dhr':
         tsk_lst.append('hr_scan')
+
+    # Calculations using the geometries
+    tsk_lst.append('conf_hess')
     if model_dct['vib'] == 'vpt2':
         tsk_lst.append('conf_vpt2')
-
-    # Add an energy calculation task
     tsk_lst.append('conf_energy')
 
     # Add in the tasks for running ircs
-    if model_dct['ts_sadpt'] == 'vtst':
+    if model_dct['ts_sadpt'] == 'vtst' and not barrierless:
         tsk_lst.append('run_irc')
 
     return tsk_lst

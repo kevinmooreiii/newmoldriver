@@ -20,13 +20,25 @@ from routines.es import scan
 
 
 def find_ts(
-        spc_dct, ts_dct, ts_info, ts_zma, typ, dist_info, grid,
+        spc_dct, ts_dct, ts_zma, typ, dist_info, grid,
         bkp_ts_class_data, ini_thy_info, thy_info, run_prefix, save_prefix,
-        rxn_run_path, rxn_save_path, overwrite, attempt=1,
+        overwrite, attempt=1,
         rad_rad_ts='vtst'):
     """ find the ts geometry
     """
     print('prepping ts scan for:', typ)
+
+    # spc_dct[sadpt]['original_zma'],
+    # spc_dct[sadpt]['class'],
+    # spc_dct[sadpt]['dist_info'],
+    # spc_dct[sadpt]['grid'],
+    # spc_dct[sadpt]['bkp_data'],
+
+    [_, _,
+     rxn_run_path, rxn_save_path] = ts_dct[sadpt]['rxn_fs']
+    ts_info = (ts_dct['ich'],
+               ts_dct['chg'],
+               ts_dct['mul'])
 
     _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(
         *thy_info[0:2])
@@ -124,6 +136,13 @@ def find_ts(
         dist_info[1] = final_dist
         print('dist_info is being set at end of backup checking',
               dist_info[1], final_dist)
+        # Add an angle check which is added to spc dct for TS
+        angle = lts.check_angle(
+            ts_dct['original_zma'],
+            ts_dct['dist_info'],
+            ts_dct['class'])
+        ts_dct['dist_info'][1] = final_dist
+        ts_dct['dist_info'].append(angle)
 
     # Find TS
     else:
@@ -288,8 +307,8 @@ def find_ts(
                 geo, zma, final_dist = find_ts(
                     spc_dct, ts_dct, ts_info, bkp_ts_zma,
                     bkp_typ, bkp_dist_info,
-                    bkp_grid, None, ini_thy_info, thy_info, run_prefix,
-                    save_prefix, rxn_run_path, rxn_save_path, overwrite=True,
+                    bkp_grid, None, ini_thy_info, thy_info,
+                     rxn_run_path, rxn_save_path, overwrite=True,
                     attempt=attempt)
             elif ('addition ' in typ or 'abstraction' in typ) and attempt < 3:
                 babs1 = 170. * phycon.DEG2RAD

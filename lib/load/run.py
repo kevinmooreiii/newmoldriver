@@ -76,13 +76,22 @@ def get_pes_idxs(pes_str):
     """ Determine the indices corresponding to what PES and channels to run
     """
     run_pes = []
+    print('pes idx test')
+    print(pes_str.splitlines())
     for line in pes_str.splitlines():
+        print(line)
         [pes_idxs, chn_idxs, proc] = line.strip().split(';')
         pes_lst = ptt.parse_idx_inp(pes_idxs)
         chn_lst = ptt.parse_idx_inp(chn_idxs)
         proc = proc.strip()
+        print('pes_lst')
+        print(pes_lst)
         for pes in pes_lst:
+            print('pes')
+            print(pes)
             for chn in chn_lst:
+                print('chn')
+                print(chn)
                 run_pes.append([pes, chn, proc])
 
     return run_pes

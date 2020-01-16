@@ -21,7 +21,7 @@ def rate_headers(
         sig1, sig2, mass1):
     """ makes the standard header and energy transfer sections for MESS input file
     """
-    # header section
+    # Header section
     header_str = mess_io.writer.global_reaction(temps, press)
     print(header_str)
     tot_mass = 0.
@@ -31,7 +31,7 @@ def rate_headers(
         for mass in masses:
             tot_mass += mass
 
-    # energy transfer section
+    # Energy transfer section
     energy_trans_str = mess_io.writer.energy_transfer(
         exp_factor, exp_power, exp_cutoff,
         eps1, eps2, sig1, sig2, mass1, tot_mass)

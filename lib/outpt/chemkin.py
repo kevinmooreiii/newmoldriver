@@ -7,6 +7,36 @@ import automol
 import thermo
 
 
+def get_ckin_ene_lvl_str(ts_tsk_lst, thy_dct, ene_coeff):
+    """ Write the comment lines for the enrgy lvls for ckin
+    """
+    ene_strl = []
+    ene_idx = 0
+    ene_str = '! energy level:'
+    for tsk in ts_tsk_lst:
+        if 'ene' in tsk[0]:
+            if ene_idx > len(ene_coeff)-1:
+                print('Warning - an insufficient ',
+                      'energy coefficient list was provided')
+                break
+            ene_lvl = tsk[1]
+            ene_lvl_ref = tsk[2]
+            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref, thy_dct)
+            ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
+            ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
+                ene_coeff[ene_idx],
+                ene_thy_info[3],
+                ene_thy_info[1],
+                ene_thy_info[2],
+                ene_ref_thy_info[3],
+                ene_ref_thy_info[1],
+                ene_ref_thy_info[2]))
+            ene_idx += 1
+    ene_str += '!               '.join(ene_strl)
+
+    return ene_str
+
+
 def run_ckin_header(pf_info, spc_model):
     """ prepare chemkin header info and convert pac 99 format to chemkin format
     """

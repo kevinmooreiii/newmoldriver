@@ -115,6 +115,45 @@ def modify_spc_dct(job_path, spc_dct):
     return mod_spc_dct
 
 
+def build_spc_dct_for_sadpts(spc_dct, rxn_lst, rxn_name_lst,
+                             rct_names_lst, prd_names_lst, cla_dct):
+    """ build dct
+    """
+    ts_dct = {}
+    ts_idx = 0
+    for idx, rxn in enumerate(rxn_lst):
+        reacs = rxn['reacs']
+        prods = rxn['prods']
+        tsname = 'ts_{:g}'.format(ts_idx)
+        ts_dct[tsname] = {}
+        rname = rxn_name_lst[idx]
+        rname_eq = '='.join(rname.split('=')[::-1])
+        if rname in cla_dct:
+            ts_dct[tsname]['given_class'] = cla_dct[rname]
+        elif rname_eq in cla_dct:
+            ts_dct[tsname]['given_class'] = cla_dct[rname_eq]
+            reacs = rxn['prods']
+            prods = rxn['reacs']
+        else:
+            ts_dct[tsname]['given_class'] = None
+        if reacs and prods:
+            ts_dct[tsname]['reacs'] = reacs
+            ts_dct[tsname]['prods'] = prods
+        ts_dct[tsname]['ich'] = ''
+        ts_chg = 0
+        for rct in rct_names_lst[idx]:
+            print(spc_dct[rct])
+            ts_chg += spc_dct[rct]['chg']
+        ts_dct[tsname]['chg'] = ts_chg
+        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
+            rct_names_lst[idx], prd_names_lst[idx], spc_dct)
+        ts_dct[tsname]['mul'] = mul_low
+        ts_dct[tsname]['rad_rad'] = rad_rad
+        ts_idx += 1
+
+    return ts_dct
+
+
 def geometry_dictionary(job_path):
     """ read in dictionary of saved geometries
     """

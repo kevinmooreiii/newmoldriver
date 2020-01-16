@@ -184,7 +184,10 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
     """ run an electronic structure task
     for generating a list of conformer or tau sampling geometries
     """
+    # Separate the kickoff keyword for now
     [kickoff_size, kickoff_backward] = kickoff
+
+    # Get a reference geometry
     if not saddle:
         geo = reference_geometry(
             spc, thy_level, ini_thy_level, filesys, ini_filesys,
