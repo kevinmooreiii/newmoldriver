@@ -11,6 +11,8 @@ from lib.phydat import phycon
 from lib.filesystem import orb as fsorb
 from lib.filesystem import minc as fsmin
 from routines.pf.messf import models as pfmodels
+from routines.pf.messf import _tors as tors
+from routines.pf.messf import _sym as sym
 
 
 def species_block(
@@ -20,8 +22,7 @@ def species_block(
     """
 
     # Unpack the models and levels
-    [geo_level, ene_level, harm_level,
-     vpt2_level, sym_level, tors_level] = pf_levels
+    [_, _, harm_level, _, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # Set theory filesystem used throughout
@@ -36,19 +37,23 @@ def species_block(
     # Set the filesystem objects for various species models
     harmfs = set_model_filesys(
         thy_save_fs, spc_info, harm_level, saddle=('ts_' in spc))
-    harm_cnf_save_fs, harm_cnf_save_path, harm_min_cnf_locs, harm_save_path = harmfs
+    [harm_cnf_save_fs, _,
+     harm_min_cnf_locs, _] = harmfs
     if sym_level:
         symfs = set_model_filesys(
             thy_save_fs, spc_info, sym_level, saddle=('ts_' in spc))
-        sym_cnf_save_fs, sym_cnf_save_path, sym_min_cnf_locs, sym_save_path = symfs
+        [sym_cnf_save_fs, _,
+         sym_min_cnf_locs, _] = symfs
     if tors_level and not rad_rad_ts:
         torsfs = set_model_filesys(
             thy_save_fs, spc_info, tors_level[0], saddle=('ts_' in spc))
-        tors_cnf_save_fs, tors_cnf_save_path, tors_min_cnf_locs, tors_save_path = torsfs
-    if vpt2_level:
-        vpt2fs = set_model_filesys(
-            thy_save_fs, spc_info, vpt2_level, saddle=('ts_' in spc))
-        vpt2_cnf_save_fs, vpt2_cnf_save_path, vpt2_min_cnf_locs, vpt2_save_path = vpt2fs
+        [tors_cnf_save_fs, tors_cnf_save_path,
+         tors_min_cnf_locs, tors_save_path] = torsfs
+    # if vpt2_level:
+    #     vpt2fs = set_model_filesys(
+    #         thy_save_fs, spc_info, vpt2_level, saddle=('ts_' in spc))
+    #     [vpt2_cnf_save_fs, vpt2_cnf_save_path,
+    #      vpt2_min_cnf_locs, vpt2_save_path] = vpt2fs
 
     # Set additional info for a saddle point
     saddle = False
@@ -70,7 +75,7 @@ def species_block(
     elec_levels = ini_elec_levels(spc_dct_i, spc_info)
 
     # Determine the species symmetry factor using the given model
-    sym_factor = pfmodels.symmetry_factor(
+    sym_factor = sym.symmetry_factor(
         sym_model, spc_dct_i, spc_info, dist_names,
         saddle, frm_bnd_key, brk_bnd_key, tors_names,
         tors_cnf_save_fs, tors_min_cnf_locs,
@@ -91,15 +96,20 @@ def species_block(
             hr_str = ""
             symf = sym_factor
         elif vib_model == 'harm' and tors_model == '1dhr':
-            geo, freqs, imag, hr_str, _, symf = pfmodels.vib_harm_tors_1dhr(
+            geo, freqs, imag, hr_str, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs, harm_cnf_save_fs,
                 tors_min_cnf_locs, tors_cnf_save_fs,
                 tors_save_path, tors_cnf_save_path,
                 spc_dct_i, spc_info,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor, elec_levels,
-                projrot_script_str,
                 saddle=saddle)
+            sym_nums = tors.get_tors_sym_nums(
+                spc_dct_i, tors_min_cnf_locs, tors_cnf_save_fs,
+                frm_bnd_key, brk_bnd_key, saddle=False)
+            symf = sym_factor
+            for num in sym_nums:
+                symf /= num
         elif vib_model == 'harm' and tors_model == 'mdhr':
             print('HARM and MDHR combination is not yet implemented')
         elif vib_model == 'harm' and tors_model == 'tau':
@@ -261,15 +271,14 @@ def vtst_with_no_saddle_block(
 
 
 def pst_block(
-        spc_dct_i, spc_dct_j, spc_model, pf_levels, projrot_script_str,
+        spc_dct_i, spc_dct_j, spc_model, pf_levels,
         spc_save_fs, elec_levels=((0., 1)), sym_factor=1.,
         pst_params=(1.0, 6)):
     """ prepare a Phase Space Theory species block
     """
 
     # Unpack the models and levels
-    [geo_level, ene_level, harm_level,
-     vpt2_level, sym_level, tors_level] = pf_levels
+    [_, _, harm_level, _, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
@@ -287,30 +296,43 @@ def pst_block(
     # Set the filesystem objects for the two species
     harmfs_i = set_model_filesys(
         thy_save_fs_i, spc_info_i, harm_level, saddle=False)
-    harm_cnf_save_fs_i, harm_cnf_save_path_i, harm_min_cnf_locs_i, harm_save_path_i = harmfs_i
-    harmfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, harm_level, saddle=False)
-    harm_cnf_save_fs_j, harm_cnf_save_path_j, harm_min_cnf_locs_j, harm_save_path_j = harmfs_j
+    harmfs_j = set_model_filesys(
+        thy_save_fs_j, spc_info_j, harm_level, saddle=False)
+    [harm_cnf_save_fs_i, _,
+     harm_min_cnf_locs_i, _] = harmfs_i
+    [harm_cnf_save_fs_j, _,
+     harm_min_cnf_locs_j, _] = harmfs_j
 
     if sym_level:
         symfs_i = set_model_filesys(
             thy_save_fs_i, spc_info_i, sym_level, saddle=False)
         symfs_j = set_model_filesys(
             thy_save_fs_j, spc_info_j, sym_level, saddle=False)
-        sym_cnf_save_fs_i, sym_cnf_save_path_i, sym_min_cnf_locs_i, sym_save_path_i = symfs_i
-        sym_cnf_save_fs_j, sym_cnf_save_path_j, sym_min_cnf_locs_j, sym_save_path_j = symfs_j
+        [sym_cnf_save_fs_i, _,
+         sym_min_cnf_locs_i, _] = symfs_i
+        [sym_cnf_save_fs_j, _,
+         sym_min_cnf_locs_j, _] = symfs_j
 
     if tors_level:
-        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
-        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
-        tors_cnf_save_fs_i, tors_cnf_save_path_i, tors_min_cnf_locs_i, tors_save_path_i = torsfs_i
-        tors_cnf_save_fs_j, tors_cnf_save_path_j, tors_min_cnf_locs_j, tors_save_path_j = torsfs_j
+        torsfs_i = set_model_filesys(
+            thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
+        torsfs_j = set_model_filesys(
+            thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
+        [tors_cnf_save_fs_i, tors_cnf_save_path_i,
+         tors_min_cnf_locs_i, tors_save_path_i] = torsfs_i
+        [tors_cnf_save_fs_j, tors_cnf_save_path_j,
+         tors_min_cnf_locs_j, tors_save_path_j] = torsfs_j
 
-    if vpt2_level:
-        vpt2fs_i = set_model_filesys(thy_save_fs_i, spc_info_i, vpt2_level, saddle=False)
-        vpt2fs_j = set_model_filesys(thy_save_fs_j, spc_info_j, vpt2_level, saddle=False)
-        vpt2_cnf_save_fs_i, vpt2_cnf_save_path_i, vpt2_min_cnf_locs_i, vpt2_save_path_i = vpt2fs_i
-        vpt2_cnf_save_fs_j, vpt2_cnf_save_path_j, vpt2_min_cnf_locs_j, vpt2_save_path_j = vpt2fs_j
-    
+    # if vpt2_level:
+    #     vpt2fs_i = set_model_filesys(
+    #         thy_save_fs_i, spc_info_i, vpt2_level, saddle=False)
+    #     vpt2fs_j = set_model_filesys(
+    #         thy_save_fs_j, spc_info_j, vpt2_level, saddle=False)
+    #     [vpt2_cnf_save_fs_i, vpt2_cnf_save_path_i,
+    #      vpt2_min_cnf_locs_i, vpt2_save_path_i] = vpt2fs_i
+    #     [vpt2_cnf_save_fs_j, vpt2_cnf_save_path_j,
+    #      vpt2_min_cnf_locs_j, vpt2_save_path_j] = vpt2fs_j
+
     # Get the combined electronic energy levels
     elec_levels = combine_elec_levels(spc_dct_i, spc_dct_j)
 
@@ -320,12 +342,12 @@ def pst_block(
     tors_names = []
     frm_bnd_key = []
     brk_bnd_key = []
-    sym_factor_i = pfmodels.symmetry_factor(
+    sym_factor_i = sym.symmetry_factor(
         sym_model, spc_dct_i, spc_info_i, dist_names,
         saddle, frm_bnd_key, brk_bnd_key, tors_names,
         tors_cnf_save_fs_i, tors_min_cnf_locs_i,
         sym_cnf_save_fs_i, sym_min_cnf_locs_i)
-    sym_factor_j = pfmodels.symmetry_factor(
+    sym_factor_j = sym.symmetry_factor(
         sym_model, spc_dct_j, spc_info_j, dist_names,
         saddle, frm_bnd_key, brk_bnd_key, tors_names,
         tors_cnf_save_fs_j, tors_min_cnf_locs_j,
@@ -342,7 +364,7 @@ def pst_block(
             spc_info_i, harm_min_cnf_locs_i, harm_cnf_save_fs_i, saddle=False)
         geo_j, freqs_j, _ = pfmodels.vib_harm_tors_rigid(
             spc_info_j, harm_min_cnf_locs_j, harm_cnf_save_fs_j, saddle=False)
-        freqs += freqs_i + freqs_j
+        freqs = freqs_i + freqs_j
         hind_rot_str = ""
 
     if vib_model == 'harm' and tors_model == '1dhr':
@@ -353,15 +375,13 @@ def pst_block(
             hr_str_i = ''
             symf_i = sym_factor_i
         else:
-            geo_i, freqs_i, _, hr_str_i, _, symf_i = pfmodels.vib_harm_tors_1dhr(
+            geo_i, freqs_i, _, hr_str_i, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs_i, harm_cnf_save_fs_i,
                 tors_min_cnf_locs_i, tors_cnf_save_fs_i,
                 tors_save_path_i, tors_cnf_save_path_i,
                 spc_dct_i, spc_info_i,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_i, elec_levels,
-                projrot_script_str,
-                hind_rot_geo=True,
                 saddle=False)
         if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
             geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
@@ -370,15 +390,13 @@ def pst_block(
             hr_str_j = ''
             symf_j = sym_factor_j
         else:
-            geo_j, freqs_j, _, hr_str_j, _, symf_j = pfmodels.vib_harm_tors_1dhr(
+            geo_j, freqs_j, _, hr_str_j, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs_j, harm_cnf_save_fs_j,
                 tors_min_cnf_locs_j, tors_cnf_save_fs_j,
                 tors_save_path_j, tors_cnf_save_path_j,
                 spc_dct_j, spc_info_j,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_j, elec_levels,
-                projrot_script_str,
-                hind_rot_geo=True,
                 saddle=False)
         freqs = list(freqs_i) + list(freqs_j)
         hind_rot_str = hr_str_i + hr_str_j
@@ -396,15 +414,14 @@ def pst_block(
 
 
 def fake_species_block(
-        spc_dct_i, spc_dct_j, spc_info_i, spc_info_j, spc_model,
-        pf_levels, projrot_script_str,
+        spc_dct_i, spc_dct_j, spc_info_i, spc_info_j,
+        spc_model, pf_levels,
         elec_levels=((0., 1)), sym_factor=1.,
         save_prefix_i='spc_save_path', save_prefix_j='spc_save_path'):
     """ prepare a fake species block corresponding to the
         van der Waals well between two fragments
     """
-    [geo_level, ene_level, harm_level,
-     vpt2_level, sym_level, tors_level] = pf_levels
+    [_, _, harm_level, _, sym_level, tors_level] = pf_levels
     tors_model, vib_model, sym_model = spc_model
 
     # prepare the four sets of file systems
@@ -422,22 +439,34 @@ def fake_species_block(
     thy_save_fs_j = autofile.fs.theory(save_prefix_j)
 
     # Set the filesystem objects for the two species
-    harmfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, harm_level, saddle=False)
-    harm_cnf_save_fs_i, harm_cnf_save_path_i, harm_min_cnf_locs_i, harm_save_path_i = harmfs_i
-    harmfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, harm_level, saddle=False)
-    harm_cnf_save_fs_j, harm_cnf_save_path_j, harm_min_cnf_locs_j, harm_save_path_j = harmfs_j
+    harmfs_i = set_model_filesys(
+        thy_save_fs_i, spc_info_i, harm_level, saddle=False)
+    harmfs_j = set_model_filesys(
+        thy_save_fs_j, spc_info_j, harm_level, saddle=False)
+    [harm_cnf_save_fs_i, _,
+     harm_min_cnf_locs_i, _] = harmfs_i
+    [harm_cnf_save_fs_j, _,
+     harm_min_cnf_locs_j, _] = harmfs_j
 
     if sym_level:
-        symfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, sym_level, saddle=False)
-        symfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, sym_level, saddle=False)
-        sym_cnf_save_fs_i, sym_cnf_save_path_i, sym_min_cnf_locs_i, sym_save_path_i = symfs_i
-        sym_cnf_save_fs_j, sym_cnf_save_path_j, sym_min_cnf_locs_j, sym_save_path_j = symfs_j
+        symfs_i = set_model_filesys(
+            thy_save_fs_i, spc_info_i, sym_level, saddle=False)
+        symfs_j = set_model_filesys(
+            thy_save_fs_j, spc_info_j, sym_level, saddle=False)
+        [sym_cnf_save_fs_i, _,
+         sym_min_cnf_locs_i, _] = symfs_i
+        [sym_cnf_save_fs_j, _,
+         sym_min_cnf_locs_j, _] = symfs_j
 
     if tors_level:
-        torsfs_i = set_model_filesys(thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
-        torsfs_j = set_model_filesys(thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
-        tors_cnf_save_fs_i, tors_cnf_save_path_i, tors_min_cnf_locs_i, tors_save_path_i = torsfs_i
-        tors_cnf_save_fs_j, tors_cnf_save_path_j, tors_min_cnf_locs_j, tors_save_path_j = torsfs_j
+        torsfs_i = set_model_filesys(
+            thy_save_fs_i, spc_info_i, tors_level[0], saddle=False)
+        torsfs_j = set_model_filesys(
+            thy_save_fs_j, spc_info_j, tors_level[0], saddle=False)
+        [tors_cnf_save_fs_i, tors_cnf_save_path_i,
+         tors_min_cnf_locs_i, tors_save_path_i] = torsfs_i
+        [tors_cnf_save_fs_j, tors_cnf_save_path_j,
+         tors_min_cnf_locs_j, tors_save_path_j] = torsfs_j
 
     spc_str = ''
 
@@ -450,12 +479,12 @@ def fake_species_block(
     tors_names = []
     frm_bnd_key = []
     brk_bnd_key = []
-    sym_factor_i = pfmodels.symmetry_factor(
+    sym_factor_i = sym.symmetry_factor(
         sym_model, spc_dct_i, spc_info_i, dist_names,
         saddle, frm_bnd_key, brk_bnd_key, tors_names,
         tors_cnf_save_fs_i, tors_min_cnf_locs_i,
         sym_cnf_save_fs_i, sym_min_cnf_locs_i)
-    sym_factor_j = pfmodels.symmetry_factor(
+    sym_factor_j = sym.symmetry_factor(
         sym_model, spc_dct_j, spc_info_j, dist_names,
         saddle, frm_bnd_key, brk_bnd_key, tors_names,
         tors_cnf_save_fs_j, tors_min_cnf_locs_j,
@@ -484,30 +513,26 @@ def fake_species_block(
             hr_str_i = ''
             symf_i = sym_factor_i
         else:
-            _, freqs_i, _, hr_str_i, _, symf_i = pfmodels.vib_harm_tors_1dhr(
+            _, freqs_i, _, hr_str_i, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs_i, harm_cnf_save_fs_i,
                 tors_min_cnf_locs_i, tors_cnf_save_fs_i,
                 tors_save_path_i, tors_cnf_save_path_i,
                 spc_dct_i, spc_info_i,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_i, elec_levels,
-                projrot_script_str,
-                hind_rot_geo=True,
                 saddle=False)
         if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
             freqs_j = []
             hr_str_j = ''
             symf_j = sym_factor_j
         else:
-            _, freqs_j, _, hr_str_j, _, symf_j = pfmodels.vib_harm_tors_1dhr(
+            _, freqs_j, _, hr_str_j, _ = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs_j, harm_cnf_save_fs_j,
                 tors_min_cnf_locs_j, tors_cnf_save_fs_j,
                 tors_save_path_j, tors_cnf_save_path_j,
                 spc_dct_j, spc_info_j,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_j, elec_levels,
-                projrot_script_str,
-                hind_rot_geo=True,
                 saddle=False)
         freqs += list(freqs_i) + list(freqs_j)
         hind_rot_str = hr_str_i + hr_str_j

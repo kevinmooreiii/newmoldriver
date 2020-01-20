@@ -11,9 +11,9 @@ from lib.phydat import phycon
 from lib.runner import script
 
 
-def projrot_freqs_1(tors_geo, hess, pot,
-                    proj_rotors_str, projrot_script_str,
-                    save_path, saddle=False):
+def projrot_freqs_1(tors_geo, hess,
+                    proj_rotors_str,
+                    save_path, pot=False, saddle=False):
     """ Get frequencies from one version of ProjRot
     """
     coord_proj = 'cartesian'
@@ -33,7 +33,7 @@ def projrot_freqs_1(tors_geo, hess, pot,
     with open(proj_file_path, 'w') as proj_file:
         proj_file.write(projrot_inp_str)
 
-    script.run_script(projrot_script_str, path)
+    script.run_script(script.PROJROT, path)
 
     freqs = []
     zpe_har_no_tors = 0.
@@ -58,7 +58,7 @@ def projrot_freqs_1(tors_geo, hess, pot,
     return freqs, imag_freq, zpe_har_no_tors
 
 
-def projrot_freqs_2(save_path, pot, saddle=False):
+def projrot_freqs_2(save_path, pot=False, saddle=False):
     """ Get ProjRot frequencies via ProjRot 2
     """
 

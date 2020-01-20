@@ -42,8 +42,6 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                        spc_dct_i, spc_info,
                        frm_bnd_key, brk_bnd_key,
                        sym_factor, elec_levels,
-                       projrot_script_str,
-                       hind_rot_geo=False,
                        saddle=False):
     """ Build the species string for a model: Harm, 1DHR
     """
@@ -70,6 +68,9 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                 spc_dct_i, tors_cnf_save_fs, saddle=saddle)
             tors_grids = tors.get_tors_grids(
                 spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key)
+            tors_sym_nums = tors.get_tors_sym_nums(
+                spc_dct_i, tors_min_cnf_locs, tors_cnf_save_fs,
+                frm_bnd_key, brk_bnd_key, saddle=False)
 
             # Set ts bond
             ts_bnd = None
@@ -78,8 +79,8 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
                 ts_bnd = automol.zmatrix.bond_idxs(zma, dist_name)
 
             hind_rot_str, proj_rotors_str = tors.write_1dhr_tors_mess_strings(
-                harm_geo, spc_info, sym_num, spc_dct_i,
-                tors_names, tors_grids, ts_bnd, zma,
+                harm_geo, spc_info, spc_dct_i, ts_bnd, zma,
+                tors_names, tors_grids, tors_sym_nums,
                 tors_cnf_save_path, min_ene,
                 saddle=False, hind_rot_geo=None)
 
@@ -93,13 +94,13 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
 
             # Run one vers ProjRot to proj freqs for that version
             freqs1, imag_freq1, zpe_harm_no_tors = vib.projrot_freqs_1(
-                tors_geo, hess, pot,
-                proj_rotors_str, projrot_script_str,
-                tors_save_path, saddle=False)
+                tors_geo, hess,
+                proj_rotors_str,
+                tors_save_path, pot=True, saddle=False)
 
             # Now run the other version of ProjRot
             pfreqs2 = vib.projrot_freqs_2(
-                tors_save_path, pot, saddle=saddle)
+                tors_save_path, pot=True, saddle=saddle)
             [freqs2, imag_freq2,
              zpe_harm_no_tors_2, harm_zpe] = pfreqs2
 
@@ -114,7 +115,7 @@ def vib_harm_tors_1dhr(harm_min_cnf_locs, harm_cnf_save_fs,
         tors_geo, freqs, imag_freq, hind_rot_str = (), (), 0.0, ''
         raise ValueError
 
-    return tors_geo, freqs, imag_freq, hind_rot_str, zpe, sym_factor
+    return tors_geo, freqs, imag_freq, hind_rot_str, zpe
 
 
 def vib_harm_tors_mdhr_tau(harm_min_cnf_locs, harm_cnf_save_fs,
@@ -123,7 +124,6 @@ def vib_harm_tors_mdhr_tau(harm_min_cnf_locs, harm_cnf_save_fs,
                            spc_dct_i, spc_info,
                            frm_bnd_key, brk_bnd_key,
                            sym_factor, elec_levels,
-                           projrot_script_str,
                            hind_rot_geo=False,
                            saddle=False):
     """ Build the species string for a model: Harm, 1DHR

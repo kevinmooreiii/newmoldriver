@@ -4,7 +4,7 @@
 import routines
 from lib.filesystem import check as fcheck
 from lib.filesystem import path as fpath
-from lib import msg
+from lib import printmsg
 
 
 def run(rxn_lst, spc_dct,
@@ -22,14 +22,20 @@ def run(rxn_lst, spc_dct,
     kickoff = run_options_dct['kickoff']
 
     # Print the header message for the driver
-    msg.program_header('es')
+    printmsg.program_header('es')
 
     # Species queue
     print('rxn_lst\n', rxn_lst)
     spc_queue = rxn_lst[0]['species']
 
+    print('driver: es tsk lst')
+    for x in es_tsk_lst:
+        print(x)
+    print('\n\n')
+
     # Loop over Tasks
     for tsk_info in es_tsk_lst:
+        print('a tsk info', tsk_info)
 
         # Task and theory information
         [tsk, thy_info, ini_thy_info, overwrite] = tsk_info
@@ -38,7 +44,7 @@ def run(rxn_lst, spc_dct,
         if tsk in ('find_ts', 'find_vdw'):
             for sadpt in spc_dct:
                 if 'ts_' in sadpt:
-                    msg.sadpt_tsk_msg(
+                    printmsg.sadpt_tsk_printmsg(
                         tsk, sadpt, spc_dct, thy_info, ini_thy_info)
                     if not spc_dct[sadpt]['class']:
                         print('skipping reaction because type =',
@@ -76,7 +82,7 @@ def run(rxn_lst, spc_dct,
         for spc in spc_queue:
 
             print('spc in es queue', spc)
-            msg.tsk_msg(tsk, thy_info, ini_thy_info, spc)
+            printmsg.tsk_msg(tsk, thy_info, ini_thy_info, spc)
 
             # Build the input and main run filesystem objects
             filesys, thy_level = fpath.set_fs(

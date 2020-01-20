@@ -16,8 +16,8 @@ from lib.runner import script
 
 
 # MESS strings
-def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
-                                 tors_names, tors_grids, ts_bnd, zma,
+def write_1dhr_tors_mess_strings(harm_geo, spc_info, spc_dct_i, ts_bnd, zma,
+                                 tors_names, tors_grids, tors_sym_nums,
                                  tors_cnf_save_path, min_ene,
                                  saddle=False, hind_rot_geo=None):
     """ Gather the 1DHR torsional data and gather them into a MESS file
@@ -25,7 +25,8 @@ def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
     # Loop over the torsions
     hind_rot_str = ""
     proj_rotors_str = ""
-    for tors_name, tors_grid in tors_names, tors_grids:
+    tors_info = zip(tors_names, tors_grids, tors_sym_nums)
+    for tors_name, tors_grid, tors_sym in tors_info:
 
         # Read the hindered rotor potential
         pot = read_hr_pot(
@@ -41,7 +42,7 @@ def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
         if saddle:
             group, axis, pot = check_saddle_groups(
                 zma, spc_dct_i, group, axis,
-                pot, ts_bnd, sym_num)
+                pot, ts_bnd, tors_sym)
         group = list(numpy.add(group, 1))
         axis = list(numpy.add(axis, 1))
         if (atm_key+1) != axis[1]:
@@ -53,11 +54,11 @@ def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
         # Write the MESS and ProjRot strings for the rotor
         hrgeo = harm_geo if hind_rot_geo else None
         hind_rot_str += mess_io.writer.rotor_hindered(
-            group, axis, sym_num, pot, remdummy=remdummy, geom=hrgeo)
+            group, axis, tors_sym, pot, remdummy=remdummy, geom=hrgeo)
         proj_rotors_str += projrot_io.writer.rotors(
             axis, group, remdummy=remdummy)
 
-        return hind_rot_str, proj_rotors_str
+    return hind_rot_str, proj_rotors_str
 
 
 # def write_mdhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
@@ -156,7 +157,7 @@ def read_hr_pot(spc_info, tors_name, tors_grid, tors_cnf_save_path, min_ene):
                   'of {}'.format(spc_info[0]))
 
     enes = numpy.subtract(enes, min_ene)
-    pot = list(enes*phycon.EH2KCAL) if enes else []
+    pot = list(enes*phycon.EH2KCAL)
 
     return pot
 
@@ -417,12 +418,13 @@ def get_tors_grids(spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key):
     return tors_grids
 
 
-def get_tors_sym_nums(spc_dct_i, zma, tors_cnf_save_fs,
+def get_tors_sym_nums(spc_dct_i, tors_min_cnf_locs, tors_cnf_save_fs,
                       frm_bnd_key, brk_bnd_key, saddle=False):
     """ get tors parameters
     """
-    # Set torsional stuff
-    tors_names, _ = get_tors_names(
+    zma = tors_cnf_save_fs.leaf.file.zmatrix.read(
+        tors_min_cnf_locs)
+    tors_names = get_tors_names(
         spc_dct_i, tors_cnf_save_fs, saddle=saddle)
     tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
         zma, tors_names, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key))

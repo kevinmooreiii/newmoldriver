@@ -3,6 +3,7 @@ better home
 """
 
 from drivers import esdriver
+from drivers import thermodriver
 from drivers import ktpdriver
 from lib.filesystem import inf as finf
 from lib.filesystem import path as fpath
@@ -55,6 +56,9 @@ def run_driver(pes_dct, conn_chnls_dct,
 
                 # Format the task info list
                 spc_tsk_lst, ts_tsk_lst = format_tsk_lst(es_tsk_lst)
+                print('TSK LST TEST')
+                print(es_tsk_lst)
+                print(spc_tsk_lst)
 
                 # Add the stationary points to the spc dcts
                 print('\nBegin transition state prep')
@@ -77,6 +81,14 @@ def run_driver(pes_dct, conn_chnls_dct,
                         spc_tsk_lst,
                         model_dct,
                         run_options_dct, run_inp_dct)
+                elif driver == 'thermo':
+                    thermodriver.run(
+                        spc_dct, model_dct, thy_dct,
+                        rxn_lst,
+                        run_inp_dct,
+                        ref_scheme='basic',
+                        run_pf=bool('pf' in run_jobs_lst),
+                        run_thermo=bool('thermo' in run_jobs_lst))
                 elif driver == 'ktp':
                     ktpdriver.run(
                         formula,
@@ -94,8 +106,8 @@ def format_tsk_lst(tsk_info_lst):
     """
     spc_tsk_lst = []
     ts_tsk_lst = []
-    ts_tsk = False
     for tsk in tsk_info_lst:
+        ts_tsk = False
         if 'find_ts' in tsk[0]:
             ts_tsk = True
         if ts_tsk:
@@ -136,8 +148,10 @@ def set_sadpt_info(ts_tsk_lst, ts_dct, spc_dct, sadpt,
                    run_prefix, save_prefix, kickoff):
     """ set the saddle point dct with info
     """
-    ini_thy_info = ts_tsk_lst[1][2]
-    thy_info = ts_tsk_lst[1][1]
+    print(ts_tsk_lst)
+    print(ts_tsk_lst[0][1])
+    ini_thy_info = ts_tsk_lst[0][2]
+    thy_info = ts_tsk_lst[0][1]
     print('ini_thy_info', ini_thy_info)
     print('thy_info', thy_info)
     # Generate rxn data, reorder if necessary, and put in spc_dct for given ts

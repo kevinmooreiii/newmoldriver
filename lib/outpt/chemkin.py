@@ -8,31 +8,21 @@ import thermo
 from lib.filesystem import inf as finf
 
 
-def get_ckin_ene_lvl_str(ts_tsk_lst, thy_dct, ene_coeff):
+def get_ckin_ene_lvl_str(pf_levels, ene_coeff):
     """ Write the comment lines for the enrgy lvls for ckin
     """
+    ene_thy_info = pf_levels[1]
+    ene_ref_thy_info = pf_levels[0]
     ene_strl = []
-    ene_idx = 0
     ene_str = '! energy level:'
-    for tsk in ts_tsk_lst:
-        if 'ene' in tsk[0]:
-            if ene_idx > len(ene_coeff)-1:
-                print('Warning - an insufficient ',
-                      'energy coefficient list was provided')
-                break
-            ene_lvl = tsk[1]
-            ene_lvl_ref = tsk[2]
-            ene_ref_thy_info = finf.get_thy_info(ene_lvl_ref, thy_dct)
-            ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
-            ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
-                ene_coeff[ene_idx],
-                ene_thy_info[3],
-                ene_thy_info[1],
-                ene_thy_info[2],
-                ene_ref_thy_info[3],
-                ene_ref_thy_info[1],
-                ene_ref_thy_info[2]))
-            ene_idx += 1
+    ene_strl.append(' {:.2f} x {}{}/{}//{}{}/{}\n'.format(
+        ene_coeff[0],
+        ene_thy_info[3],
+        ene_thy_info[1],
+        ene_thy_info[2],
+        ene_ref_thy_info[3],
+        ene_ref_thy_info[1],
+        ene_ref_thy_info[2]))
     ene_str += '!               '.join(ene_strl)
 
     return ene_str
@@ -43,7 +33,10 @@ def run_ckin_header(pf_info, spc_model):
     """
     tors_model, vib_model, _ = spc_model
     [geo_info, ene_info, har_info,
-     vpt2_info, _, tors_info, sp_str] = pf_info
+     vpt2_info, _, tors_info] = pf_info
+    sp_str = False
+    # [geo_info, ene_info, har_info,
+    #  vpt2_info, _, tors_info, sp_str] = pf_info
 
     # Convert the pac99 polynomial to chemkin polynomial
     chemkin_header_str = '! vib model: {0}\n'.format(vib_model)

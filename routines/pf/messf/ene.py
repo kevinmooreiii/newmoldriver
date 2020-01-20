@@ -55,6 +55,9 @@ def get_high_level_energy(
     sp_save_fs = autofile.fs.single_point(cnf_save_path)
     sp_save_fs.leaf.create(thy_high_level)
 
+    print('test path')
+    print(thy_high_level)
+    print(sp_save_fs.leaf.path(thy_high_level))
     min_ene = sp_save_fs.leaf.file.energy.read(thy_high_level)
 
     return min_ene
@@ -162,14 +165,13 @@ def get_zero_point_energy(
             zpe = harm_zpe
         elif vib_model == 'harm' and tors_model == '1dhr':
             print('HARM_1DHR')
-            _, _, _, _, zpe, _ = pfmodels.vib_harm_tors_1dhr(
+            _, _, _, _, zpe = pfmodels.vib_harm_tors_1dhr(
                 harm_min_cnf_locs, harm_cnf_save_fs,
                 tors_min_cnf_locs, tors_cnf_save_fs,
                 tors_save_path, tors_cnf_save_path,
                 spc_dct_i, spc_info,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor, elec_levels,
-                projrot_script_str,
                 saddle=saddle)
         elif vib_model == 'harm' and tors_model == 'mdhr':
             print('HARM and MDHR combination is not yet implemented')

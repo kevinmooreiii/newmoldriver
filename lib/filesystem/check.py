@@ -3,7 +3,7 @@ Functions to check the filesystem
 """
 
 from lib.filesystem import minc as fsmin
-from lib import msg
+from lib import printmsg
 
 
 def check_save(save_fs, tsk, obj):
@@ -17,9 +17,9 @@ def check_save(save_fs, tsk, obj):
     else:
         save_locs = [save_fs.leaf.existing()[0]]
     if not save_locs:
-        msg.ini_info_noavail_msg(tsk)
+        printmsg.ini_info_noavail_msg(tsk)
         avail = False
     elif not save_fs.leaf.file.geometry.exists(save_locs):
-        msg.ini_info_noavail_msg(tsk)
+        printmsg.ini_info_noavail_msg(tsk)
         avail = False
     return avail

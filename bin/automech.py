@@ -5,18 +5,17 @@
 
 import sys
 from drivers import mech as lmech
-from drivers import thermodriver
 from lib.load import run as loadrun
 from lib.load import theory as loadthy
 from lib.load import model as loadmodel
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
 from lib.filesystem import build as fbuild
-from lib import msg
+from lib import printmsg
 
 
 # Print the header message for the driver
-msg.program_header('amech')
+printmsg.program_header('amech')
 # Print random picture from RCDriver
 
 # Set runtime options based on user input
@@ -91,12 +90,16 @@ if 'es' in RUN_JOBS_LST:
     )
 
 if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
-    thermodriver.run(
-        SPC_DCT, MODEL_DCT,
-        RUN_INP_DCT,
+    lmech.run_driver(
+        PES_DCT, CHNLS_DCT,
+        SPC_DCT, {},
+        THY_DCT,
+        MODEL_DCT,
+        RUN_ES_TSK_LST,
         RUN_JOBS_LST,
-        run_pf=bool('pf' in RUN_JOBS_LST),
-        run_thermo=bool('thermo' in RUN_JOBS_LST)
+        RUN_INP_DCT,
+        RUN_OPTIONS_DCT,
+        driver='thermo'
     )
 
 if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:

@@ -1,13 +1,11 @@
 """ driver for rate constant evaluations
 """
 
-import autofile.fs
 from drivers import mech as lmech
 from routines.pf.fit import fit_rates
 from routines.pf import rates as messrates
-from lib.filesystem import build as fbuild
 from lib.runner import rates as raterunner
-from lib import msg
+from lib import printmsg
 
 
 def run(pes_formula,
@@ -20,8 +18,10 @@ def run(pes_formula,
         run_fits=True):
     """ main driver for generation of full set of rate constants on a single PES
     """
+    # Print the header message for the driver
+    printmsg.program_header('ktp')
+
     # Pull stuff from dcts for now
-    run_prefix = run_inp_dct['run_prefix']
     save_prefix = run_inp_dct['save_prefix']
     etrans = model_dct['etransfer']
     temps = model_dct['options']['temps']
@@ -29,9 +29,6 @@ def run(pes_formula,
     pst_params = model_dct['options']['pst_params']
     multi_info = model_dct['options']['multi_info']
     assess_pdep = model_dct['options']['assess_pdep']
-
-    # Print the header message for the driver
-    msg.program_header('ktp')
 
     # Get the levels in lists from the user
     pf_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)

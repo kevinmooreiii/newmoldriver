@@ -13,6 +13,7 @@ REF_CALLS = {"basic": "get_basic",
              "cbh1": "get_cbhone",
              "cbh2": "get_cbhtwo"}
 
+
 # Put in load in the keyword parsing
 def is_scheme(entry):
     """ Check whether this is a basis set scheme
@@ -47,17 +48,17 @@ def get_refs(species, spcs, scheme):
     return list(dict.fromkeys(ref)), msg
 
 
-def prepare_refs(ref_scheme, ref_spc, spc_dct, spc_queue):
+def prepare_refs(ref_scheme, spc_dct, spc_queue):
     """ add refs to species list as necessary
     """
     # Determine the reference species, lsit of inchis
     if ref_scheme in REF_CALLS:
-        msg = 'Determining {} reference molecules for: \n'.format(refscheme)
-        refs, newmsg = get_refs(spc_queue, spcdct, refscheme)
+        msg = 'Determining {} reference molecules for: \n'.format(ref_scheme)
+        refs, newmsg = get_refs(spc_queue, spc_dct, ref_scheme)
         msg += newmsg
     else:
-        msg = 'Reference set = {}: \n'.format(', '.join(refscheme))
-        refs = refscheme
+        msg = 'Reference set = {}: \n'.format(', '.join(ref_scheme))
+        refs = ref_scheme
 
     # Get a list of the reference species in a list
     unique_refs = []
@@ -65,8 +66,10 @@ def prepare_refs(ref_scheme, ref_spc, spc_dct, spc_queue):
     for ref in refs:
         if ref in spc_ichs:
             msg += 'Adding reference species ref_{}\n'.format(ref)
-            spcdct['ref_' + ref] = create_spec(ref)
-            unique_refs.append('ref_' + ref)
+            spc_dct[ref] = create_spec(ref)
+            unique_refs.append(ref)
+            # spc_dct['ref_' + ref] = create_spec(ref)
+            # unique_refs.append('ref_' + ref)
     return unique_refs, msg
 
 
