@@ -150,10 +150,10 @@ def jobs_block(inp_str):
 
 
 # PARSE THE JOBS SECTION OF THE FILE #
-def build_run_es_tsks_lst(es_tsk_str, model_dct):
+def build_run_es_tsks_lst(es_tsk_str, model_dct, thy_dct):
     """ Build the list of ES tasks, potentially w/ models
     """
-    tsk_lst = tsks.es_tsk_lst(es_tsk_str, model_dct)
+    tsk_lst = tsks.es_tsk_lst(es_tsk_str, model_dct, thy_dct)
     assert tsk_lst
     # assert check_run_keyword_dct(keyword_dct)
 

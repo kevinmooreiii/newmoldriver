@@ -7,6 +7,7 @@ import automol
 import autofile
 from lib.load import ptt
 from lib.phydat import symm, eleclvl
+from lib.reaction import rxnid
 
 
 SPC_INP = 'inp/species.dat'

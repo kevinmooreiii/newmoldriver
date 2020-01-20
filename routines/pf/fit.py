@@ -16,13 +16,13 @@ from lib.phydat import phycon
 
 def fit_rates(spc_dct, pes_formula, idx_dct,
               pf_levels, ts_model,
-              ene_str, mess_path, assess_pdep):
+              mess_path, assess_pdep):
     """ Parse the MESS output and fit the rates to
         Arrhenius expressions written as CHEMKIN strings
     """
 
-    pf_levels.append(ene_str)
-    ene_str = lmech.get_ckin_ene_lvl_str(
+    # pf_levels.append(ene_str)
+    ene_str = cout.get_ckin_ene_lvl_str(
         ts_tsk_lst, thy_dct, ene_coeff)
     chemkin_header_str = ''
     chemkin_header_str = cout.run_ckin_header(pf_levels, ts_model)

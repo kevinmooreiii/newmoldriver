@@ -9,6 +9,7 @@ import elstruct
 
 # New
 from lib.reaction import grid as rxngrid
+from lib.reaction import ts as lts
 from lib.phydat import phycon
 from lib.runner import driver
 from lib.runner import par as runpar
@@ -20,22 +21,22 @@ from routines.es import scan
 
 
 def find_ts(
-        spc_dct, ts_dct, ts_zma, typ, dist_info, grid,
-        bkp_ts_class_data, ini_thy_info, thy_info, run_prefix, save_prefix,
+        spc_dct, ts_dct, ts_zma,
+        ini_thy_info, thy_info,
+        run_prefix, save_prefix,
         overwrite, attempt=1,
         rad_rad_ts='vtst'):
     """ find the ts geometry
     """
+
+    typ = ts_dct['class']
+    dist_info = ts_dct['dist_info']
+    grid = ts_dct['grid']
+    bkp_ts_class_data = ts_dct['bkp_data']
     print('prepping ts scan for:', typ)
 
-    # spc_dct[sadpt]['original_zma'],
-    # spc_dct[sadpt]['class'],
-    # spc_dct[sadpt]['dist_info'],
-    # spc_dct[sadpt]['grid'],
-    # spc_dct[sadpt]['bkp_data'],
-
     [_, _,
-     rxn_run_path, rxn_save_path] = ts_dct[sadpt]['rxn_fs']
+     rxn_run_path, rxn_save_path] = ts_dct['rxn_fs']
     ts_info = (ts_dct['ich'],
                ts_dct['chg'],
                ts_dct['mul'])
@@ -71,9 +72,9 @@ def find_ts(
     cnf_save_fs = autofile.fs.conformer(ts_save_path)
     cnf_save_fs.trunk.create()
 
+    print('dist_info')
+    print(dist_info)
     dist_name = dist_info[0]
-    print('dist_name')
-    print(dist_name)
     update_guess = dist_info[2]
     brk_name = dist_info[3]
 

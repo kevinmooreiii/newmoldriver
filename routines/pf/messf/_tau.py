@@ -45,20 +45,3 @@ def tau_pf_write(
     file_name = os.path.join(save_prefix, 'TAU', 'tau.out')
     with open(file_name, 'w') as tau_file:
         tau_file.write(evr)
-
-    temp_list = [300., 500., 750., 1000., 1500.]
-    for temp in temp_list:
-        sumq = 0.
-        sum2 = 0.
-        idx = 0
-        # print('integral convergence for T = ', temp)
-        for locs in tau_save_fs.leaf.existing():
-            idx += 1
-            ene = tau_save_fs.leaf.file.energy.read(locs)
-            ene = (ene - ene_ref) * phycon.EH2KCAL
-            tmp = numpy.exp(-ene*349.7/(0.695*temp))
-            sumq = sumq + tmp
-            sum2 = sum2 + tmp**2
-            sigma = numpy.sqrt(
-                (abs(sum2/float(idx)-(sumq/float(idx))**2))/float(idx))
-            print(sumq/float(idx), sigma, 100.*sigma*float(idx)/sumq, idx)

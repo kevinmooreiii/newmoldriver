@@ -10,12 +10,15 @@ def tsk_msg(tsk, spc, thy_info, ini_thy_info):
         tsk, '/'.join(thy_info), '/'.join(ini_thy_info), spc))
 
 
-def sadpt_tsk_msg(tsk, ts, spc_dct, thy_info, ini_thy_info):
+def sadpt_tsk_msg(tsk, sadpt, spc_dct, thy_info, ini_thy_info):
     """ print a task message for a TS
     """
     print('Task {} \t for {} \t {}//{} \t {} = {}'.format(
-        tsk, ts, '/'.join(thy_info), '/'.join(ini_thy_info),
-        '+'.join(spc_dct[ts]['reacs']), '+'.join(spc_dct[ts]['prods'])))
+        tsk, sadpt,
+        '/'.join(thy_info),
+        '/'.join(ini_thy_info),
+        '+'.join(spc_dct[sadpt]['reacs']),
+        '+'.join(spc_dct[sadpt]['prods'])))
 
 
 def ini_info_noavail_msg(tsk):
@@ -32,39 +35,44 @@ def run_tsk_msg(tsk):
     print('running task {}'.format(tsk))
 
 
-KTPMSG = """
+def program_header(driver):
+    """ print the header for a program
+    """
+    header_dct = {
+        'amech': AMECH_MSG,
+        'ktp': KTP_MSG,
+        'thermo': THM_MSG,
+        'es': ES_MSG
+    }
+    print(header_dct[driver]+'\n\n')
+
+
+AMECH_MSG = """
           ================================================================
           ==                        AUTOMECHANIC                        ==
           ===         Andreas Copan, Sarah Elliott, Kevin Moore,       ===
           ===     Daniel Moberg, Carlo Cavallotti, Yuri Georgievski,   ===
           ==       Ahren Jasper, Murat Keceli, Stephen Klippenstein     ==
+          ================================================================"""
+
+KTP_MSG = """
           ================================================================
-          ==                         KTPDRIVER                          ==
+          ==                          KTPDRIVER                         ==
           ===         Sarah Elliott, Kevin Moore, Andreas Copan,       ===
           ===      Daniel Moberg, Carlo Cavallotti, Yuri Georgievski,  ===
           ==            Ahren Jasper, Stephen Klippenstein              ==
-          ================================================================\n"""
+          ================================================================"""
 
-THMMSG = """
-          ================================================================
-          ==                        AUTOMECHANIC                        ==
-          ===         Andreas Copan, Sarah Elliott, Kevin Moore,       ===
-          ===     Daniel Moberg, Carlo Cavallotti, Yuri Georgievski,   ===
-          ==       Ahren Jasper, Murat Keceli, Stephen Klippenstein     ==
+THM_MSG = """
           ================================================================
           ==                        THERMODRIVER                        ==
           ===         Sarah Elliott, Kevin Moore, Andreas Copan,       ===
           ===    Murat Keceli, Yuri Georgievski, Stephen Klippenstein   ==
-          ================================================================\n"""
+          ================================================================"""
 
-ESMSG = """
-          ================================================================
-          ==                        AUTOMECHANIC                        ==
-          ===         Andreas Copan, Sarah Elliott, Kevin Moore,       ===
-          ===     Daniel Moberg, Carlo Cavallotti, Yuri Georgievski,   ===
-          ==       Ahren Jasper, Murat Keceli, Stephen Klippenstein     ==
+ES_MSG = """
           ================================================================
           ==                          ESDRIVER                          ==
           ====        Sarah Elliott, Andreas Copan, Kevin Moore,      ====
           ==            Carlo Cavolotti, Stephen Klippenstein           ==
-          ================================================================\n"""
+          ================================================================"""

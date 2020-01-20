@@ -8,16 +8,16 @@ from lib.filesystem import minc as fsmin
 from lib.filesystem import orb as fsorb
 
 
-def set_fs(spc_dct, spc, spc_info, thy_info,
+def set_fs(spc_dct, spc, thy_info,
            run_prefix, save_prefix,
-           setfs_chk, rad_rad_ts, ini_fs=False):
+           setfs_chk=True, ini_fs=False):
     """ set up filesystem """
 
     # Build the species filesys objs
     [spc_info,
      spc_run_fs, spc_save_fs,
      spc_run_path, spc_save_path] = set_spc_fs(
-         spc_dct, spc, run_prefix, save_prefix, rad_rad_ts)
+         spc_dct, spc, run_prefix, save_prefix)
 
     # Initialize the filesystems
     thy_run_fs = None
@@ -94,7 +94,7 @@ def set_fs(spc_dct, spc, spc_info, thy_info,
     return filesys, thy_level
 
 
-def set_spc_fs(spc_dct, spc, run_prefix, save_prefix, rad_rad_ts):
+def set_spc_fs(spc_dct, spc, run_prefix, save_prefix):
     """ set the species filesys objects
     """
     print('INFO TEST')
@@ -197,5 +197,3 @@ def get_rxn_fs(run_prefix, save_prefix, sadpt):
         [rxn_ichs, rxn_chgs, rxn_muls, ts_mul])
 
     return rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path
-
-

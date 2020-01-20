@@ -13,6 +13,8 @@ from lib.filesystem import read as fsread
 def get_thy_info(method, thy_dct):
     """ convert theory level dictionary to theory information array
     """
+    print(method)
+    print(thy_dct)
     method_dct = thy_dct[method]
     err_msg = ''
     info = ['program', 'method', 'basis', 'orb_res']
@@ -52,7 +54,7 @@ def get_spc_info(spc_dct):
     return props
 
 
-def rxn_info(save_prefix, sadpt, spc_dct,
+def rxn_info(save_prefix, sadpt, ts_dct, spc_dct,
              thy_info, ini_thy_info=None):
     """ prepare rxn info and reverse the reactants and products
         if reaction is endothermic
@@ -62,11 +64,10 @@ def rxn_info(save_prefix, sadpt, spc_dct,
     rxn_muls = [[], []]
     print('\n TS for {}: {} = {}'.format(
         sadpt,
-        '+'.join(spc_dct[sadpt]['reacs']),
-        '+'.join(spc_dct[sadpt]['prods'])))
-    reacs = spc_dct[sadpt]['reacs']
-    prods = spc_dct[sadpt]['prods']
-    print('sadpt dct', spc_dct[sadpt])
+        '+'.join(ts_dct[sadpt]['reacs']),
+        '+'.join(ts_dct[sadpt]['prods'])))
+    reacs = ts_dct[sadpt]['reacs']
+    prods = ts_dct[sadpt]['prods']
     for spc in reacs:
         rxn_ichs[0].append(spc_dct[spc]['ich'])
         rxn_chgs[0].append(spc_dct[spc]['chg'])
@@ -84,16 +85,16 @@ def rxn_info(save_prefix, sadpt, spc_dct,
         rxn_exo = fsread.reaction_energy(
             save_prefix, rxn_ichs, rxn_chgs, rxn_muls, ini_thy_info)
     print('reaction is {:.2f} endothermic'.format(rxn_exo*phycon.EH2KCAL))
-    if rxn_exo > 0 and not spc_dct[sadpt]['given_class']:
+    if rxn_exo > 0 and not ts_dct[sadpt]['given_class']:
         rxn_ichs = rxn_ichs[::-1]
         rxn_chgs = rxn_chgs[::-1]
         rxn_muls = rxn_muls[::-1]
-        spc_dct[sadpt]['reacs'] = prods
-        spc_dct[sadpt]['prods'] = reacs
+        ts_dct[sadpt]['reacs'] = prods
+        ts_dct[sadpt]['prods'] = reacs
         print('Reaction will proceed as {}: {} = {}'.format(
             sadpt,
-            '+'.join(spc_dct[sadpt]['reacs']),
-            '+'.join(spc_dct[sadpt]['prods'])))
+            '+'.join(ts_dct[sadpt]['reacs']),
+            '+'.join(ts_dct[sadpt]['prods'])))
 
     # set up the filesystem
     rxn_ichs, rxn_chgs, rxn_muls = autofile.system.sort_together(

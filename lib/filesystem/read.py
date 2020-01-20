@@ -34,6 +34,7 @@ def reagent_energies(save_prefix, rgt_ichs, rgt_chgs, rgt_muls, thy_level):
         thy_lvl = thy_level[0:3]
         thy_lvl.append(orb_restr)
         thy_save_fs = autofile.fs.theory(spc_save_path)
+        print('thyleveltest', thy_level)
         thy_save_path = thy_save_fs.leaf.path(thy_lvl[1:4])
         cnf_save_fs = autofile.fs.conformer(thy_save_path)
         min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)

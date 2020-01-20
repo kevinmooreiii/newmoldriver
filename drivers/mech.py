@@ -2,15 +2,13 @@
 better home
 """
 
-import automol.geom
 from drivers import esdriver
 from drivers import ktpdriver
-from routines.pf import get_high_level_energy
-from routines.pf import rates as messrates
 from lib.filesystem import inf as finf
 from lib.filesystem import path as fpath
 from lib.filesystem import read as fread
 from lib.reaction import rxnid
+from lib.load import species as loadspc
 
 
 def run_driver(pes_dct, conn_chnls_dct,
@@ -52,53 +50,39 @@ def run_driver(pes_dct, conn_chnls_dct,
             # Call the Driver for the PES
             if run_pes:
 
-                # Add the stationary points to the spc dcts
-                print('\nBegin transition state prep')
-                ts_dct = build_spc_dct_for_sadpts(
-                    spc_dct, rxn_lst, rxn_name_lst,
-                    rct_names_lst, prd_names_lst, cla_dct)
-                for spc in ts_dct:
-                        ts_dct[spc] = set_sadpt_info(
-                            ts_tsk_lst, spc_dct, spc, thy_dct,
-                            run_prefix, save_prefix,
-                            kickoff)
-                spc_dct.update(ts_dct)
-    
                 # Form the reaction list
                 rxn_lst = format_run_rxn_lst(rct_names_lst, prd_names_lst)
-    
+
                 # Format the task info list
                 spc_tsk_lst, ts_tsk_lst = format_tsk_lst(es_tsk_lst)
 
+                # Add the stationary points to the spc dcts
+                print('\nBegin transition state prep')
+                ts_dct = loadspc.build_spc_dct_for_sadpts(
+                    spc_dct, rxn_lst, rxn_name_lst,
+                    rct_names_lst, prd_names_lst, cla_dct)
+                for sadpt in ts_dct:
+                    ts_dct[sadpt] = set_sadpt_info(
+                        ts_tsk_lst, ts_dct, spc_dct, sadpt,
+                        run_inp_dct['run_prefix'],
+                        run_inp_dct['save_prefix'],
+                        run_options_dct['kickoff'])
+                    print('loop dct\n', ts_dct[sadpt]['dist_info'])
+                spc_dct.update(ts_dct)
+
                 # Run the appropriate driver
-                print('Running {} Driver'.format(driver))
-                if driver == 'es_spc':
-                    esdriver.run(run_lst, spc_dct,
+                if driver == 'es':
+                    esdriver.run(
+                        rxn_lst, spc_dct,
                         spc_tsk_lst,
-                        thy_dct, model_dct,
+                        model_dct,
                         run_options_dct, run_inp_dct)
-                if driver == 'es_rxn':
-                    run_prefix = run_inp_dct['run_prefix']
-                    save_prefix = run_inp_dct['save_prefix']
-                    kickoff = run_options_dct['kickoff']
-                    for spc in spc_dct:
-                        if 'ts_' in spc:
-                            spc_dct[spc] = set_sadpt_info(
-                                ts_tsk_lst, spc_dct, spc, thy_dct,
-                                run_prefix, save_prefix,
-                                kickoff)
-                    esdriver.run(run_lst, spc_dct,
-                                 ts_tsk_lst,
-                                 thy_dct, model_dct,
-                                 run_options_dct, run_inp_dct)
                 elif driver == 'ktp':
                     ktpdriver.run(
                         formula,
                         spc_dct,
                         thy_dct,
-                        es_tsk_lst,
-                        pes_rct_names_lst,
-                        pes_prd_names_lst,
+                        rxn_lst,
                         model_dct,
                         run_inp_dct,
                         run_rates=bool('rates' in run_jobs_lst),
@@ -148,67 +132,66 @@ def format_run_rxn_lst(rct_names_lst, prd_names_lst):
     return run_lst
 
 
-def set_sadpt_info(ts_tsk_lst, spc_dct, spc, thy_dct,
+def set_sadpt_info(ts_tsk_lst, ts_dct, spc_dct, sadpt,
                    run_prefix, save_prefix, kickoff):
     """ set the saddle point dct with info
     """
-    es_ini_key = ts_tsk_lst[0][2]
-    es_run_key = ts_tsk_lst[0][1]
-    ini_thy_info = finf.get_es_info(es_ini_key, thy_dct)
-    thy_info = finf.get_es_info(es_run_key, thy_dct)
-
+    ini_thy_info = ts_tsk_lst[1][2]
+    thy_info = ts_tsk_lst[1][1]
+    print('ini_thy_info', ini_thy_info)
+    print('thy_info', thy_info)
     # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
     rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
-        save_prefix, spc, spc_dct, thy_info, ini_thy_info)
-    spc_dct[spc]['rxn_ichs'] = rxn_ichs
-    spc_dct[spc]['rxn_chgs'] = rxn_chgs
-    spc_dct[spc]['rxn_muls'] = rxn_muls
-    spc_dct[spc]['low_mul'] = low_mul
-    spc_dct[spc]['high_mul'] = high_mul
+        save_prefix, sadpt, ts_dct, spc_dct, thy_info, ini_thy_info)
+    ts_dct[sadpt]['rxn_ichs'] = rxn_ichs
+    ts_dct[sadpt]['rxn_chgs'] = rxn_chgs
+    ts_dct[sadpt]['rxn_muls'] = rxn_muls
+    ts_dct[sadpt]['low_mul'] = low_mul
+    ts_dct[sadpt]['high_mul'] = high_mul
 
     # Generate rxn_fs from rxn_info stored in spc_dct
     [kickoff_size, kickoff_backward] = kickoff
     rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
-        run_prefix, save_prefix, spc_dct[spc])
-    spc_dct[spc]['rxn_fs'] = [
+        run_prefix, save_prefix, ts_dct[sadpt])
+    ts_dct[sadpt]['rxn_fs'] = [
         rxn_run_fs,
         rxn_save_fs,
         rxn_run_path,
         rxn_save_path]
     rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
-        spc_dct[spc]['reacs'], spc_dct[spc]['prods'], spc_dct,
+        ts_dct[sadpt]['reacs'], ts_dct[sadpt]['prods'], spc_dct,
         ini_thy_info, save_prefix, run_prefix, kickoff_size,
         kickoff_backward)
     ret = rxnid.ts_class(
-        rct_zmas, prd_zmas, spc_dct[spc]['rad_rad'],
-        spc_dct[spc]['mul'], low_mul, high_mul,
-        rct_cnf_save_fs, prd_cnf_save_fs, spc_dct[spc]['given_class'])
+        rct_zmas, prd_zmas, ts_dct[sadpt]['rad_rad'],
+        ts_dct[sadpt]['mul'], low_mul, high_mul,
+        rct_cnf_save_fs, prd_cnf_save_fs, ts_dct[sadpt]['given_class'])
     ret1, ret2 = ret
     if ret1:
         [rxn_class, spc_zma,
          dist_name, brk_name, grid,
          frm_bnd_key, brk_bnd_key,
          tors_names, update_guess] = ret1
-        spc_dct[spc]['class'] = rxn_class
-        spc_dct[spc]['grid'] = grid
-        spc_dct[spc]['tors_names'] = tors_names
-        spc_dct[spc]['original_zma'] = spc_zma
+        ts_dct[sadpt]['class'] = rxn_class
+        ts_dct[sadpt]['grid'] = grid
+        ts_dct[sadpt]['tors_names'] = tors_names
+        ts_dct[sadpt]['original_zma'] = spc_zma
         dist_info = [dist_name, 0., update_guess, brk_name]
-        spc_dct[spc]['dist_info'] = dist_info
-        spc_dct[spc]['frm_bnd_key'] = frm_bnd_key
-        spc_dct[spc]['brk_bnd_key'] = brk_bnd_key
+        ts_dct[sadpt]['dist_info'] = dist_info
+        ts_dct[sadpt]['frm_bnd_key'] = frm_bnd_key
+        ts_dct[sadpt]['brk_bnd_key'] = brk_bnd_key
         # Adding in the rct and prd zmas for vrctst
-        spc_dct[spc]['rct_zmas'] = rct_zmas
-        spc_dct[spc]['prd_zmas'] = prd_zmas
+        ts_dct[sadpt]['rct_zmas'] = rct_zmas
+        ts_dct[sadpt]['prd_zmas'] = prd_zmas
         if ret2:
-            spc_dct[spc]['bkp_data'] = ret2
+            ts_dct[sadpt]['bkp_data'] = ret2
         else:
-            spc_dct[spc]['bkp_data'] = None
+            ts_dct[sadpt]['bkp_data'] = None
     else:
-        spc_dct[spc]['class'] = None
-        spc_dct[spc]['bkp_data'] = None
+        ts_dct[sadpt]['class'] = None
+        ts_dct[sadpt]['bkp_data'] = None
 
-    return spc_dct[spc]
+    return ts_dct[sadpt]
 
 
 def set_pf_model_info(pf_model):

@@ -8,16 +8,15 @@ import thermo
 import autofile
 
 # New Libs
-from lib.submission import substr
-from lib.runner.script import run_script
+from lib.runner import script
 from lib.filesystem import orb as fsorb
 
 
 # MESSPF
-def run_pf(pf_path, pf_script_str=substr.MESSPF):
+def run_pf(pf_path, pf_script_str=script.MESSPF):
     """ run messpf
     """
-    run_script(pf_script_str, pf_path)
+    script.run_script(pf_script_str, pf_path)
 
 
 # THERMP

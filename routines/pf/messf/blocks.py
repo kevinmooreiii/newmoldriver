@@ -14,7 +14,7 @@ from routines.pf.messf import models as pfmodels
 
 
 def species_block(
-        spc, spc_dct_i, spc_info, spc_model, pf_levels, projrot_script_str,
+        spc, spc_dct_i, spc_info, spc_model, pf_levels,
         elec_levels=((0., 1)), sym_factor=1., save_prefix='spc_save_path'):
     """ prepare the species input for messpf
     """

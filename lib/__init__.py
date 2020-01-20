@@ -8,6 +8,7 @@ from lib import outpt
 from lib import runner
 from lib import reaction
 from lib import load
+from lib import msg
 
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     'outpt',
     'runner',
     'reaction',
-    'load'
+    'load',
+    'msg'
 ]

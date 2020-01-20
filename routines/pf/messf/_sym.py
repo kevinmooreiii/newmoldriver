@@ -43,8 +43,8 @@ def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
     return sym_factor
 
 
-def tors_mods_on_sym_factor():
-    """ Decrease the overall molecular symmetry factor by the 
+def tors_mods_on_sym_factor(tors_min_cnf_locs, tors_cnf_save_fs, saddle=False):
+    """ Decrease the overall molecular symmetry factor by the
         torsional mode symmetry numbers
     """
     if tors_min_cnf_locs is not None:
@@ -52,13 +52,12 @@ def tors_mods_on_sym_factor():
         # Get geometry for the torsional minimum
         zma = tors_cnf_save_fs.leaf.file.zmatrix.read(
             tors_min_cnf_locs)
-    
+
         # Set torsional stuff
-        tors_names, _ = get_tors_names(
-            spc_dct_i, zma, tors_cnf_save_fs, saddle=saddle)
-        tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
-            zma, tors_names, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key))
-            
+        tors_sym_nums = tors.get_tors_sym_nums(
+            spc_dct_i, zma, tors_cnf_save_fs,
+            frm_bnd_key, brk_bnd_key, saddle=False)
+
         # Divide total sym_factor by rotor sym number
         for sym_num in tors_sym_nums:
             sym_factor /= sym_num

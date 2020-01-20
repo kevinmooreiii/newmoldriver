@@ -91,11 +91,9 @@ def get_zero_point_energy(
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
 
     # Prepare the sets of file systems
-    print('get zero models')
-    for x in pf_levels:
-        print(x)
-    [geo_levels, ene_levels, harm_levels,
-     vpt2_levels, _, tors_levels] = pf_levels
+    [_, _, harm_levels, _, _, tors_levels] = pf_levels
+    print('spc_model')
+    print(spc_model)
     tors_model, vib_model, _ = spc_model
 
     # Set theory filesystem used throughout

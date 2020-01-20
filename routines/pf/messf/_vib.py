@@ -92,3 +92,28 @@ def projrot_freqs_2(save_path, pot, saddle=False):
             freqs_2 = freqs_2[:-1]
 
     return freqs_2, imag_freq_2, har_zpe, zpe_har_no_tors_2
+
+
+def determine_freqs_zpe(freqs1, freqs2, imag_freq1, imag_freq2,
+                        zpe_harm_no_tors, zpe_harm_no_tors_2,
+                        harm_zpe, tors_zpe):
+    """ get the freqs ftom two methods
+    """
+    harm_tors_zpe = harm_zpe - zpe_harm_no_tors
+    harm_tors_zpe_2 = harm_zpe - zpe_harm_no_tors_2
+    del_tors_zpe = harm_tors_zpe - tors_zpe
+    del_tors_zpe_2 = harm_tors_zpe_2 - tors_zpe
+    if del_tors_zpe <= del_tors_zpe_2:
+        zpe = zpe_harm_no_tors + tors_zpe
+        freqs = freqs1
+        imag_freq = imag_freq1
+    else:
+        zpe = zpe_harm_no_tors_2 + tors_zpe
+        freqs = freqs2
+        imag_freq = imag_freq2
+    if abs(del_tors_zpe) > 0.2 and abs(del_tors_zpe_2) > 0.2:
+        print('Warning: There is a difference of ',
+              '{0:.2f} and {1:.2f}'.format(del_tors_zpe, del_tors_zpe_2),
+              'kcal/mol between harmonic and hindered torsional ZPVEs')
+
+    return freqs, imag_freq, zpe

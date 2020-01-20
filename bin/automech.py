@@ -5,24 +5,26 @@
 
 import sys
 from drivers import mech as lmech
-# from drivers import thermodriver
+from drivers import thermodriver
 from lib.load import run as loadrun
 from lib.load import theory as loadthy
 from lib.load import model as loadmodel
 from lib.load import mechanism as loadmech
 from lib.load import species as loadspc
+from lib.filesystem import build as fbuild
+from lib import msg
 
+
+# Print the header message for the driver
+msg.program_header('amech')
+# Print random picture from RCDriver
 
 # Set runtime options based on user input
 JOB_PATH = sys.argv[1]
-# PARAMS = read_dat.params(os.path.join(JOB_PATH, 'inp/params.dat'))
 
 # Parse the run input
 RUN_INP_DCT = loadrun.build_run_inp_dct(JOB_PATH)
 RUN_LST = loadrun.objects_lst(JOB_PATH)
-print(RUN_LST)
-import sys
-sys.exit()
 [PESNUMS, CHANNELS, MODEL] = RUN_LST[0]
 
 RUN_OPTIONS_DCT = loadrun.build_run_glob_opts_dct(JOB_PATH)
@@ -45,12 +47,11 @@ PES_DCT, CHNLS_DCT = loadmech.parse_mechanism_file(
     sort_rxns=RUN_INP_DCT['sort_rxns'])
 
 # Do some extra work to prepare the info to pass to the drivers
-RUN_ES_TSK_LST = loadrun.build_run_es_tsks_lst(RUN_ES_TSK_STR, MODEL_DCT, THY_DCT)
-print('first RUN_ES_TSK_LST')
-print(RUN_ES_TSK_LST)
+RUN_ES_TSK_LST = loadrun.build_run_es_tsks_lst(
+    RUN_ES_TSK_STR, MODEL_DCT, THY_DCT)
 
 # Print stuff for test
-print('test auto input')
+print('Echoing the user input:\n\n')
 print('\nrun inp dct')
 print(RUN_INP_DCT)
 print('\nrun options dct')
@@ -70,10 +71,13 @@ print(PES_DCT)
 print('\nchnls dct')
 print(CHNLS_DCT)
 
+# Prepare filesystem
+fbuild.prefix_filesystem(
+    RUN_INP_DCT['run_prefix'], RUN_INP_DCT['save_prefix'])
+
 # Run the requested drivers: es, thermo, ktp
 print('\n\n')
-print('RUNNING ES DRIVER FOR SPC')
-if 'es_spc' in RUN_JOBS_LST:
+if 'es' in RUN_JOBS_LST:
     lmech.run_driver(
         PES_DCT, CHNLS_DCT,
         SPC_DCT, {},
@@ -83,30 +87,18 @@ if 'es_spc' in RUN_JOBS_LST:
         RUN_JOBS_LST,
         RUN_INP_DCT,
         RUN_OPTIONS_DCT,
-        driver='es_spc'
+        driver='es'
     )
 
-print('RUNNING ES DRIVER FOR RXNS')
-if 'es_rxn' in RUN_JOBS_LST:
-    lmech.run_driver(
-        PES_DCT, CHNLS_DCT,
-        SPC_DCT, {},
-        THY_DCT,
-        MODEL_DCT,
-        RUN_ES_TSK_LST,
-        RUN_JOBS_LST,
+if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
+    thermodriver.run(
+        SPC_DCT, MODEL_DCT,
         RUN_INP_DCT,
-        RUN_OPTIONS_DCT,
-        driver='es_rxn'
+        RUN_JOBS_LST,
+        run_pf=bool('pf' in RUN_JOBS_LST),
+        run_thermo=bool('thermo' in RUN_JOBS_LST)
     )
 
-# if RUN_JOBS_LST['thermo'] or RUN_JOBS_LST['nasa']:
-#     thermodriver.run(
-#         PARAMS.TSK_INFO_LST, SPC_DCT, PARAMS.REF_MOLS,
-#         PARAMS.RUN_PREFIX, PARAMS.SAVE_PREFIX,
-#         ene_coeff=PARAMS.ENE_COEFF, options=PARAMS.OPTIONS_THERMO)
-
-print('RUNNING KTP DRIVER')
 if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:
     lmech.run_driver(
         PES_DCT, CHNLS_DCT,
@@ -119,3 +111,6 @@ if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:
         RUN_OPTIONS_DCT,
         driver='ktp'
     )
+
+# Print the program exit message
+print('AutoMech has completed. Exiting program')

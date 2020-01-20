@@ -21,11 +21,11 @@ def es_tsk_lst(es_tsk_str, model_dct, thy_dct, saddle=False):
     # Ensure that all the tasks are in the supported tasks
     # :assert check_es_tsks_supported(tsk_lst)
     mod_tsk_lst = []
-    for tsk_info in es_tsk_lst:
+    for tsk_info in tsk_lst:
         [tsk, es_run_key, es_ini_key, overwrite] = tsk_info
         ini_thy_info = finf.get_es_info(es_ini_key, thy_dct)
         thy_info = finf.get_es_info(es_run_key, thy_dct)
-        mod_tsk_info_lst.append([tsk, thy_info, ini_thy_info, overwrite])
+        mod_tsk_lst.append([tsk, thy_info, ini_thy_info, overwrite])
 
     return mod_tsk_lst
 
@@ -61,7 +61,8 @@ def format_tsk_lst(keyword, value_lst):
     return tsk_lst
 
 
-def es_tsks_from_models(model_dct, saddle=False):  # barrierless=False):
+def es_tsks_from_models(model_dct,
+                        saddle=False, wells=False, barrierless=False):
     """ Set a list of tasks using the model dictionary for
         setting up the electronic structure calculations
     """

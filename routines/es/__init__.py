@@ -31,7 +31,6 @@ from routines.es.sp import run_vpt2
 from routines.es.tau import tau_sampling
 from routines.es.tau import run_tau
 from routines.es.tau import save_tau
-from routines.es.tau import tau_pf_write
 from routines.es.ts import sadpt_reference_geometry
 from routines.es.ts import cas_options_1
 from routines.es.ts import cas_options_2
@@ -44,6 +43,7 @@ from routines.es.util import nsamp_init
 from lib.phydat import phycon
 from lib.runner import par as runpar
 from lib.filesystem import minc as fsmin
+from lib.filesystem import inf as finf
 
 
 __all__ = [
@@ -76,7 +76,6 @@ __all__ = [
     'tau_sampling',
     'run_tau',
     'save_tau',
-    'tau_pf_write',
     'reference_geometry',
     'cas_options_1',
     'cas_options_2',
@@ -176,9 +175,13 @@ def run_tau_sampling(filesys, params, opt_kwargs):
     params['tau_save_fs'] = filesys[7]
     params['thy_save_fs'] = filesys[3]
     tau_sampling(**params, **opt_kwargs)
+    # del params['thy_save_fs']
+    # del params['nsamp_par']
+    # moldr.tau.run_tau_gradients(**params, **opt_kwargs)
+    # moldr.tau.run_tau_hessians(**params, **opt_kwargs)
 
 
-def geometry_generation(tsk, spc, spc_info, mc_nsamp,
+def geometry_generation(tsk, spc, mc_nsamp,
                         ini_thy_level, thy_level, ini_filesys, filesys,
                         overwrite, saddle=False, kickoff=(0.1, False)):
     """ run an electronic structure task
@@ -186,6 +189,8 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
     """
     # Separate the kickoff keyword for now
     [kickoff_size, kickoff_backward] = kickoff
+
+    spc_info = finf.get_spc_info(spc)
 
     # Get a reference geometry
     if not saddle:
@@ -233,12 +238,13 @@ def geometry_generation(tsk, spc, spc_info, mc_nsamp,
 
 
 def geometry_analysis(tsk, thy_level, ini_filesys,
-                      spc_info, spc, overwrite,
+                      spc, overwrite,
                       saddle=False, selection='min'):
     """ run the specified electronic structure task
     for a set of geometries
     """
     params = {}
+    spc_info = finf.get_spc_info(spc)
 
     print('Task:', tsk)
     if 'conf' in tsk:

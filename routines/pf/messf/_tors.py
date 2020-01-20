@@ -15,11 +15,12 @@ from lib.phydat import phycon
 from lib.runner import script
 
 
+# MESS strings
 def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
                                  tors_names, tors_grids, ts_bnd, zma,
                                  tors_cnf_save_path, min_ene,
                                  saddle=False, hind_rot_geo=None):
-    """ Gather the torsional data and gather them into a MESS file
+    """ Gather the 1DHR torsional data and gather them into a MESS file
     """
     # Loop over the torsions
     hind_rot_str = ""
@@ -57,6 +58,84 @@ def write_1dhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
             axis, group, remdummy=remdummy)
 
         return hind_rot_str, proj_rotors_str
+
+
+# def write_mdhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
+#                                  tors_names, tors_grids, ts_bnd, zma,
+#                                  tors_cnf_save_path, min_ene,
+#                                  saddle=False, hind_rot_geo=None):
+#     """ Gather the MDHR torsional data and gather them into a MESS file
+#     """
+#
+#     hind_rot_str = ""
+#     proj_rotors_str = ""
+#     hr_pots = []
+#     for tors_name, tors_grid in tors_names, tors_grids:
+#
+#         # Read the hindered rotor potential (NEED NEW VERSION)
+#         pot = read_hr_pot(
+#             spc_info, tors_name, tors_grid,
+#             tors_cnf_save_path, min_ene)
+#
+#         # Build potential lst from only successful calculations
+#         pot = hrpot_spline_fitter(pot)
+#
+#         # Get the HR groups and axis for the rotor
+#         group, axis, atm_key = set_groups_ini(
+#             zma, tors_name, ts_bnd, saddle)
+#         if saddle:
+#             group, axis, pot = check_saddle_groups(
+#                 zma, spc_dct_i, group, axis,
+#                 pot, ts_bnd, sym_num)
+#         group = list(numpy.add(group, 1))
+#         axis = list(numpy.add(axis, 1))
+#         if (atm_key+1) != axis[1]:
+#             axis.reverse()
+#
+#         # Add potential to master list
+#         hr_pots.append(pot)
+#
+#         # Check for dummy transformations
+#         remdummy = check_dummy_trans(zma)
+#
+#         # Write the MESS and ProjRot strings for the rotor
+#         rotor_int_str += mess_io.writer.mol_data.rotor_internal(
+#             group, axis, symmetry,
+#             rotor_id='',
+#             mass_exp_size=5, pot_exp_size=5,
+#             hmin=13, hmax=101,
+#             grid_size=100)
+#
+#     # Write the MDHR potential file
+#     mdhr_str = write_mdhr_dat_file(hr_pot, mess_path)
+#
+#     # Write the overall core section for the multirotor
+#     core_multirotor_str = mess_io.writer.mol_data.core_multirotor(
+#         geom, sym_factor, pot_surf, rotor_int_str,
+#         interp_emax=100, quant_lvl_emax=9, forceq=False)
+#
+#     return core_multirotor_str, mdhr_str
+
+
+def write_mdhr_dat_file(potentials):
+    """ Write a file containing the hindered rotor potentisl
+    """
+    npts1 = len(potentials)
+    npts2 = len(potentials[0]) if npts1 > 1 else 0
+    npts3 = len(potentials[0][0]) if npts2 > 1 else 0
+
+    mdhr_str = '{0:>6d}{1:>6d}{2:>6d}\n'.format(npts1, npts2, npts3)
+    mdhr_str += ' nofreq\n\n'
+
+    for i in npts1:
+        for j in npts2:
+            for k in npts3:
+                mdhr_str += (
+                    '{0:>6d}{1:>6d}{2:>6d}{3:>12.f}\n'.format(
+                        i+1, j+1, k+1, potentials[i][j][k])
+                )
+
+    return mdhr_str
 
 
 # Functions to handle setting up torsional defintion and potentials properly
@@ -317,7 +396,7 @@ def get_tors_names(spc_dct_i, tors_cnf_save_fs, saddle=False):
     return tors_names
 
 
-def tors_params(spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key):
+def get_tors_grids(spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key):
     """ get tors parameters
     """
     # Prepare stuff
@@ -336,3 +415,16 @@ def tors_params(spc_dct_i, zma, tors_names, frm_bnd_key, brk_bnd_key):
         for name, linspace in zip(tors_names, tors_linspaces)]
 
     return tors_grids
+
+
+def get_tors_sym_nums(spc_dct_i, zma, tors_cnf_save_fs,
+                      frm_bnd_key, brk_bnd_key, saddle=False):
+    """ get tors parameters
+    """
+    # Set torsional stuff
+    tors_names, _ = get_tors_names(
+        spc_dct_i, tors_cnf_save_fs, saddle=saddle)
+    tors_sym_nums = list(automol.zmatrix.torsional_symmetry_numbers(
+        zma, tors_names, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key))
+
+    return tors_sym_nums
