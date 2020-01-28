@@ -1,8 +1,8 @@
 """ Run and Read the scans from VTST calculations
 """
 
-import moldr
 import automol
+from routines.es import scan
 
 
 def run_vtst_scan(ts_zma, ts_formula, ts_info, ts_dct, spc_dct,
@@ -51,8 +51,12 @@ def run_vtst_scan(ts_zma, ts_formula, ts_info, ts_dct, spc_dct,
     print(locs)
     ts_zma = scn_save_fs.leaf.file.zmatrix.read(locs)
     rcts = ts_dct['reacs']
-    spc_1_info = [spc_dct[rcts[0]]['ich'], spc_dct[rcts[0]]['chg'], spc_dct[rcts[0]]['mul']]
-    spc_2_info = [spc_dct[rcts[1]]['ich'], spc_dct[rcts[1]]['chg'], spc_dct[rcts[1]]['mul']]
+    spc_1_info = [spc_dct[rcts[0]]['ich'],
+                  spc_dct[rcts[0]]['chg'],
+                  spc_dct[rcts[0]]['mul']]
+    spc_2_info = [spc_dct[rcts[1]]['ich'],
+                  spc_dct[rcts[1]]['chg'],
+                  spc_dct[rcts[1]]['mul']]
 
     inf_sep_ene = moldr.scan.infinite_separation_energy(
         spc_1_info, spc_2_info, ts_info, high_mul, ts_zma, ini_thy_info, thy_info,
@@ -69,4 +73,3 @@ def run_vtst_scan(ts_zma, ts_formula, ts_info, ts_dct, spc_dct,
     final_dist = grid1[0]
 
     return geo, zma, final_dist
-

@@ -165,7 +165,7 @@ def run_hr_scan(filesys, params, opt_kwargs):
     hindered_rotor_scans(**params, **opt_kwargs)
 
 
-def run_tau_sampling(filesys, params, opt_kwargs):
+def run_tau_samp(filesys, params, opt_kwargs):
     """ energies, gradients, and hessians,
     for set of arbitrarily sampled torsional coordinates
     with all other coordinates optimized
@@ -183,7 +183,8 @@ def run_tau_sampling(filesys, params, opt_kwargs):
 
 def geometry_generation(tsk, spc, mc_nsamp,
                         ini_thy_level, thy_level, ini_filesys, filesys,
-                        overwrite, saddle=False, kickoff=(0.1, False)):
+                        overwrite, saddle=False, kickoff=(0.1, False),
+                        tors_model=('1dhr', False)):
     """ run an electronic structure task
     for generating a list of conformer or tau sampling geometries
     """
@@ -222,8 +223,11 @@ def geometry_generation(tsk, spc, mc_nsamp,
                 params['two_stage'] = True
                 params['rxn_class'] = spc['class']
         elif tsk in ['hr_scan']:
+            params['tors_model'] = tors_model
+            if 'hind_def' in spc:
+                params['run_tors_names'] = spc['hind_def']
             if 'hind_inc' in spc:
-                params['scan_increment'] = spc['hind_inc']
+                params['scan_increment'] = spc['hind_inc'] * phycon.DEG2RAD
             else:
                 params['scan_increment'] = 30. * phycon.DEG2RAD
             if saddle:

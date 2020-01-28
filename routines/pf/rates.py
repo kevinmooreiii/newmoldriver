@@ -114,11 +114,10 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
     return well_str, bim_str, ts_str
 
 
-def make_all_species_data(rxn_lst, spc_dct, save_prefix, model_info,
-                          pf_info):
+def make_all_species_data(rxn_lst, spc_dct, save_prefix,
+                          model_info, pf_info):
     """ generate the MESS species blocks for all the species
     """
-    projrot_script_str = script.PROJROT
     species = {}
     spc_save_fs = autofile.fs.species(save_prefix)
     for idx, rxn in enumerate(rxn_lst):
@@ -128,18 +127,17 @@ def make_all_species_data(rxn_lst, spc_dct, save_prefix, model_info,
             if name not in species:
                 species[name], _ = make_species_data(
                     name, spc_dct[name], spc_save_fs,
-                    model_info, pf_info, projrot_script_str)
+                    model_info, pf_info)
         if 'radical radical addition' not in spc_dct[tsname]['class']:
             ret1, ret2 = make_species_data(
                 tsname, spc_dct[tsname], save_prefix,
-                model_info, pf_info, projrot_script_str)
+                model_info, pf_info)
             species[tsname] = ret1
             spc_dct[tsname]['imag_freq'] = ret2
     return species
 
 
-def make_species_data(spc, spc_dct_i, spc_save_fs, spc_model,
-                      pf_levels, projrot_script_str):
+def make_species_data(spc, spc_dct_i, spc_save_fs, spc_model, pf_levels):
     """ makes the main part of the MESS species block for a given species
     """
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
@@ -154,15 +152,13 @@ def make_species_data(spc, spc_dct_i, spc_save_fs, spc_model,
         spc_info=spc_info,
         spc_model=spc_model,
         pf_levels=pf_levels,
-        projrot_script_str=projrot_script_str,
-        elec_levels=[[0., 1]], sym_factor=1.,
         save_prefix=save_path,
         )
     return species_data
 
 
 def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
-                           spc_model, pf_levels, projrot_script_str):
+                           spc_model, pf_levels):
     """ make a fake MESS species block to represent the van der Waals well
     arising from the combination of two fragment species
     """
@@ -180,8 +176,6 @@ def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
         spc_info_j=spc_info_j,
         spc_model=spc_model,
         pf_levels=pf_levels,
-        projrot_script_str=projrot_script_str,
-        elec_levels=[[0., 1]], sym_factor=1.,
         save_prefix_i=save_path_i,
         save_prefix_j=save_path_j
         )
@@ -341,7 +335,7 @@ def make_channel_pfs(
                     '+'.join(rxn['reacs']))
                 fake_wellr = make_fake_species_data(
                     spc_dct[rxn['reacs'][0]], spc_dct[rxn['reacs'][1]],
-                    spc_save_fs, spc_model, pf_levels, projrot_script_str)
+                    spc_save_fs, spc_model, pf_levels)
                 well_str += mess_io.writer.well(
                     fake_wellr_label, fake_wellr, zero_energy)
                 idx_dct[well_dct_key1] = fake_wellr_label
@@ -352,7 +346,7 @@ def make_channel_pfs(
                 spc_dct_j = spc_dct[rxn['reacs'][1]]
                 pst_r_ts_str = blocks.pst_block(
                     spc_dct_i, spc_dct_j, spc_model=spc_model,
-                    pf_levels=pf_levels, projrot_script_str=projrot_script_str,
+                    pf_levels=pf_levels,
                     spc_save_fs=spc_save_fs,
                     pst_params=pst_params)
             print('fake_wellr_label test:', fake_wellr_label)
@@ -384,7 +378,7 @@ def make_channel_pfs(
                     '+'.join(rxn['prods']))
                 fake_wellp = make_fake_species_data(
                     spc_dct[rxn['prods'][0]], spc_dct[rxn['prods'][1]],
-                    spc_save_fs, spc_model, pf_levels, projrot_script_str)
+                    spc_save_fs, spc_model, pf_levels)
                 well_str += mess_io.writer.well(
                     fake_wellp_label, fake_wellp, zero_energy)
                 idx_dct[well_dct_key1] = fake_wellp_label
@@ -395,7 +389,7 @@ def make_channel_pfs(
                 spc_dct_j = spc_dct[rxn['prods'][1]]
                 pst_p_ts_str = blocks.pst_block(
                     spc_dct_i, spc_dct_j, spc_model=spc_model,
-                    pf_levels=pf_levels, projrot_script_str=projrot_script_str,
+                    pf_levels=pf_levels,
                     spc_save_fs=spc_save_fs,
                     pst_params=pst_params)
             if not fake_wellp_label:
@@ -414,7 +408,7 @@ def make_channel_pfs(
             # zero_energy = SOMETHING
             pst_str = blocks.pst_block(
                 spc_dct_i, spc_dct_j, spc_model=spc_model,
-                pf_levels=pf_levels, projrot_script_str=projrot_script_str,
+                pf_levels=pf_levels,
                 spc_save_fs=spc_save_fs,
                 pst_params=pst_params)
             ts_str += '\n' + mess_io.writer.ts_sadpt(
@@ -433,9 +427,7 @@ def make_channel_pfs(
                     spc_dct[rxn['prods'][1]]['zpe'])
             ts_str += '\n' + blocks.vtst_with_no_saddle_block(
                 spc_dct[tsname], ts_label, fake_wellr_label, fake_wellp_label,
-                spc_ene, spc_zpe, projrot_script_str,
-                multi_info, elec_levels=[[0., 1]], sym_factor=1.
-                )
+                spc_ene, spc_zpe, projrot_script_str, multi_info)
         else:
             vdwr_ene = reac_ene - 1.0
             vdwp_ene = prod_ene - 1.0
@@ -467,12 +459,12 @@ def make_channel_pfs(
         ts_str += '\n' + blocks.vtst_with_no_saddle_block(
             spc_dct[tsname], ts_label, reac_label, prod_label,
             spc_ene, spc_zpe, projrot_script_str,
-            multi_info, elec_levels=[[0., 1]], sym_factor=1.)
+            multi_info)
     elif rad_rad and addn_rxn and low_spin and rad_rad_ts == 'pst':
         # zero_energy = SOMETHING
         pst_str = blocks.pst_block(
             spc_dct_i, spc_dct_j, spc_model=spc_model,
-            pf_levels=pf_levels, projrot_script_str=projrot_script_str,
+            pf_levels=pf_levels,
             spc_save_fs=spc_save_fs,
             pst_params=pst_params)
         ts_str += '\n' + mess_io.writer.ts_sadpt(

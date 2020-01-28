@@ -7,19 +7,129 @@ from elstruct.reader._molpro2015.molecule import hess_geometry
 import autofile
 
 # New libs
+from lib.phydat import phycon
 from lib.runner import driver
 from lib.runner import par as runpar
 from lib.filesystem import minc as fsmin
 from lib.filesystem import orb as fsorb
-from routines.es import ts
+from routines.es import variational
+
+
+def hr_prep(zma, geo, run_tors_names=(), scan_increment=30.0, ndim_tors='1dhr',
+            saddle=False, frm_bnd_key=(), brk_bnd_key=()):
+    """ set-up the hr for different rotor combinations
+        tors_names = [ ['D1'], ['D2', 'D3'], ['D4'] ]
+    """
+    # Convert scan_increment to radians (was broken before)
+    print('INCREMENT:')
+    print(scan_increment)
+    print(phycon.DEG2RAD)
+    # scan_increment *= phycon.DEG2RAD
+
+    # Get the tors names if thery have not already been supplied
+    val_dct = automol.zmatrix.values(zma)
+    if not run_tors_names:
+        if not saddle:
+            run_tors_names = [
+                [name]
+                for name in automol.geom.zmatrix_torsion_coordinate_names(geo)
+            ]
+            if ndim_tors == 'mdhr':
+                run_tors_names = [[tors
+                                   for rotor in run_tors_names
+                                   for tors in rotor]]
+
+    # Deal with the dimensionality of the rotors
+    if ndim_tors == 'mdhr':
+        run_tors_names = mdhr_prep(zma, run_tors_names)
+
+    # Build the grids corresponding to the torsions
+    run_tors_grids = []
+    print('build linespace loop')
+    for tors_names in run_tors_names:
+        print('tors names', tors_names)
+        tors_linspaces = automol.zmatrix.torsional_scan_linspaces(
+            zma, tors_names, scan_increment, frm_bnd_key=frm_bnd_key,
+            brk_bnd_key=brk_bnd_key)
+        print(tors_linspaces)
+        run_tors_grids.append(
+            [numpy.linspace(*linspace) + val_dct[name]
+             for name, linspace in zip(tors_names, tors_linspaces)]
+        )
+
+    return run_tors_names, run_tors_grids
+
+
+def mdhr_prep(zma, run_tors_names):
+    """ Handle cases where the MDHR
+    """
+
+    # Figure out set of torsions are to be used: defined or AMech generated
+    rotor_lst = run_tors_names
+    print('rotor_lst', rotor_lst)
+
+    # Check the dimensionality of each rotor to see if they are greater than 4
+    # Call a function to reduce large rotors
+    final_rotor_lst = []
+    for rotor in rotor_lst:
+        print('mdhr prep rotor', rotor)
+        if len(rotor) > 4:
+            print('LEN BAD')
+            for reduced_rotor in reduce_rotor_dimensionality(zma, rotor):
+                final_rotor_lst.append(reduced_rotor)
+        else:
+            print('LEN GOOD')
+            final_rotor_lst.append(rotor)
+
+    return final_rotor_lst
+
+
+def reduce_rotor_dimensionality(zma, rotor):
+    """ For rotors with a dimensionality greater than 4, try and take them out
+    """
+
+    # Find the methyl rotors for that are a part of the MDHR
+    reduced_rotor_lst = []
+    methyl_rotors = []
+    for tors in rotor:
+        # If a methyl rotor add to methyl rotor list
+        if is_methyl_rotor():   # Add arguments when ID methyls
+            methyl_rotors.append(tors)
+        # Add to reduced rotor list
+        else:
+            reduced_rotor_lst.append(tors)
+
+    # Add each of methyl rotors, if any exist
+    if methyl_rotors:
+        for methyl_rotor in methyl_rotors:
+            reduced_rotor_lst.append(methyl_rotor)
+
+    # Check new dimensionality of list; if still high, flatten to lst of 1DHRs
+    if len(reduced_rotor_lst) > 4:
+        reduced_rotor_lst = [tors
+                             for rotor in reduced_rotor_lst
+                             for tors in rotor]
+
+    return reduced_rotor_lst
+
+
+def is_methyl_rotor():
+    """ Check if methyl rotor
+    """
+    return False
 
 
 def hindered_rotor_scans(
         spc_info, thy_level, cnf_run_fs, cnf_save_fs, script_str, overwrite,
-        scan_increment=30., saddle=False, tors_names='', frm_bnd_key=(),
-        brk_bnd_key=(), **opt_kwargs):
+        scan_increment=30.0, saddle=False, run_tors_names=(), frm_bnd_key=(),
+        brk_bnd_key=(), tors_model=('1dhr', False), **opt_kwargs):
     """ Perform 1d scans over each of the torsional coordinates
     """
+
+    # Unpack tors model
+    ndim_tors, freeze_all_tors = tors_model
+
+    # Run with the old code
     min_cnf_locs = fsmin.min_energy_conformer_locators(cnf_save_fs)
     if min_cnf_locs:
         min_cnf_run_path = cnf_run_fs.leaf.path(min_cnf_locs)
@@ -28,48 +138,73 @@ def hindered_rotor_scans(
         scn_save_fs = autofile.fs.scan(min_cnf_save_path)
         geo = cnf_save_fs.leaf.file.geometry.read(min_cnf_locs)
         zma = cnf_save_fs.leaf.file.zmatrix.read(min_cnf_locs)
-        val_dct = automol.zmatrix.values(zma)
-        if not saddle:
-            tors_names = automol.geom.zmatrix_torsion_coordinate_names(geo)
-        if tors_names:
-            tors_linspaces = automol.zmatrix.torsional_scan_linspaces(
-                zma, tors_names, scan_increment, frm_bnd_key=frm_bnd_key,
-                brk_bnd_key=brk_bnd_key)
-            tors_grids = [
-                numpy.linspace(*linspace) + val_dct[name]
-                for name, linspace in zip(tors_names, tors_linspaces)]
 
-            for tors_name, tors_grid in zip(tors_names, tors_grids):
-                save_scan(
-                    scn_run_fs=scn_run_fs,
-                    scn_save_fs=scn_save_fs,
-                    coo_names=[tors_name],
-                )
+        run_tors_names, run_tors_grids = hr_prep(
+            zma, geo, run_tors_names=(),
+            scan_increment=scan_increment, ndim_tors=ndim_tors,
+            saddle=saddle, frm_bnd_key=frm_bnd_key, brk_bnd_key=brk_bnd_key)
 
-                run_scan(
-                    zma=zma,
-                    spc_info=spc_info,
-                    thy_level=thy_level,
-                    grid_dct={tors_name: tors_grid},
-                    scn_run_fs=scn_run_fs,
-                    scn_save_fs=scn_save_fs,
-                    script_str=script_str,
-                    overwrite=overwrite,
-                    saddle=saddle,
-                    **opt_kwargs,
-                )
+        print('TEST: run_tors_names')
+        print(run_tors_names)
+        print(run_tors_grids)
+        # import sys
+        # sys.exit()
 
-                save_scan(
-                    scn_run_fs=scn_run_fs,
-                    scn_save_fs=scn_save_fs,
-                    coo_names=[tors_name],
-                )
+        print('TEST: in loop')
+        # for tors_name, tors_grid in zip(tors_names, tors_grids):
+        for tors_names, tors_grids in zip(run_tors_names, run_tors_grids):
+
+            # Get the dictionary for the torsional modes
+            print(tors_names)
+            print(tors_grids)
+            if not tors_names:
+                continue
+            grid_dct = dict(zip(tors_names, tors_grids))
+
+            # Get a list of the other tors coords to freeze
+            print('freeze variable', freeze_all_tors)
+            if freeze_all_tors:
+                alt_constraints = [name
+                                   for name_lst in run_tors_names
+                                   for name in name_lst]
+            else:
+                alt_constraints = ()
+            print('alt_constraints')
+            print(alt_constraints)
+
+            # Perform the scans
+            save_scan(
+                scn_run_fs=scn_run_fs,
+                scn_save_fs=scn_save_fs,
+                coo_names=tors_names,
+            )
+
+            run_scan(
+                zma=zma,
+                spc_info=spc_info,
+                thy_level=thy_level,
+                grid_dct=grid_dct,
+                scn_run_fs=scn_run_fs,
+                scn_save_fs=scn_save_fs,
+                script_str=script_str,
+                overwrite=overwrite,
+                saddle=saddle,
+                alt_constraints=alt_constraints,
+                **opt_kwargs,
+            )
+
+            save_scan(
+                scn_run_fs=scn_run_fs,
+                scn_save_fs=scn_save_fs,
+                coo_names=tors_names,
+            )
 
 
 def run_scan(
         zma, spc_info, thy_level, grid_dct, scn_run_fs, scn_save_fs,
         script_str, overwrite, update_guess=True,
         reverse_sweep=True, fix_failures=True, saddle=False,
+        alt_constraints=(),
         **kwargs):
     """ run constrained optimization scan
     """
@@ -85,6 +220,11 @@ def run_scan(
         (coo, coo_grid_vals) = item
         coo_names.append(coo)
         grid_vals.append(coo_grid_vals)
+
+    print('grid_dct test:', grid_dct)
+    print('grid_vals test:', grid_vals)
+    # import sys
+    # sys.exit()
 
     # for now, running only one-dimensional hindered rotor scans
     scn_save_fs.branch.create([coo_names])
@@ -113,6 +253,7 @@ def run_scan(
             update_guess=update_guess,
             saddle=saddle,
             retry_failed=fix_failures,
+            alt_constraints=alt_constraints,
             **kwargs
         )
 
@@ -130,6 +271,7 @@ def run_scan(
                 overwrite=overwrite,
                 update_guess=update_guess,
                 saddle=saddle,
+                alt_constraints=alt_constraints,
                 **kwargs
             )
 
@@ -156,6 +298,7 @@ def run_scan(
             update_guess=update_guess,
             saddle=saddle,
             retry_failed=fix_failures,
+            alt_constraints=alt_constraints,
             **kwargs
         )
 
@@ -180,6 +323,128 @@ def run_scan(
                 overwrite=overwrite,
                 update_guess=update_guess,
                 saddle=saddle,
+                alt_constraints=alt_constraints,
+                **kwargs
+            )
+
+    elif len(grid_vals) == 3:
+        run_prefixes = []
+        for grid_val_i in grid_vals[0]:
+            for grid_val_j in grid_vals[1]:
+                for grid_val_k in grid_vals[2]:
+                    scn_run_fs.leaf.create(
+                        [coo_names, [grid_val_i, grid_val_j, grid_val_k]])
+                    run_prefixes.append(scn_run_fs.leaf.path(
+                        [coo_names, [grid_val_i, grid_val_j, grid_val_k]]))
+        run_prefixes = tuple(run_prefixes)
+
+        _run_3d_scan(
+            script_str=script_str,
+            run_prefixes=run_prefixes,
+            scn_save_fs=scn_save_fs,
+            guess_zma=zma,
+            coo_names=coo_names,
+            grid_idxs=grid_idxs,
+            grid_vals=grid_vals,
+            spc_info=spc_info,
+            thy_level=thy_level,
+            overwrite=overwrite,
+            update_guess=update_guess,
+            saddle=saddle,
+            retry_failed=fix_failures,
+            alt_constraints=alt_constraints,
+            **kwargs
+        )
+
+        if reverse_sweep:
+            run_prefixes = []
+            for grid_val_i in grid_vals[0][::-1]:
+                for grid_val_j in grid_vals[1][::-1]:
+                    for grid_val_k in grid_vals[2][::-1]:
+                        run_prefixes.append(scn_run_fs.leaf.path(
+                            [coo_names, [grid_val_i, grid_val_j, grid_val_k]]))
+            run_prefixes = tuple(run_prefixes)
+            _run_3d_scan(
+                script_str=script_str,
+                run_prefixes=run_prefixes,
+                scn_save_fs=scn_save_fs,
+                guess_zma=zma,
+                coo_names=coo_names,
+                grid_idxs=list(reversed(grid_idxs)),
+                grid_vals=[list(reversed(grid_vals[0])),
+                           list(reversed(grid_vals[1])),
+                           list(reversed(grid_vals[2]))],
+                spc_info=spc_info,
+                thy_level=thy_level,
+                overwrite=overwrite,
+                update_guess=update_guess,
+                saddle=saddle,
+                alt_constraints=alt_constraints,
+                **kwargs
+            )
+
+    elif len(grid_vals) == 4:
+        run_prefixes = []
+        for grid_val_i in grid_vals[0]:
+            for grid_val_j in grid_vals[1]:
+                for grid_val_k in grid_vals[2]:
+                    for grid_val_l in grid_vals[3]:
+                        scn_run_fs.leaf.create(
+                            [coo_names,
+                             [grid_val_i, grid_val_j,
+                              grid_val_k, grid_val_l]])
+                        run_prefixes.append(scn_run_fs.leaf.path(
+                            [coo_names,
+                             [grid_val_i, grid_val_j,
+                              grid_val_k, grid_val_l]]))
+        run_prefixes = tuple(run_prefixes)
+
+        _run_4d_scan(
+            script_str=script_str,
+            run_prefixes=run_prefixes,
+            scn_save_fs=scn_save_fs,
+            guess_zma=zma,
+            coo_names=coo_names,
+            grid_idxs=grid_idxs,
+            grid_vals=grid_vals,
+            spc_info=spc_info,
+            thy_level=thy_level,
+            overwrite=overwrite,
+            update_guess=update_guess,
+            saddle=saddle,
+            retry_failed=fix_failures,
+            alt_constraints=alt_constraints,
+            **kwargs
+        )
+
+        if reverse_sweep:
+            run_prefixes = []
+            for grid_val_i in grid_vals[0][::-1]:
+                for grid_val_j in grid_vals[1][::-1]:
+                    for grid_val_k in grid_vals[2][::-1]:
+                        for grid_val_l in grid_vals[3][::-1]:
+                            run_prefixes.append(scn_run_fs.leaf.path(
+                                [coo_names,
+                                 [grid_val_i, grid_val_j,
+                                  grid_val_k, grid_val_l]]))
+            run_prefixes = tuple(run_prefixes)
+            _run_4d_scan(
+                script_str=script_str,
+                run_prefixes=run_prefixes,
+                scn_save_fs=scn_save_fs,
+                guess_zma=zma,
+                coo_names=coo_names,
+                grid_idxs=list(reversed(grid_idxs)),
+                grid_vals=[list(reversed(grid_vals[0])),
+                           list(reversed(grid_vals[1])),
+                           list(reversed(grid_vals[2])),
+                           list(reversed(grid_vals[3]))],
+                spc_info=spc_info,
+                thy_level=thy_level,
+                overwrite=overwrite,
+                update_guess=update_guess,
+                saddle=saddle,
+                alt_constraints=alt_constraints,
                 **kwargs
             )
 
@@ -187,7 +452,8 @@ def run_scan(
 def run_multiref_rscan(
         formula, high_mul, zma, spc_info, multi_level, dist_name, grid1, grid2,
         scn_run_fs, scn_save_fs, overwrite, update_guess=True,
-        gradient=False, hessian=False, num_act_elc=None, num_act_orb=None):
+        gradient=False, hessian=False, num_act_elc=None, num_act_orb=None,
+        alt_constraints=()):
     """ run constrained optimization scan
     """
 
@@ -217,24 +483,32 @@ def run_multiref_rscan(
 
     _, opt_script_str, _, opt_kwargs = runpar.run_qchem_par(prog, method)
 
-    if num_act_elc is None and num_act_orb is None:
-        num_act_elc = high_mul - 1
-        num_act_orb = num_act_elc
-
     ref_zma = automol.zmatrix.set_values(zma, {coo_names[0]: grid_vals[0][0]})
-    cas_opt = ['', '']
-    cas_opt[0], _ = ts.cas_options_1(
-        spc_info, formula, num_act_elc, num_act_orb, high_mul)
-    cas_opt[1], _ = ts.cas_options_2(
-        spc_info, formula, num_act_elc, num_act_orb, high_mul)
-    guess_str = ts.multiref_wavefunction_guess(
+
+    # Build the elstruct CASSCF options list for multiref calcs
+    cas_opt = []
+    cas_opt.append(
+        variational.wfn.cas_options(
+            spc_info, formula, num_act_elc, num_act_orb,
+            high_mul, add_two_closed=False))
+    cas_opt.append(
+        variational.wfn.cas_options(
+            spc_info, formula, num_act_elc, num_act_orb,
+            high_mul, add_two_closed=True))
+
+    # Write the lines containing all the calcs for a guess wfn
+    guess_str = variational.wfn.multiref_wavefunction_guess(
         high_mul, ref_zma, spc_info, multi_level, cas_opt)
     guess_lines = guess_str.splitlines()
 
+    # Add the above-built objects to the elstruct opt_kwargs dct
     opt_kwargs['casscf_options'] = cas_opt[1]
-    opt_kwargs['mol_options'] = ['nosym']
     opt_kwargs['gen_lines'] = {1: guess_lines}
 
+    # Add option to opt_kwargs dct to turn off symmetry
+    opt_kwargs['mol_options'] = ['nosym']
+
+    # Setup and run the first part of the scan to shorter distances
     coo_names = []
     grid1_vals = []
     grid1_dct = {dist_name: grid1}
@@ -267,9 +541,11 @@ def run_multiref_rscan(
         update_guess=update_guess,
         gradient=gradient,
         hessian=hessian,
+        alt_constraints=alt_constraints,
         **opt_kwargs,
     )
 
+    # Setup and run the second part of the scan to longer distances
     coo_names = []
     grid2_vals = []
     grid2_dct = {dist_name: grid2}
@@ -301,6 +577,7 @@ def run_multiref_rscan(
         update_guess=update_guess,
         gradient=gradient,
         hessian=hessian,
+        alt_constraints=alt_constraints,
         **opt_kwargs,
     )
 
@@ -311,6 +588,7 @@ def _run_1d_scan(
         spc_info, thy_level, overwrite, errors=(), options_mat=(),
         retry_failed=True, update_guess=True, saddle=False,
         gradient=False, hessian=False,
+        alt_constraints=(),
         **kwargs):
     """ run 1 dimensional scan with constrained optimization
     """
@@ -323,6 +601,7 @@ def _run_1d_scan(
         zma = automol.zmatrix.set_values(guess_zma, {coo_name: grid_val})
         run_fs = autofile.fs.run(run_prefix)
 
+        frozen_coordinates = [coo_name] + list(alt_constraints)
         geo_exists = scn_save_fs.leaf.file.geometry.exists(
             [[coo_name], [grid_val]])
         if not geo_exists or overwrite:
@@ -334,7 +613,7 @@ def _run_1d_scan(
                 spc_info=spc_info,
                 thy_level=thy_level,
                 overwrite=overwrite,
-                frozen_coordinates=[coo_name],
+                frozen_coordinates=frozen_coordinates,
                 errors=errors,
                 options_mat=options_mat,
                 retry_failed=retry_failed,
@@ -394,9 +673,10 @@ def _run_2d_scan(
         grid_idxs, grid_vals,
         spc_info, thy_level, overwrite, errors=(),
         options_mat=(), retry_failed=True, update_guess=True, saddle=False,
+        alt_constraints=(),
         **kwargs):
     """ run 2-dimensional scan with constrained optimization
-    """
+     """
 
     npoints = len(grid_idxs)
     assert len(grid_vals[0])*len(grid_vals[1]) == len(run_prefixes) == npoints
@@ -413,6 +693,7 @@ def _run_2d_scan(
             run_fs = autofile.fs.run(run_prefix)
             idx += 1
 
+            frozen_coordinates = coo_names + list(alt_constraints)
             if not scn_save_fs.leaf.file.geometry.exists(
                     [coo_names, [grid_val_i, grid_val_j]]) or overwrite:
                 driver.run_job(
@@ -423,7 +704,7 @@ def _run_2d_scan(
                     spc_info=spc_info,
                     thy_level=thy_level,
                     overwrite=overwrite,
-                    frozen_coordinates=coo_names,
+                    frozen_coordinates=frozen_coordinates,
                     errors=errors,
                     options_mat=options_mat,
                     retry_failed=retry_failed,
@@ -437,6 +718,122 @@ def _run_2d_scan(
                     inf_obj, _, out_str = ret
                     prog = inf_obj.prog
                     guess_zma = elstruct.reader.opt_zmatrix(prog, out_str)
+
+
+def _run_3d_scan(
+        script_str, run_prefixes, scn_save_fs, guess_zma, coo_names,
+        grid_idxs, grid_vals,
+        spc_info, thy_level, overwrite, errors=(),
+        options_mat=(), retry_failed=True, update_guess=True, saddle=False,
+        alt_constraints=(),
+        **kwargs):
+    """ run 2-dimensional scan with constrained optimization
+    """
+
+    npoints = len(grid_idxs)
+    assert len(grid_vals[0])*len(grid_vals[1])*len(grid_vals[2]) == len(run_prefixes)
+    assert len(run_prefixes)== npoints
+
+    idx = 0
+    for grid_val_i in grid_vals[0]:
+        for grid_val_j in grid_vals[1]:
+            for grid_val_k in grid_vals[2]:
+                grid_idx = grid_idxs[idx]
+                run_prefix = run_prefixes[idx]
+                print("Point {}/{}".format(grid_idx+1, npoints))
+                zma = automol.zmatrix.set_values(
+                    guess_zma, {coo_names[0]: grid_val_i,
+                                coo_names[1]: grid_val_j,
+                                coo_names[2]: grid_val_k})
+                run_fs = autofile.fs.run(run_prefix)
+                idx += 1
+
+                frozen_coordinates = coo_names + list(alt_constraints)
+                print('3d freeze test', coo_names, list(alt_constraints))
+                exists = scn_save_fs.leaf.file.geometry.exists(
+                    [coo_names, [grid_val_i, grid_val_j, grid_val_k]])
+                if not exists or overwrite:
+                    driver.run_job(
+                        job=elstruct.Job.OPTIMIZATION,
+                        script_str=script_str,
+                        run_fs=run_fs,
+                        geom=zma,
+                        spc_info=spc_info,
+                        thy_level=thy_level,
+                        overwrite=overwrite,
+                        frozen_coordinates=frozen_coordinates,
+                        errors=errors,
+                        options_mat=options_mat,
+                        retry_failed=retry_failed,
+                        saddle=saddle,
+                        **kwargs
+                    )
+
+                    ret = driver.read_job(
+                        job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+                    if update_guess and ret is not None:
+                        inf_obj, _, out_str = ret
+                        prog = inf_obj.prog
+                        guess_zma = elstruct.reader.opt_zmatrix(prog, out_str)
+
+
+def _run_4d_scan(
+        script_str, run_prefixes, scn_save_fs, guess_zma, coo_names,
+        grid_idxs, grid_vals,
+        spc_info, thy_level, overwrite, errors=(),
+        options_mat=(), retry_failed=True, update_guess=True, saddle=False,
+        alt_constraints=(),
+        **kwargs):
+    """ run 2-dimensional scan with constrained optimization
+    """
+
+    npoints = len(grid_idxs)
+    gmult = len(grid_vals[0])*len(grid_vals[1])*len(grid_vals[2])*len(grid_vals[3])
+    assert gmult == len(run_prefixes) == npoints
+
+    idx = 0
+    for grid_val_i in grid_vals[0]:
+        for grid_val_j in grid_vals[1]:
+            for grid_val_k in grid_vals[2]:
+                for grid_val_l in grid_vals[3]:
+                    grid_idx = grid_idxs[idx]
+                    run_prefix = run_prefixes[idx]
+                    print("Point {}/{}".format(grid_idx+1, npoints))
+                    zma = automol.zmatrix.set_values(
+                        guess_zma, {coo_names[0]: grid_val_i,
+                                    coo_names[1]: grid_val_j,
+                                    coo_names[2]: grid_val_k,
+                                    coo_names[3]: grid_val_l})
+                    run_fs = autofile.fs.run(run_prefix)
+                    idx += 1
+
+                    frozen_coordinates = coo_names + list(alt_constraints)
+                    print('4d freeze test', coo_names, list(alt_constraints))
+                    exists = scn_save_fs.leaf.file.geometry.exists(
+                        [coo_names, [grid_val_i, grid_val_j, grid_val_k, grid_val_l]])
+                    if not exists or overwrite:
+                        driver.run_job(
+                            job=elstruct.Job.OPTIMIZATION,
+                            script_str=script_str,
+                            run_fs=run_fs,
+                            geom=zma,
+                            spc_info=spc_info,
+                            thy_level=thy_level,
+                            overwrite=overwrite,
+                            frozen_coordinates=frozen_coordinates,
+                            errors=errors,
+                            options_mat=options_mat,
+                            retry_failed=retry_failed,
+                            saddle=saddle,
+                            **kwargs
+                        )
+
+                        ret = driver.read_job(
+                            job=elstruct.Job.OPTIMIZATION, run_fs=run_fs)
+                        if update_guess and ret is not None:
+                            inf_obj, _, out_str = ret
+                            prog = inf_obj.prog
+                            guess_zma = elstruct.reader.opt_zmatrix(prog, out_str)
 
 
 def save_scan(scn_run_fs, scn_save_fs, coo_names,
@@ -569,8 +966,6 @@ def infinite_separation_energy(
     if num_act_elc is None and num_act_orb is None:
         num_act_elc = high_mul
         num_act_orb = num_act_elc
-    # num_act_elc = high_mul
-    # num_act_orb = num_act_elc
     ts_formula = automol.geom.formula(automol.zmatrix.geometry(ref_zma))
 
     cas_opt, _ = ts.cas_options_2(

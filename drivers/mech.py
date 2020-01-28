@@ -61,18 +61,18 @@ def run_driver(pes_dct, conn_chnls_dct,
                 print(spc_tsk_lst)
 
                 # Add the stationary points to the spc dcts
-                print('\nBegin transition state prep')
-                ts_dct = loadspc.build_spc_dct_for_sadpts(
-                    spc_dct, rxn_lst, rxn_name_lst,
-                    rct_names_lst, prd_names_lst, cla_dct)
-                for sadpt in ts_dct:
-                    ts_dct[sadpt] = set_sadpt_info(
-                        ts_tsk_lst, ts_dct, spc_dct, sadpt,
-                        run_inp_dct['run_prefix'],
-                        run_inp_dct['save_prefix'],
-                        run_options_dct['kickoff'])
-                    print('loop dct\n', ts_dct[sadpt]['dist_info'])
-                spc_dct.update(ts_dct)
+                # print('\nBegin transition state prep')
+                # ts_dct = loadspc.build_spc_dct_for_sadpts(
+                #     spc_dct, rxn_lst, rxn_name_lst,
+                #     rct_names_lst, prd_names_lst, cla_dct)
+                # for sadpt in ts_dct:
+                #     ts_dct[sadpt] = set_sadpt_info(
+                #         ts_tsk_lst, ts_dct, spc_dct, sadpt,
+                #         run_inp_dct['run_prefix'],
+                #         run_inp_dct['save_prefix'],
+                #         run_options_dct['kickoff'])
+                #     print('loop dct\n', ts_dct[sadpt]['dist_info'])
+                # spc_dct.update(ts_dct)
 
                 # Run the appropriate driver
                 if driver == 'es':

@@ -177,6 +177,8 @@ def get_zero_point_energy(
             print('HARM and MDHR combination is not yet implemented')
         elif vib_model == 'harm' and tors_model == 'tau':
             print('HARM and TAU combination is not yet implemented')
+        elif vib_model == 'tau' and tors_model == 'tau':
+            zpe = 0.0
         elif vib_model == 'vpt2' and tors_model == 'rigid':
             print('VPT2 and RIGID combination is not yet implemented')
         elif vib_model == 'vpt2' and tors_model == '1dhr':

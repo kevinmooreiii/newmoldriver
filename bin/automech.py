@@ -116,4 +116,4 @@ if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:
     )
 
 # Print the program exit message
-print('AutoMech has completed. Exiting program')
+print('\n\nAutoMech has completed. Exiting program.')

@@ -64,6 +64,8 @@ def run(spc_dct, model_dct, thy_dct,
             spc_save_fs = autofile.fs.species(save_prefix)
             spc_save_fs.leaf.create(spc_info)
             spc_save_path = spc_save_fs.leaf.path(spc_info)
+            print('TEST: spc_save_path')
+            print(spc_save_path)
 
             # Read the ZPVE from the filesystem
             _, zpe_str = routines.pf.get_zpe(

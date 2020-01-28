@@ -5,7 +5,6 @@ import numpy
 import automol
 import elstruct
 import autofile
-import scripts
 import projrot_io
 
 # New Libs
@@ -15,6 +14,7 @@ from lib.phydat import phycon
 from lib.runner import driver
 from lib.runner import par as runpar
 from lib.runner import script
+from lib.filesystem import inf as finf
 
 
 def reference_geometry(
@@ -27,7 +27,7 @@ def reference_geometry(
     From the hierarchy an optimization is performed followed by a check for
     an imaginary frequency and then a conformer file system is set up.
     """
-    projrot_script_str = script.PROJROT
+    # projrot_script_str = script.PROJROT
     ret = None
 
     thy_run_fs = filesys[2]
@@ -106,7 +106,7 @@ def reference_geometry(
                 'script_str': opt_script_str,
                 'overwrite': overwrite,
                 'thy_level': thy_level,
-                'geo_init': geo_init}
+                'ini_geo': geo_init}
             geo, inf = run_initial_geometry_opt(**params, **opt_kwargs)
             thy_save_fs.leaf.create(thy_level[1:4])
             thy_save_path = thy_save_fs.leaf.path(thy_level[1:4])
@@ -118,7 +118,6 @@ def reference_geometry(
                     spc_dct_i, geo, thy_level, thy_run_fs,
                     run_fs, kickoff_size,
                     kickoff_backward,
-                    projrot_script_str,
                     overwrite=overwrite)
 
                 tors_names = automol.geom.zmatrix_torsion_coordinate_names(geo)
@@ -218,16 +217,15 @@ def remove_imag(
     mode and then reoptimize
     """
 
-    projrot_script_str = script.PROJROT
+    # projrot_script_str = script.PROJROT
 
     print('the initial geometries will be checked for imaginary frequencies')
-    spc_info = scripts.es.get_spc_info(spc_dct_i)
+    spc_info = finf.get_spc_info(spc_dct_i)
     script_str, opt_script_str, kwargs, opt_kwargs = runpar.run_qchem_par(
         *thy_level[0:2])
 
     imag, geo, disp_xyzs, hess = run_check_imaginary(
         spc_info, geo, thy_level, thy_run_fs, script_str,
-        projrot_script_str,
         overwrite, **kwargs)
     chk_idx = 0
     while imag and chk_idx < 5:
@@ -245,7 +243,6 @@ def remove_imag(
         run_fs.leaf.remove([elstruct.Job.HESSIAN])
         imag, geo, disp_xyzs, hess = run_check_imaginary(
             spc_info, geo, thy_level, thy_run_fs, script_str,
-            projrot_script_str,
             overwrite, **kwargs)
     return geo, hess
 
@@ -255,7 +252,7 @@ def run_check_imaginary(
         overwrite=False, **kwargs):
     """ check if species has an imaginary frequency
     """
-    projrot_script_str = script.PROJROT
+    # projrot_script_str = script.PROJROT
 
     thy_run_fs.leaf.create(thy_level[1:4])
     thy_run_path = thy_run_fs.leaf.path(thy_level[1:4])
@@ -286,7 +283,7 @@ def run_check_imaginary(
             if hess:
                 imag = False
                 _, imag_freq = projrot_frequencies(
-                    geo, hess, thy_level, thy_run_fs, projrot_script_str)
+                    geo, hess, thy_level, thy_run_fs)
                 if imag_freq:
                     imag = True
 

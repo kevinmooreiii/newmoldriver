@@ -61,80 +61,110 @@ def write_1dhr_tors_mess_strings(harm_geo, spc_info, spc_dct_i, ts_bnd, zma,
     return hind_rot_str, proj_rotors_str
 
 
-# def write_mdhr_tors_mess_strings(harm_geo, spc_info, sym_num, spc_dct_i,
-#                                  tors_names, tors_grids, ts_bnd, zma,
-#                                  tors_cnf_save_path, min_ene,
-#                                  saddle=False, hind_rot_geo=None):
-#     """ Gather the MDHR torsional data and gather them into a MESS file
-#     """
-#
-#     hind_rot_str = ""
-#     proj_rotors_str = ""
-#     hr_pots = []
-#     for tors_name, tors_grid in tors_names, tors_grids:
-#
-#         # Read the hindered rotor potential (NEED NEW VERSION)
-#         pot = read_hr_pot(
-#             spc_info, tors_name, tors_grid,
-#             tors_cnf_save_path, min_ene)
-#
-#         # Build potential lst from only successful calculations
-#         pot = hrpot_spline_fitter(pot)
-#
-#         # Get the HR groups and axis for the rotor
-#         group, axis, atm_key = set_groups_ini(
-#             zma, tors_name, ts_bnd, saddle)
-#         if saddle:
-#             group, axis, pot = check_saddle_groups(
-#                 zma, spc_dct_i, group, axis,
-#                 pot, ts_bnd, sym_num)
-#         group = list(numpy.add(group, 1))
-#         axis = list(numpy.add(axis, 1))
-#         if (atm_key+1) != axis[1]:
-#             axis.reverse()
-#
-#         # Add potential to master list
-#         hr_pots.append(pot)
-#
-#         # Check for dummy transformations
-#         remdummy = check_dummy_trans(zma)
-#
-#         # Write the MESS and ProjRot strings for the rotor
-#         rotor_int_str += mess_io.writer.mol_data.rotor_internal(
-#             group, axis, symmetry,
-#             rotor_id='',
-#             mass_exp_size=5, pot_exp_size=5,
-#             hmin=13, hmax=101,
-#             grid_size=100)
-#
-#     # Write the MDHR potential file
-#     mdhr_str = write_mdhr_dat_file(hr_pot, mess_path)
-#
-#     # Write the overall core section for the multirotor
-#     core_multirotor_str = mess_io.writer.mol_data.core_multirotor(
-#         geom, sym_factor, pot_surf, rotor_int_str,
-#         interp_emax=100, quant_lvl_emax=9, forceq=False)
-#
-#     return core_multirotor_str, mdhr_str
+def write_mdhr_tors_mess_strings(geom, spc_info, sym_num, spc_dct_i,
+                                 ts_bnd, zma,
+                                 tors_names, tors_grids, tors_sym_nums,
+                                 tors_cnf_save_path, min_ene,
+                                 saddle=False, hind_rot_geo=None):
+    """ Gather the MDHR torsional data and gather them into a MESS file
+    """
+    # Loop over the torsions and get the int rot strings and potentials
+    rotor_internal_str = ''
+    hind_rot_potentials = []
+    tors_info = zip(tors_names, tors_grids, tors_sym_nums)
+    for tors_name, tors_grid, tors_sym in tors_info:
+
+        # Read the hindered rotor potential (NEED NEW VERSION)
+        pot = read_hr_pot(
+            spc_info, tors_name, tors_grid,
+            tors_cnf_save_path, min_ene)
+
+        # Build potential lst from only successful calculations
+        pot = hrpot_spline_fitter(pot)
+
+        # Get the HR groups and axis for the rotor
+        group, axis, atm_key = set_groups_ini(
+            zma, tors_name, ts_bnd, saddle)
+        if saddle:
+            group, axis, pot = check_saddle_groups(
+                zma, spc_dct_i, group, axis,
+                pot, ts_bnd, sym_num)
+        group = list(numpy.add(group, 1))
+        axis = list(numpy.add(axis, 1))
+        if (atm_key+1) != axis[1]:
+            axis.reverse()
+
+        # Add potential to master list
+        hind_rot_potentials.append(pot)
+
+        # Check for dummy transformations
+        remdummy = check_dummy_trans(zma)
+
+        # Write the MESS and ProjRot strings for the rotor
+        rotor_internal_str += mess_io.writer.mol_data.rotor_internal(
+            group, axis, tors_sym,
+            rotor_id='', remdummy=remdummy,
+            mass_exp_size=5, pot_exp_size=5,
+            hmin=13, hmax=101,
+            grid_size=100)
+
+    # Write the MDHR potential file
+    mdhr_str = write_mdhr_dat_file(hind_rot_potentials)
+
+    return rotor_internal_str, mdhr_str
 
 
 def write_mdhr_dat_file(potentials):
-    """ Write a file containing the hindered rotor potentisl
+    """ Write a file containing the hindered rotor potentials
+        Only writes the file for up to 4-dimensinal rotor
     """
     npts1 = len(potentials)
     npts2 = len(potentials[0]) if npts1 > 1 else 0
     npts3 = len(potentials[0][0]) if npts2 > 1 else 0
+    npts4 = len(potentials[0][0][0]) if npts3 > 1 else 0
 
-    mdhr_str = '{0:>6d}{1:>6d}{2:>6d}\n'.format(npts1, npts2, npts3)
-    mdhr_str += ' nofreq\n\n'
+    # Write top line string with number of points in potential
+    mdhr_str = '{0:>6d}'.format(npts1)
+    if npts2 > 0:
+        mdhr_str += '{0:>6d}'.format(npts2)
+    if npts3 > 0:
+        mdhr_str += '{0:>6d}'.format(npts3)
+    if npts4 > 0:
+        mdhr_str += '{0:>6d}'.format(npts4)
 
-    for i in npts1:
-        for j in npts2:
-            for k in npts3:
+    # Add the nofreq line (need to know when to put the freqs)
+    mdhr_str += '\n nofreq\n\n'
+
+    # Write the strings with the potential values
+    if npts2 == npts3 == npts4 == 0:
+        for i in npts1:
+            mdhr_str += (
+                '{0:>6d}{1:>12.f}\n'.format(
+                    i+1, potentials[i]))
+    elif npts2 > 0 and npts3 == npts4 == 0:
+        for i in npts1:
+            for j in npts2:
                 mdhr_str += (
-                    '{0:>6d}{1:>6d}{2:>6d}{3:>12.f}\n'.format(
-                        i+1, j+1, k+1, potentials[i][j][k])
+                    '{0:>6d}{1:>6d}{2:>12.f}\n'.format(
+                        i+1, j+1, potentials[i][j])
                 )
+    elif npts2 > 0 and npts3 > 0 and npts4 == 0:
+        for i in npts1:
+            for j in npts2:
+                for k in npts3:
+                    mdhr_str += (
+                        '{0:>6d}{1:>6d}{2:>6d}{3:>12.f}\n'.format(
+                            i+1, j+1, k+1, potentials[i][j][k])
+                    )
+    else:
+        for i in npts1:
+            for j in npts2:
+                for k in npts3:
+                    for m in npts4:
+                        mdhr_str += (
+                            '{0:>6d}{1:>6d}{2:>6d}{3:>6d}{4:>12.f}\n'.format(
+                                i+1, j+1, k+1, m+1, potentials[i][j][k][m])
+                        )
 
     return mdhr_str
 

@@ -4,26 +4,29 @@
 import os
 import chemkin_io
 import automol
+import autoparse.find as apf
 import autofile
 from lib.load import ptt
 from lib.phydat import symm, eleclvl
 from lib.reaction import rxnid
 
 
-SPC_INP = 'inp/species.dat'
+CSV_INP = 'inp/species.csv'
+DAT_INP = 'inp/species.dat'
+CLA_INP = 'inp/class.csv'
 
 
 def build_spc_dct(job_path, spc_type):
     """ Get a dictionary of all the input species
         indexed by InChi string
     """
-    spc_str = ptt.read_inp_str(job_path, SPC_INP)
+    spc_csv_str = ptt.read_inp_str(job_path, CSV_INP)
     if spc_type == 'csv':
-        spc_dct = csv_dct(spc_str, check_stereo=False)
+        spc_dct = csv_dct(spc_csv_str, check_stereo=False)
     else:
         raise NotImplementedError
 
-    # Add other things to the species dct
+    # Modify spc dct with params from the AMech file
     mod_spc_dct = modify_spc_dct(job_path, spc_dct)
 
     return mod_spc_dct
@@ -80,16 +83,33 @@ def csv_dct(spc_str, check_stereo):
     return spc_dct
 
 
-def read_spc_amech():
+def read_spc_amech(job_path):
     """ Read an amech style input file for the species
     """
-    return None
+
+    spc_amech_str = ptt.read_inp_str(job_path, DAT_INP)
+
+    spc_dct = {}
+    if spc_amech_str:
+        spc_sections = apf.all_captures(
+            ptt.end_section_wname2('spc'), spc_amech_str)
+        if spc_sections:
+            for section in spc_sections:
+                name = section[0]
+                keyword_dct = ptt.build_keyword_dct(section[1])
+                spc_dct[name] = keyword_dct
+
+    return spc_dct
 
 
 def modify_spc_dct(job_path, spc_dct):
-    """ Modify the species dct
+    """ Modify the species dct using input from the additional AMech file
     """
+
+    # Read in other dcts
+    amech_dct = read_spc_amech(job_path)
     geom_dct = geometry_dictionary(job_path)
+
     mod_spc_dct = {}
     for spc in spc_dct:
         # Set the ich and mult
@@ -101,19 +121,44 @@ def modify_spc_dct(job_path, spc_dct):
         mod_spc_dct[spc]['mul'] = mul
         mod_spc_dct[spc]['chg'] = chg
 
-        # Add the optional things
-        if (ich, mul) in eleclvl.DCT:
-            mod_spc_dct[spc]['elec_levs'] = eleclvl.DCT[(ich, mul)]
-        if (ich, mul) in symm.DCT:
-            mod_spc_dct[spc]['sym'] = symm.DCT[(ich, mul)]
+        # Add the parameters from amech file
+        if spc in amech_dct:
+            if 'hind_inc' in amech_dct[spc]:
+                mod_spc_dct[spc]['hind_inc'] = amech_dct[spc]['hind_inc']
+            if 'hind_def' in amech_dct[spc]:
+                mod_spc_dct[spc]['hind_def'] = amech_dct[spc]['hind_def']
+            if 'elec_levs' in amech_dct[spc]:
+                mod_spc_dct[spc]['elec_levs'] = amech_dct[spc]['elec_levs']
+            if 'sym' in amech_dct[spc]:
+                mod_spc_dct[spc]['sym'] = amech_dct[spc]['sym']
+            if 'mc_nsamp' in amech_dct[spc]:
+                mod_spc_dct[spc]['mc_nsamp'] = amech_dct[spc]['mc_nsamp']
+
+        # Add the parameters from std lib if needed
+        if 'elec_levs' not in mod_spc_dct[spc]:
+            if (ich, mul) in eleclvl.DCT:
+                mod_spc_dct[spc]['elec_levs'] = eleclvl.DCT[(ich, mul)]
+            else:
+                mod_spc_dct[spc]['elec_levs'] = [[0.0, mul]]
+        if 'sym' not in mod_spc_dct[spc]:
+            if (ich, mul) in symm.DCT:
+                mod_spc_dct[spc]['sym'] = symm.DCT[(ich, mul)]
+
+        # Add geoms from geo dct (prob switch to amech file)
         if ich in geom_dct:
             mod_spc_dct[spc]['geo_obj'] = geom_dct[ich]
-        # if 'hind_inc' not in spc_dct:
-        #     mod_spc_dct[spc]['hind_inc'] = 30.0 * phycon.DEG2RAD
-        # else:
-        #     mod_spc_dct[spc]['hind_inc'] = spc_dct[spc]['hind_inc']
 
     return mod_spc_dct
+
+
+def read_class_dct(job_path):
+    """ Read the class dictionary
+    """
+    cla_str = ptt.read_inp_str(job_path, CLA_INP)
+    cla_str = cla_str if cla_str else 'REACTION,RCLASS\nEND'
+    cla_dct = chemkin_io.parser.mechanism.reac_class_dct(cla_str, 'class')
+
+    return cla_dct
 
 
 def build_spc_dct_for_sadpts(spc_dct, rxn_lst, rxn_name_lst,

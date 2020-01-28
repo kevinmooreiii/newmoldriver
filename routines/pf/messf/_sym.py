@@ -1,6 +1,10 @@
 """ Handle symmetry factor stuff
 """
 
+import automol
+from routines.es import conformer
+
+
 def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
                     saddle, frm_bnd_key, brk_bnd_key, tors_names,
                     tors_cnf_save_fs, tors_min_cnf_locs,
@@ -33,12 +37,12 @@ def symmetry_factor(sym_model, spc_dct_i, spc_info, dist_names,
             print('sym_factor from conformer sampling:', sym_factor)
         elif sym_model == '1DHR':
             print('Warning: the 1DHR based symmetry number',
-                  'has not yet been set up')
-            sym_factor = 1
+                  'has not yet been implemented, setting symf to 1.0')
+            sym_factor = 1.0
         else:
             print('Warning: no symmetry model requested,',
                   'setting symmetry factor to 1.0')
-            sym_factor = 1
+            sym_factor = 1.0
 
     return sym_factor
 

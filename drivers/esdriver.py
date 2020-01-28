@@ -13,10 +13,13 @@ def run(rxn_lst, spc_dct,
         run_options_dct, run_inp_dct):
     """ driver for all electronic structure tasks
     """
+
     # Pull stuff from dcts for now
     run_prefix = run_inp_dct['run_prefix']
     save_prefix = run_inp_dct['save_prefix']
     # vdw_params = model_dct['options']['vdw_params']
+    freeze_all_tors = model_dct['options']['freeze_all_tors']
+    ndim_tors = model_dct['pf']['tors']
     rad_rad_ts = model_dct['pf']['ts_barrierless']
     mc_nsamp = run_options_dct['mc_nsamp']
     kickoff = run_options_dct['kickoff']
@@ -104,21 +107,27 @@ def run(rxn_lst, spc_dct,
                     routines.es.geometry_generation(
                         tsk, spc_dct[spc], mc_nsamp,
                         ini_thy_level, thy_level, ini_filesys, filesys,
-                        overwrite, saddle=False, kickoff=kickoff)
+                        overwrite, saddle=saddle, kickoff=kickoff,
+                        tors_model=(ndim_tors, freeze_all_tors))
                 else:
                     routines.es.wells.fake_geo_gen(tsk, thy_level, filesys)
             else:
+                print('ini_filesys\n')
+                print(len(ini_filesys))
                 if 'conf' in tsk and not saddle:
-                    ini_cnf_save_fs = ini_filesys[5]
+                    ini_cnf_save_fs = ini_filesys[3]
                     avail = fcheck.check_save(ini_cnf_save_fs, tsk, 'conf')
+                    selection = 'min'
                 elif 'tau' in tsk and not saddle:
-                    ini_tau_save_fs = ini_filesys[7]
+                    ini_tau_save_fs = ini_filesys[5]
                     avail = fcheck.check_save(ini_tau_save_fs, tsk, 'tau')
+                    selection = 'all'
                 elif 'scan' in tsk and not saddle:
-                    ini_scn_save_fs = ini_filesys[9]
-                    avail = fcheck.check_save(ini_scn_save_fs, tsk, 'tau')
+                    ini_scn_save_fs = ini_filesys[7]
+                    avail = fcheck.check_save(ini_scn_save_fs, tsk, 'scan')
+                    selection = 'all'
                 if avail:
                     routines.es.geometry_analysis(
                         tsk, thy_level, ini_filesys,
                         spc_dct[spc], overwrite,
-                        saddle=saddle, selection='min')
+                        saddle=saddle, selection=selection)

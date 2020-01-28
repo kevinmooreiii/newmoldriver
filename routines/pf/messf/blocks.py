@@ -13,11 +13,11 @@ from lib.filesystem import minc as fsmin
 from routines.pf.messf import models as pfmodels
 from routines.pf.messf import _tors as tors
 from routines.pf.messf import _sym as sym
+from routines.pf.messf import _util as messfutil
 
 
-def species_block(
-        spc, spc_dct_i, spc_info, spc_model, pf_levels,
-        elec_levels=((0., 1)), sym_factor=1., save_prefix='spc_save_path'):
+def species_block(spc, spc_dct_i, spc_info, spc_model,
+                  pf_levels, save_prefix):
     """ prepare the species input for messpf
     """
 
@@ -38,7 +38,7 @@ def species_block(
     harmfs = set_model_filesys(
         thy_save_fs, spc_info, harm_level, saddle=('ts_' in spc))
     [harm_cnf_save_fs, _,
-     harm_min_cnf_locs, _] = harmfs
+     harm_min_cnf_locs, harm_save_path] = harmfs
     if sym_level:
         symfs = set_model_filesys(
             thy_save_fs, spc_info, sym_level, saddle=('ts_' in spc))
@@ -112,8 +112,31 @@ def species_block(
                 symf /= num
         elif vib_model == 'harm' and tors_model == 'mdhr':
             print('HARM and MDHR combination is not yet implemented')
+            geo, freqs, imag, hr_str, _ = pfmodels.vib_harm_tors_mdhr(
+                harm_min_cnf_locs, harm_cnf_save_fs,
+                tors_min_cnf_locs, tors_cnf_save_fs,
+                tors_save_path, tors_cnf_save_path,
+                spc_dct_i, spc_info,
+                frm_bnd_key, brk_bnd_key,
+                sym_factor, elec_levels,
+                saddle=False)
+            sym_nums = tors.get_tors_sym_nums(
+                spc_dct_i, tors_min_cnf_locs, tors_cnf_save_fs,
+                frm_bnd_key, brk_bnd_key, saddle=False)
+            symf = sym_factor
+            for num in sym_nums:
+                symf /= num
+            pot_file_name = 'mdhr.dat'
+            multi_rot_str = mess_io.writer.mol_data.core_multirotor(
+                geo, sym_factor, pot_file_name, hr_str,
+                interp_emax=100, quant_lvl_emax=9)  # , forceq=False)
         elif vib_model == 'harm' and tors_model == 'tau':
             print('HARM and TAU combination is not yet implemented')
+        elif vib_model == 'tau' and tors_model == 'tau':
+            mc_str = pfmodels.vib_tau_tors_tau(harm_save_path)
+            freqs = [1.0]
+            hr_str = ''
+            imag = 10.0
         elif vib_model == 'vpt2' and tors_model == 'rigid':
             print('VPT2 and RIGID combination is not yet implemented')
         elif vib_model == 'vpt2' and tors_model == '1dhr':
@@ -122,10 +145,26 @@ def species_block(
             print('VPT2 and TAU combination is not yet implemented')
 
         # Write the species string for the molecule
-        core = mess_io.writer.core_rigidrotor(geo, symf)
+        if vib_model == 'tau' and tors_model == 'tau':
+            core = mc_str
+        elif tors_model == 'mdhr':
+            core = multi_rot_str
+        else:
+            core = mess_io.writer.core_rigidrotor(geo, symf)
         spc_str = mess_io.writer.molecule(
             core, freqs, elec_levels,
             hind_rot=hr_str)
+
+        # Write some dat strings
+        # if tau_dat_str:
+        #     pass
+        # tau_file_name = os.path.join(save_prefix, 'TAU', 'tau.out')
+        # with open(tau_file_name, 'w') as tau_file:
+        #     tau_file.write(tau_dat_str)
+        # print('tau file name')
+        # print(tau_file_name)
+        # if mdhr_dat_str:
+        #     pass
 
     return spc_str, imag
 
@@ -133,7 +172,7 @@ def species_block(
 def vtst_with_no_saddle_block(
         ts_dct, ts_label, reac_label, prod_label,
         spc_ene, rct_zpe, projrot_script_str,
-        multi_info, elec_levels=((0., 1)), sym_factor=1.0):
+        multi_info):
     """ prepare the mess input string for a variational TS that does not have
     a saddle point. Do it by calling the species block for each grid point
     in the scan file system
@@ -270,10 +309,8 @@ def vtst_with_no_saddle_block(
 #     return variational_str
 
 
-def pst_block(
-        spc_dct_i, spc_dct_j, spc_model, pf_levels,
-        spc_save_fs, elec_levels=((0., 1)), sym_factor=1.,
-        pst_params=(1.0, 6)):
+def pst_block(spc_dct_i, spc_dct_j, spc_model, pf_levels,
+              spc_save_fs, pst_params=(1.0, 6)):
     """ prepare a Phase Space Theory species block
     """
 
@@ -354,7 +391,7 @@ def pst_block(
         sym_cnf_save_fs_j, sym_min_cnf_locs_j)
 
     # Get the stoichiometry
-    stoich = pfmodels.get_stoich(
+    stoich = messfutil.get_stoich(
         harm_min_cnf_locs_i, harm_min_cnf_locs_j,
         harm_cnf_save_fs_i, harm_cnf_save_fs_j)
 
@@ -416,8 +453,7 @@ def pst_block(
 def fake_species_block(
         spc_dct_i, spc_dct_j, spc_info_i, spc_info_j,
         spc_model, pf_levels,
-        elec_levels=((0., 1)), sym_factor=1.,
-        save_prefix_i='spc_save_path', save_prefix_j='spc_save_path'):
+        save_prefix_i, save_prefix_j):
     """ prepare a fake species block corresponding to the
         van der Waals well between two fragments
     """
@@ -580,9 +616,10 @@ def set_model_filesys(thy_save_fs, spc_info, level, saddle=False):
 def ini_elec_levels(spc_dct, spc_info):
     """ get initial elec levels
     """
-    elec_levels = [[0., spc_info[2]]]
     if 'elec_levs' in spc_dct:
         elec_levels = spc_dct['elec_levs']
+    else:
+        elec_levels = [[0., spc_info[2]]]
 
     return elec_levels
 

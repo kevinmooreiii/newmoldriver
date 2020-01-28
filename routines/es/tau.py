@@ -96,14 +96,15 @@ def run_tau(
             locs = [tid]
 
             tau_run_fs.leaf.create(locs)
-            # run_path = tau_run_fs.leaf.path(locs)
+            tau_run_prefix = tau_run_fs.leaf.path(locs)
+            run_fs = autofile.fs.run(tau_run_prefix)
 
             idx += 1
             print("Run {}/{}".format(idx, nsamp0))
             driver.run_job(
                 job=elstruct.Job.OPTIMIZATION,
                 script_str=script_str,
-                run_fs=tau_run_fs,
+                run_fs=run_fs,
                 geom=samp_zma,
                 spc_info=spc_info,
                 thy_level=thy_level,

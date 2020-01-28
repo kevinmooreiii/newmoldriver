@@ -74,21 +74,24 @@ def set_fs(spc_dct, spc, thy_info,
             scn_run_fs = autofile.fs.conformer(min_cnf_run_path)
             scn_save_fs = autofile.fs.conformer(min_cnf_save_path)
 
-    filesys = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
-               cnf_run_fs, cnf_save_fs, tau_run_fs, tau_save_fs,
-               scn_run_fs, scn_save_fs]
+    # filesys = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
+    #            cnf_run_fs, cnf_save_fs, tau_run_fs, tau_save_fs,
+    #            scn_run_fs, scn_save_fs]
 
     # Add run fs if needed
     if not ini_fs:
-        filesys = [spc_run_fs, spc_save_fs, thy_run_fs, thy_save_fs,
-                   cnf_run_fs, cnf_save_fs, tau_run_fs, tau_save_fs,
+        filesys = [spc_run_fs, spc_save_fs, 
+                   thy_run_fs, thy_save_fs,
+                   cnf_run_fs, cnf_save_fs,
+                   tau_run_fs, tau_save_fs,
                    scn_run_fs, scn_save_fs]
         run_fs = autofile.fs.run(thy_run_path)
         run_fs.trunk.create()
         filesys.append(run_fs)
     else:
-        filesys = [thy_run_fs, thy_save_fs, cnf_run_fs,
-                   cnf_save_fs, tau_run_fs, tau_save_fs,
+        filesys = [thy_run_fs, thy_save_fs,
+                   cnf_run_fs, cnf_save_fs,
+                   tau_run_fs, tau_save_fs,
                    scn_run_fs, scn_save_fs]
 
     return filesys, thy_level
