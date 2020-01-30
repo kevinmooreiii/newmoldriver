@@ -5,7 +5,6 @@
 import os
 import automol
 import thermo
-from lib.filesystem import inf as finf
 
 
 def get_ckin_ene_lvl_str(pf_levels, ene_coeff):

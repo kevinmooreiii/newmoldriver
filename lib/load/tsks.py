@@ -34,7 +34,6 @@ def es_tsks_from_lst(es_tsks_str):
     """ Take the es tsk list string from input and set the tasks
         Right now, we presume the tasks given in the file are correct
     """
-    print(es_tsks_str)
     # Split the string into different strings of keywords
     tsk_lst = []
     for line in es_tsks_str.splitlines():

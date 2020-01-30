@@ -3,8 +3,11 @@
    launch the desired drivers
 """
 
+import os
 import sys
-from drivers import mech as lmech
+from drivers import esdriver
+from drivers import thermodriver
+from drivers import ktpdriver
 from lib.load import run as loadrun
 from lib.load import theory as loadthy
 from lib.load import model as loadmodel
@@ -16,104 +19,150 @@ from lib import printmsg
 
 # Print the header message for the driver
 printmsg.program_header('amech')
-# Print random picture from RCDriver
+printmsg.random_cute_animal()
 
 # Set runtime options based on user input
 JOB_PATH = sys.argv[1]
 
 # Parse the run input
+print('Parsing the input files...')
+print('\nReading run.dat...')
 RUN_INP_DCT = loadrun.build_run_inp_dct(JOB_PATH)
-RUN_LST = loadrun.objects_lst(JOB_PATH)
-[PESNUMS, CHANNELS, MODEL] = RUN_LST[0]
-
+RUN_OBJ_DCT = loadrun.objects_dct(JOB_PATH)
 RUN_OPTIONS_DCT = loadrun.build_run_glob_opts_dct(JOB_PATH)
 RUN_JOBS_LST = loadrun.build_run_jobs_lst(JOB_PATH)
-RUN_ES_TSK_STR = loadrun.read_es_tsks(JOB_PATH)
+ES_TSK_STR = loadrun.read_es_tsks(JOB_PATH)
 
 # Parse the theory input
+print('\nReading theory.dat...')
 THY_DCT = loadthy.build_thy_dct(JOB_PATH)
 
 # Parse the model input
-ALL_MODEL_DCT = loadmodel.read_models_sections(JOB_PATH)
-MODEL_DCT = ALL_MODEL_DCT[MODEL]
+print('\nReading model.dat...')
+MODEL_DCT = loadmodel.read_models_sections(JOB_PATH)
 
 # Parse the species input to get a dct with ALL species in mechanism
+print('\nReading species.csv...')
 SPC_DCT = loadspc.build_spc_dct(JOB_PATH, RUN_INP_DCT['spc'])
 
 # Parse the mechanism input and get a dct with info on PESs user request to run
-PES_DCT, CHNLS_DCT = loadmech.parse_mechanism_file(
-    JOB_PATH, RUN_INP_DCT['mech'], SPC_DCT, [PESNUMS],
-    sort_rxns=RUN_INP_DCT['sort_rxns'])
-
-# Do some extra work to prepare the info to pass to the drivers
-RUN_ES_TSK_LST = loadrun.build_run_es_tsks_lst(
-    RUN_ES_TSK_STR, MODEL_DCT, THY_DCT)
+if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
+    print('\nReaction Channels Needed. Reading mechanism.dat...')
+    # Prob move this into the fxn below cuz I need the model
+    RUN_PES_DCT = loadmech.parse_mechanism_file(
+        JOB_PATH,
+        RUN_INP_DCT['mech'],
+        SPC_DCT,
+        RUN_OBJ_DCT,
+        sort_rxns=RUN_INP_DCT['sort_rxns']
+    )
+elif RUN_OBJ_DCT['spc']:
+    RUN_PES_DCT = {}
+    RUN_SPC_LST_DCT = loadspc.make_run_spc_dct(SPC_DCT, RUN_OBJ_DCT)
+else:
+    print('No Proper Run object specified')
+    sys.exit()
 
 # Print stuff for test
-print('Echoing the user input:\n\n')
-print('\nrun inp dct')
-print(RUN_INP_DCT)
-print('\nrun options dct')
-print(RUN_OPTIONS_DCT)
-print('\nrun jobs lst')
-print(RUN_JOBS_LST)
-print('\nrun es tsk lst')
-print(RUN_ES_TSK_LST)
-print('\ntheory dct')
-print(THY_DCT)
-print('\nall model dct')
-print(ALL_MODEL_DCT)
-print('\nspc dct')
-print(SPC_DCT)
-print('\npes dct')
-print(PES_DCT)
-print('\nchnls dct')
-print(CHNLS_DCT)
+# print('\n\nEchoing the user input:\n\n')
+# print('\nrun inp dct')
+# print(RUN_INP_DCT)
+# print('\nrun options dct')
+# print(RUN_OPTIONS_DCT)
+# print('\nrun jobs lst')
+# print(RUN_JOBS_LST)
+# print('\ntheory dct')
+# print(THY_DCT)
+# print('\nmodel dct')
+# print(MODEL_DCT)
+# print('\nspc dct')
+# print(SPC_DCT)
+# print('\npes dct')
+# print(PES_DCT)
 
-# Prepare filesystem
+# Initialize the filesystem
+print('\nBuilding the base Run-Save filesystems at')
 fbuild.prefix_filesystem(
-    RUN_INP_DCT['run_prefix'], RUN_INP_DCT['save_prefix'])
+    RUN_INP_DCT['run_prefix'],
+    RUN_INP_DCT['save_prefix']
+)
+print('{}'.format(RUN_INP_DCT['run_prefix']))
+print('{}'.format(RUN_INP_DCT['save_prefix']))
+
+# Add models to the the pes and spc dct
+# pes
+# [ {'species': [('CH4', '')]}, {'reacs': []}, {'prods': []}, {'model': 'model_str'} ]
+# spc 
+# [ {'species': [('CH4', 'model_str'), ('C2H8', 'model_str)]}, {'reacs': []}, {'prods': []}, {'model': ''} ]
 
 # Run the requested drivers: es, thermo, ktp
-print('\n\n')
+print('\n\nRunning the requested drivers...')
 if 'es' in RUN_JOBS_LST:
-    lmech.run_driver(
-        PES_DCT, CHNLS_DCT,
-        SPC_DCT, {},
-        THY_DCT,
-        MODEL_DCT,
-        RUN_ES_TSK_LST,
-        RUN_JOBS_LST,
-        RUN_INP_DCT,
-        RUN_OPTIONS_DCT,
-        driver='es'
-    )
+    if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
+        # Call ESDriver for spc in each PES
+        for pes, rxn_lst in RUN_PES_DCT.items():
+            esdriver.run(
+                rxn_lst,
+                SPC_DCT,
+                ES_TSK_STR,
+                MODEL_DCT,
+                RUN_OPTIONS_DCT,
+                RUN_INP_DCT
+            )
+    else:
+        # Call ESDriver for all of the species
+        esdriver.run(
+            RUN_SPC_LST_DCT,
+            SPC_DCT,
+            ES_TSK_STR,
+            MODEL_DCT,
+            RUN_OPTIONS_DCT,
+            RUN_INP_DCT
+        )
 
 if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
-    lmech.run_driver(
-        PES_DCT, CHNLS_DCT,
-        SPC_DCT, {},
-        THY_DCT,
-        MODEL_DCT,
-        RUN_ES_TSK_LST,
-        RUN_JOBS_LST,
-        RUN_INP_DCT,
-        RUN_OPTIONS_DCT,
-        driver='thermo'
-    )
+    if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
+        # Call ThermoDriver for spc in each PES
+        for pes, rxn_lst in RUN_PES_DCT.items():
+            thermodriver.run(
+                SPC_DCT,
+                MODEL_DCT,
+                THY_DCT,
+                RUN_LST,
+                RUN_INP_DCT,
+                ref_scheme='basic',
+                run_pf=bool('pf' in RUN_JOBS_LST),
+                run_thermo=bool('thermo' in RUN_JOBS_LST)
+            )
+    else:
+        # Call ThermoDriver for all of the species
+        thermodriver.run(
+            SPC_DCT,
+            MODEL_DCT,
+            THY_DCT,
+            RUN_SPC_LST_DCT,
+            RUN_INP_DCT,
+            ref_scheme='basic',
+            run_pf=bool('pf' in RUN_JOBS_LST),
+            run_thermo=bool('thermo' in RUN_JOBS_LST)
+        )
 
 if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:
-    lmech.run_driver(
-        PES_DCT, CHNLS_DCT,
-        SPC_DCT, {},
-        THY_DCT,
-        MODEL_DCT,
-        RUN_ES_TSK_LST,
-        RUN_JOBS_LST,
-        RUN_INP_DCT,
-        RUN_OPTIONS_DCT,
-        driver='ktp'
-    )
+    if RUN_OBJ_DCT['pes']:
+        # Call kTPDriver for spc in each PES
+        for pes, rxn_lst in RUN_PES_DCT.items():
+            ktpdriver.run(
+                FORMULA,
+                SPC_DCT,
+                THY_DCT,
+                RUN_LST,
+                MODEL_DCT,
+                RUN_INP_DCT,
+                run_rates=bool('rates' in RUN_JOBS_LST),
+                run_fits=bool('params' in RUN_JOBS_LST)
+            )
+    else:
+        print("Can't run kTPDriver without a PES being specified")
 
-# Print the program exit message
-print('\n\nAutoMech has completed. Exiting program.')
+# Print the program exist message
+print('AutoMech has completed. I hope you had fun!')

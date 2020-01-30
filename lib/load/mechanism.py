@@ -10,7 +10,7 @@ from lib.load import ptt
 MECH_INP = 'inp/mechanism.dat'
 
 
-def parse_mechanism_file(job_path, mech_type, spc_dct, pesnums,
+def parse_mechanism_file(job_path, mech_type, spc_dct, run_obj_dct,
                          sort_rxns=False):
     """ Get the reactions and species from the mechanism input
     """
@@ -32,12 +32,20 @@ def parse_mechanism_file(job_path, mech_type, spc_dct, pesnums,
     print_pes_channels(pes_dct)
 
     # Reduce the PES dct to only what the user requests
-    run_pes_dct = reduce_pes_dct_to_run(pes_dct, pesnums)
+    if run_obj_dct['pes']:
+        pesnums = [idx_pair[0] for idx_pair in run_obj_dct['pes']]
+    else:
+        pesnums = [idx_pair[0] for idx_pair in run_obj_dct['pspc']]
+    reduced_pes_dct = reduce_pes_dct_to_user_inp(pes_dct, pesnums)
 
     # Get a dct for all of the connected channels
-    conn_chnls_dct = determine_connected_pes_channels(run_pes_dct)
+    conn_chnls_dct = determine_connected_pes_channels(reduced_pes_dct)
 
-    return run_pes_dct, conn_chnls_dct
+    # Form the pes dct that has info formatted to run
+    # Get the models in here
+    run_pes_dct = pes_dct_w_rxn_lsts(pes_dct, conn_chnls_dct, run_obj_dct)
+
+    return run_pes_dct
 
 
 def _parse_chemkin(mech_str, spc_dct, sort_rxns):
@@ -107,13 +115,12 @@ def build_pes_dct(formula_str_lst, rct_names_lst,
     return pes_dct
 
 
-def reduce_pes_dct_to_run(pes_dct, pesnums):
+def reduce_pes_dct_to_user_inp(pes_dct, pesnums):
     """ get a pes dictionary containing only the PESs the user is running
     """
     run_pes_dct = {}
     for pes_idx, formula in enumerate(pes_dct):
         if pes_idx+1 in pesnums:
-            print('formula', formula)
             run_pes_dct[formula] = pes_dct[formula]
     return run_pes_dct
 
@@ -144,7 +151,7 @@ def determine_connected_pes_channels(pes_dct):
         For efficiency we only determine channels for PESs we wish to run.
     """
     conn_chn_dct = {}
-    for pes_idx, formula in enumerate(pes_dct):
+    for _, formula in enumerate(pes_dct):
         # Set the names lists for the rxns and species needed below
         pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
         pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
@@ -192,6 +199,76 @@ def determine_connected_pes_channels(pes_dct):
         conn_chn_dct[formula] = connchnls
 
     return conn_chn_dct
+
+
+def pes_dct_w_rxn_lsts(pes_dct, conn_chnls_dct, run_obj_dct):
+    """ Form a new PES dictionary with the rxn_lst formatted to work
+        with the drivers currently
+    """
+    run_pes_dct = {}
+    for pes_idx, formula in enumerate(pes_dct):
+
+        # Build the names list
+        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
+        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
+
+        # Select names from the names list corresponding to chnls to run
+        # conn_chnls_dct[formula] = {sub_pes_idx: [channel_idxs]}
+        for cvals in conn_chnls_dct[formula].values():
+            run_pes = False
+            rct_names_lst = []
+            prd_names_lst = []
+            rxn_name_lst = []
+            rxn_model_lst = []
+            for chn_idx, _ in enumerate(pes_rxn_name_lst):
+                if chn_idx in cvals:
+                    run_pes = True
+                    rct_names_lst.append(pes_rct_names_lst[chn_idx])
+                    prd_names_lst.append(pes_prd_names_lst[chn_idx])
+                    rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
+                    rxn_model_lst.append(run_obj_dct[(pes_idx, chn_idx)])
+                    print('running channel {}: {} = {}'.format(
+                        str(chn_idx+1),
+                        ' + '.join(pes_rct_names_lst[chn_idx]),
+                        ' + '.join(pes_prd_names_lst[chn_idx])))
+
+            # Form the reaction list
+            rxn_lst = format_run_rxn_lst(
+                rct_names_lst, prd_names_lst, rxn_model_lst)
+
+        # Add the rxn lst to the pes dictionary
+        run_pes_dct[formula] = rxn_lst
+
+    return run_pes_dct
+
+
+def format_run_rxn_lst(rct_names_lst, prd_names_lst, rxn_model_lst):
+    """ Get the lst of reactions to be run
+    """
+    # spc_queue
+    spc_queue = []
+    for rxn, _ in enumerate(rct_names_lst):
+        rxn_spc = list(rct_names_lst[rxn])
+        rxn_spc.extend(list(prd_names_lst[rxn]))
+        for spc in rxn_spc:
+            if spc not in spc_queue:
+                spc_queue.append(spc)
+    run_lst = []
+    for rxn, _ in enumerate(rct_names_lst):
+        spc_queue = []
+        rxn_spc = list(rct_names_lst[rxn])
+        rxn_spc.extend(list(prd_names_lst[rxn]))
+        for spc in rxn_spc:
+            if spc not in spc_queue:
+                spc_queue.append(spc)
+        run_lst.append(
+            {'species': spc_queue,
+             'reacs': list(rct_names_lst[rxn]),
+             'prods': list(prd_names_lst[rxn]),
+             'model': rxn_model_lst[rxn]})
+
+    return run_lst
 # def parse_json():
 #     """ parse a json file mechanism file
 #     """

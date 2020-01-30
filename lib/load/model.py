@@ -71,3 +71,55 @@ def check_model_dct(dct):
             proper_def = False
 
     return proper_def
+
+
+def set_pf_model_info(pf_model):
+    """ Set the PF model list based on the input
+    """
+    tors_model = pf_model['tors'] if pf_model['tors'] else 'RIGID'
+    vib_model = pf_model['vib'] if pf_model['vib'] else 'HARM'
+    sym_model = pf_model['sym'] if pf_model['sym'] else ''
+
+    pf_models = [tors_model, vib_model, sym_model]
+
+    return pf_models
+
+
+def set_es_model_info(es_model, thy_dct):
+    """ Set the model info
+    """
+    # Read the ES models from the model dictionary
+    geo_lvl = es_model['geo'] if es_model['geo'] else None
+    ene_lvl = es_model['ene'] if es_model['ene'] else None
+    harm_lvl = es_model['harm'] if es_model['harm'] else None
+    anharm_lvl = es_model['anharm'] if es_model['anharm'] else None
+    sym_lvl = es_model['sym'] if es_model['sym'] else None
+
+    # Torsional Scan which needs a reference for itself
+    tors_lvl_sp = es_model['tors'][0] if es_model['tors'] else None
+    tors_lvl_scn = es_model['tors'][1] if es_model['tors'] else None
+
+    # Set the theory info objects
+    geo_thy_info = finf.get_thy_info(geo_lvl, thy_dct)
+    ene_thy_info = finf.get_thy_info(ene_lvl, thy_dct)
+    harm_thy_info = finf.get_thy_info(harm_lvl, thy_dct)
+    anharm_thy_info = (finf.get_thy_info(anharm_lvl, thy_dct)
+                       if anharm_lvl else None)
+    sym_thy_info = (finf.get_thy_info(sym_lvl, thy_dct)
+                    if sym_lvl else None)
+    tors_sp_thy_info = (finf.get_thy_info(tors_lvl_sp, thy_dct)
+                        if tors_lvl_sp else None)
+    tors_scn_thy_info = (finf.get_thy_info(tors_lvl_scn, thy_dct)
+                         if tors_lvl_scn else None)
+
+    # Combine levels into a list
+    es_levels = [
+        geo_thy_info,
+        ene_thy_info,
+        harm_thy_info,
+        anharm_thy_info,
+        sym_thy_info,
+        [tors_sp_thy_info, tors_scn_thy_info]
+    ]
+
+    return es_levels

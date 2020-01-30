@@ -20,11 +20,14 @@ def read_inp_str(filepath, filename):
     """ read the run parameters from a file
     """
     input_file = os.path.join(filepath, filename)
-    with open(input_file, 'r') as inp_file:
-        inp_lines = inp_file.readlines()
-    inp_str = ''.join(
-        (line for line in inp_lines
-         if '#' not in line and line.strip() != ''))
+    if os.path.exists(input_file):
+        with open(input_file, 'r') as inp_file:
+            inp_lines = inp_file.readlines()
+        inp_str = ''.join(
+            (line for line in inp_lines
+             if '#' not in line and line.strip() != ''))
+    else:
+        inp_str = ''
     return inp_str
 
 
@@ -80,7 +83,8 @@ def parse_idx_inp(idx_str):
     """
     idx_str = idx_str.strip()
     if idx_str.isdigit():
-        idxs = [int(idx_str), int(idx_str)]
+        idxs = [int(idx_str)]
+        #idxs = [int(idx_str), int(idx_str)]
     if '-' in idx_str:
         [idx_begin, idx_end] = idx_str.split('-')
         idxs = list(range(int(idx_begin), int(idx_end)+1))

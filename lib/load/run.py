@@ -4,6 +4,7 @@
 import autoparse.find as apf
 from lib.load import ptt
 from lib.load import tsks
+from lib.load import mechanism as loadmech
 from lib.load.keywords import RUN_INP_REQUIRED_KEYWORDS
 
 
@@ -16,7 +17,6 @@ def build_run_inp_dct(job_path):
     """
     run_str = ptt.read_inp_str(job_path, RUN_INP)
     keyword_dct = ptt.build_keyword_dct(inp_block(run_str))
-    print(keyword_dct)
     assert keyword_dct
     assert check_run_keyword_dct(keyword_dct)
 
@@ -39,29 +39,42 @@ def check_run_keyword_dct(dct):
 
 
 # PARSE THE OBJ SECTION OF THE FILE #
-def objects_lst(job_path):
+def objects_dct(job_path):
     """ Get the sections for the run block
     """
     run_str = ptt.read_inp_str(job_path, RUN_INP)
     obj_str = object_block(run_str)
     # Read one of a set of objects to run calcs on (only one supported)
     pes_block_str = apf.first_capture(ptt.paren_section('pes'), obj_str)
+    pspc_block_str = apf.first_capture(ptt.paren_section('pspc'), obj_str)
     spc_block_str = apf.first_capture(ptt.paren_section('spc'), obj_str)
     # ts_block_str = apf.first_capture(paren_section('ts'), section_str)
     # wells_block_str = apf.first_capture(paren_section('wells'), section_str)
+
+    # Build the run dictionary
+    run_dct = {}
     if pes_block_str is not None:
-        run_lst = get_pes_idxs(ptt.remove_empty_lines(pes_block_str))
-    elif spc_block_str is not None:
-        run_lst = get_spc_idxs(ptt.remove_empty_lines(spc_block_str))
+        run_dct['pes'] = get_pes_idxs(ptt.remove_empty_lines(pes_block_str))
+    else:
+        run_dct['pes'] = []
+    if pspc_block_str is not None:
+        run_dct['pspc'] = get_pspc_idxs(ptt.remove_empty_lines(pspc_block_str))
+    else:
+        run_dct['pspc'] = []
+    if spc_block_str is not None:
+        run_dct['spc'] = get_spc_idxs(ptt.remove_empty_lines(spc_block_str))
+    else:
+        run_dct['spc'] = []
     # elif ts_block_str is not None:
     #     obj_str = ts_block_str
     # elif ts_block_str is not None:
     #     obj_str = ts_block_str
     # elif wells_block_str is not None:
     #     obj_str = wells_block_str
-    else:
-        raise ValueError
-    return run_lst
+    # else:
+    #    raise ValueError
+
+    return run_dct
 
 
 def object_block(inp_str):
@@ -75,24 +88,17 @@ def object_block(inp_str):
 def get_pes_idxs(pes_str):
     """ Determine the indices corresponding to what PES and channels to run
     """
-    run_pes = []
-    print('pes idx test')
-    print(pes_str.splitlines())
+    run_pes = {}
+    # run_pes = []
     for line in pes_str.splitlines():
-        print(line)
         [pes_idxs, chn_idxs, proc] = line.strip().split(';')
         pes_lst = ptt.parse_idx_inp(pes_idxs)
         chn_lst = ptt.parse_idx_inp(chn_idxs)
         proc = proc.strip()
-        print('pes_lst')
-        print(pes_lst)
         for pes in pes_lst:
-            print('pes')
-            print(pes)
             for chn in chn_lst:
-                print('chn')
-                print(chn)
-                run_pes.append([pes, chn, proc])
+                run_pes[(pes, chn)] = proc
+                # run_pes.append([pes, chn, proc])
 
     return run_pes
 
@@ -100,13 +106,15 @@ def get_pes_idxs(pes_str):
 def get_spc_idxs(pes_str):
     """ Determine the indices corresponding to what species to run
     """
-    run_spc = []
+    run_spc = {}
+    # run_spc = []
     for line in pes_str.splitlines():
         [spc_idxs, proc] = line.strip().split(';')
         spc_lst = ptt.parse_idx_inp(spc_idxs)
         proc = proc.strip()
         for spc in spc_lst:
-            run_spc.append([spc, proc])
+            run_spc[spc] = proc
+            # run_spc.append([spc, proc])
 
     return run_spc
 

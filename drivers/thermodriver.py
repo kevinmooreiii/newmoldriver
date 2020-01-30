@@ -6,14 +6,16 @@
 import os
 import autofile.fs
 import routines
-from drivers import mech as lmech
+from lib.load import mechanism as loadmech
 from lib.filesystem import inf as finf
 from lib.runner import therm as thmrunner
 from lib.outpt import chemkin as cout
 from lib import printmsg
 
 
-def run(spc_dct, model_dct, thy_dct,
+def run(spc_dct,
+        model_dct,
+        thy_dct,
         rxn_lst,
         run_inp_dct,
         ref_scheme='basic',
@@ -26,8 +28,9 @@ def run(spc_dct, model_dct, thy_dct,
     printmsg.program_header('thermo')
 
     # Pull stuff from dcts for now
+    model = rxn_lst['model']
     save_prefix = run_inp_dct['save_prefix']
-    ene_coeff = model_dct['options']['ene_coeff']
+    ene_coeff = model_dct[model]['options']['ene_coeff']
     ene_idx = 0
 
     # Add reference molecules
@@ -44,8 +47,8 @@ def run(spc_dct, model_dct, thy_dct,
     print(msg)
 
     # Gather PF model and theory level info
-    pf_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)
-    pf_model = lmech.set_pf_model_info(model_dct['pf'])
+    pf_levels = loadmech.set_es_model_info(model_dct['es'], thy_dct)
+    pf_model = loadmech.set_pf_model_info(model_dct['pf'])
 
     # Write and Run MESSPF inputs to generate the partition functions
     if run_pf:

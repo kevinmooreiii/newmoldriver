@@ -12,7 +12,7 @@ from routines.pf.messf.ene import get_high_level_energy
 __all__ = [
     'blocks',
     'models',
-    'pfblock'
+    'pfblock',
     'get_zpe',
     'get_zero_point_energy',
     'get_high_level_energy'

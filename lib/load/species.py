@@ -16,6 +16,28 @@ DAT_INP = 'inp/species.dat'
 CLA_INP = 'inp/class.csv'
 
 
+def build_run_spc_dct(spc_dct, run_obj_dct):
+    """ Get a dictionary of requested species matching the PES_DCT format
+    """
+    spcnums = [idx for idx in run_obj_dct['spc']]
+    
+    run_lst = []
+    for idx, spc in enumerate(spc_dct):
+        if idx in spcnums:
+            model = spcmods[idx]
+            run_lst.append((spc['name'], run_obj_dct['spc'][idx]))
+
+    # Build the run dct
+    run_dct = {}
+    run_dct['all'] =  {
+        'species': run_spc_lst,
+        'reacs': [],
+        'prods': []
+    }
+
+    return run_dct
+
+
 def build_spc_dct(job_path, spc_type):
     """ Get a dictionary of all the input species
         indexed by InChi string
@@ -42,8 +64,10 @@ def csv_dct(spc_str, check_stereo):
     chg_dct = chemkin_io.parser.mechanism.spc_name_dct(spc_str, 'charge')
     sens_dct = chemkin_io.parser.mechanism.spc_name_dct(spc_str, 'sens')
 
+    # Print message detailing if stereochemistry is used
+    print_check_stero_msg(check_stereo)
+
     # Rebuild with stereochemistry if possible
-    print('check_stereo test:', check_stereo, type(check_stereo))
     if check_stereo:
         spc_str = 'name,SMILES,InChI,mult,charge,sens \n'
         for name in ich_dct:
@@ -58,9 +82,7 @@ def csv_dct(spc_str, check_stereo):
                 # this returns a list of ichs w/ different possible stereo vals
                 # for now just taking the first of these
                 ich = automol.inchi.add_stereo(ich)
-                print('new ich possibilities:', ich)
                 ich = ich[-1]
-                print('new ich:', ich)
                 ich_dct[name] = ich
             spc_str += '{0},\'{1}\',\'{2}\',{3},{4},{5} \n'.format(
                 name, smi, ich, mul, chg, sens)
@@ -188,7 +210,6 @@ def build_spc_dct_for_sadpts(spc_dct, rxn_lst, rxn_name_lst,
         ts_dct[tsname]['ich'] = ''
         ts_chg = 0
         for rct in rct_names_lst[idx]:
-            print(spc_dct[rct])
             ts_chg += spc_dct[rct]['chg']
         ts_dct[tsname]['chg'] = ts_chg
         mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
@@ -216,3 +237,138 @@ def geometry_dictionary(job_path):
                     print('Warning: Dupilicate xyz geometry for ', ich)
                 geom_dct[ich] = geo
     return geom_dct
+
+
+def add_sadpt_dct():
+    """ sadpt dct stuff
+    """
+    for formula in pes_dct:
+
+        # Build the names list
+        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
+        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
+        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
+
+        # Select names from the names list corresponding to chnls to run
+        # conn_chnls_dct[formula] = {sub_pes_idx: [channel_idxs]}
+        for cvals in conn_chnls_dct[formula].values():
+            run_pes = False
+            rct_names_lst = []
+            prd_names_lst = []
+            rxn_name_lst = []
+            for chn_idx, _ in enumerate(pes_rxn_name_lst):
+                if chn_idx in cvals:
+                    run_pes = True
+                    rct_names_lst.append(pes_rct_names_lst[chn_idx])
+                    prd_names_lst.append(pes_prd_names_lst[chn_idx])
+                    rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
+                    print('running channel {}: {} = {}'.format(
+                        str(chn_idx+1),
+                        ' + '.join(pes_rct_names_lst[chn_idx]),
+                        ' + '.join(pes_prd_names_lst[chn_idx])))
+
+            # Call the Driver for the PES
+            if run_pes:
+
+                # Form the reaction list
+                rxn_lst = format_run_rxn_lst(rct_names_lst, prd_names_lst)
+
+                # Add the stationary points to the spc dcts
+                need_ts = bool(
+                    'find_ts' in es_tsk_lst or
+                    'rates' in run_jobs_lst or
+                    'params' in run_jobs_lst)
+                if need_ts:
+                    print('\nBegin transition state prep')
+                    ts_dct = loadspc.build_spc_dct_for_sadpts(
+                        spc_dct, rxn_lst, rxn_name_lst,
+                        rct_names_lst, prd_names_lst, cla_dct)
+                    for sadpt in ts_dct:
+                        ts_dct[sadpt] = set_sadpt_info(
+                            es_tsk_lst, ts_dct, spc_dct, sadpt,
+                            run_inp_dct['run_prefix'],
+                            run_inp_dct['save_prefix'],
+                            run_options_dct['kickoff'])
+                        print('loop dct\n', ts_dct[sadpt]['dist_info'])
+                    spc_dct.update(ts_dct)
+
+    return None
+
+
+def set_sadpt_info(es_tsk_lst, ts_dct, spc_dct, sadpt,
+                   run_prefix, save_prefix, kickoff):
+    """ set the saddle point dct with info
+    """
+    # Right now getting from tasks, need to get from model as well
+    for tsk in es_tsk_lst:
+        if 'find_ts' in tsk:
+            print(es_tsk_lst)
+            print(es_tsk_lst[0][1])
+            ini_thy_info = es_tsk_lst[0][2]
+            thy_info = es_tsk_lst[0][1]
+            break
+    print('ini_thy_info', ini_thy_info)
+    print('thy_info', thy_info)
+    # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
+    rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
+        save_prefix, sadpt, ts_dct, spc_dct, thy_info, ini_thy_info)
+    ts_dct[sadpt]['rxn_ichs'] = rxn_ichs
+    ts_dct[sadpt]['rxn_chgs'] = rxn_chgs
+    ts_dct[sadpt]['rxn_muls'] = rxn_muls
+    ts_dct[sadpt]['low_mul'] = low_mul
+    ts_dct[sadpt]['high_mul'] = high_mul
+
+    # Generate rxn_fs from rxn_info stored in spc_dct
+    [kickoff_size, kickoff_backward] = kickoff
+    rxn_run_fs, rxn_save_fs, rxn_run_path, rxn_save_path = fpath.get_rxn_fs(
+        run_prefix, save_prefix, ts_dct[sadpt])
+    ts_dct[sadpt]['rxn_fs'] = [
+        rxn_run_fs,
+        rxn_save_fs,
+        rxn_run_path,
+        rxn_save_path]
+    rct_zmas, prd_zmas, rct_cnf_save_fs, prd_cnf_save_fs = fread.get_zmas(
+        ts_dct[sadpt]['reacs'], ts_dct[sadpt]['prods'], spc_dct,
+        ini_thy_info, save_prefix, run_prefix, kickoff_size,
+        kickoff_backward)
+    ret = rxnid.ts_class(
+        rct_zmas, prd_zmas, ts_dct[sadpt]['rad_rad'],
+        ts_dct[sadpt]['mul'], low_mul, high_mul,
+        rct_cnf_save_fs, prd_cnf_save_fs, ts_dct[sadpt]['given_class'])
+    ret1, ret2 = ret
+    if ret1:
+        [rxn_class, spc_zma,
+         dist_name, brk_name, grid,
+         frm_bnd_key, brk_bnd_key,
+         tors_names, update_guess] = ret1
+        ts_dct[sadpt]['class'] = rxn_class
+        ts_dct[sadpt]['grid'] = grid
+        ts_dct[sadpt]['tors_names'] = tors_names
+        ts_dct[sadpt]['original_zma'] = spc_zma
+        dist_info = [dist_name, 0., update_guess, brk_name]
+        ts_dct[sadpt]['dist_info'] = dist_info
+        ts_dct[sadpt]['frm_bnd_key'] = frm_bnd_key
+        ts_dct[sadpt]['brk_bnd_key'] = brk_bnd_key
+        # Adding in the rct and prd zmas for vrctst
+        ts_dct[sadpt]['rct_zmas'] = rct_zmas
+        ts_dct[sadpt]['prd_zmas'] = prd_zmas
+        if ret2:
+            ts_dct[sadpt]['bkp_data'] = ret2
+        else:
+            ts_dct[sadpt]['bkp_data'] = None
+    else:
+        ts_dct[sadpt]['class'] = None
+        ts_dct[sadpt]['bkp_data'] = None
+
+    return ts_dct[sadpt]
+
+
+# Print messages
+def print_check_stero_msg(check_stereo):
+    """ Print a message detailing whether stereo is being checked
+    """
+    if check_stereo:
+        print('Species will be treated with stereochemistry.',
+              'Checking and adding stereo.')
+    else:
+        print('Stereochemistry will be ignored')

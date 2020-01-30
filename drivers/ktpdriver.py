@@ -1,10 +1,10 @@
 """ driver for rate constant evaluations
 """
 
-from drivers import mech as lmech
 from routines.pf.fit import fit_rates
 from routines.pf import rates as messrates
 from lib.runner import rates as raterunner
+from lib.load import mechanism as loadmech
 from lib import printmsg
 
 
@@ -22,17 +22,19 @@ def run(pes_formula,
     printmsg.program_header('ktp')
 
     # Pull stuff from dcts for now
+    model = rxn_lst['model']
     save_prefix = run_inp_dct['save_prefix']
-    etrans = model_dct['etransfer']
-    temps = model_dct['options']['temps']
-    pressures = model_dct['options']['pressures']
-    pst_params = model_dct['options']['pst_params']
-    multi_info = model_dct['options']['multi_info']
-    assess_pdep = model_dct['options']['assess_pdep']
+    etrans = model_dct[model]['etransfer']
+    temps = model_dct[model]['options']['temps']
+    pressures = model_dct[model]['options']['pressures']
+    pst_params = model_dct[model]['options']['pst_params']
+    multi_info = model_dct[model]['options']['multi_info']
+    assess_pdep = model_dct[model]['options']['assess_pdep']
+    ene_coeff = model_dct[model]['options']['ene_coeff']
 
     # Get the levels in lists from the user
-    pf_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)
-    pf_model = lmech.set_pf_model_info(model_dct['pf'])
+    pf_levels = loadmech.set_es_model_info(model_dct['es'], thy_dct)
+    pf_model = loadmech.set_pf_model_info(model_dct['pf'])
 
     # Run the rates
     if run_rates:
@@ -60,5 +62,5 @@ def run(pes_formula,
     # Fit rate output to modified Arrhenius forms, print in ChemKin format
     if run_fits:
         fit_rates(spc_dct, pes_formula, idx_dct,
-                  pf_levels, pf_model,
+                  pf_levels, pf_model, ene_coeff,
                   mess_path, assess_pdep)

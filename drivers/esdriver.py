@@ -7,26 +7,37 @@ from lib.filesystem import path as fpath
 from lib import printmsg
 
 
-def run(rxn_lst, spc_dct,
-        es_tsk_lst,
+def run(rxn_lst,
+        spc_dct,
+        es_tsk_str,
         model_dct,
-        run_options_dct, run_inp_dct):
+        run_options_dct,
+        run_inp_dct):
     """ driver for all electronic structure tasks
     """
-
-    # Pull stuff from dcts for now
-    run_prefix = run_inp_dct['run_prefix']
-    save_prefix = run_inp_dct['save_prefix']
-    # vdw_params = model_dct['options']['vdw_params']
-    freeze_all_tors = model_dct['options']['freeze_all_tors']
-    ndim_tors = model_dct['pf']['tors']
-    rad_rad_ts = model_dct['pf']['ts_barrierless']
-    mc_nsamp = run_options_dct['mc_nsamp']
-    kickoff = run_options_dct['kickoff']
-
+   
     # Print the header message for the driver
     printmsg.program_header('es')
 
+    # Pull stuff from dcts for now
+    # Have to set to the model for the reaction
+    model = rxn_lst['model']
+    run_prefix = run_inp_dct['run_prefix']
+    save_prefix = run_inp_dct['save_prefix']
+    # vdw_params = model_dct['options']['vdw_params']
+    freeze_all_tors = model_dct[model]['options']['freeze_all_tors']
+    ndim_tors = model_dct[model]['pf']['tors']
+    rad_rad_ts = model_dct[model]['pf']['ts_barrierless']
+    mc_nsamp = run_options_dct['mc_nsamp']
+    kickoff = run_options_dct['kickoff']
+
+    # Do some extra work to prepare the info to pass to the drivers
+    print('Setting es tasks list...')
+    # right now this assumes one set of task lists for everything (one model)
+    # need to move this into esdriver
+    es_tsk_lst = loadrun.build_run_es_tsks_lst(
+        es_tsk_str, model_dct, thy_dct)
+    
     # Species queue
     print('rxn_lst\n', rxn_lst)
     spc_queue = rxn_lst[0]['species']

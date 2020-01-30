@@ -2,44 +2,14 @@
 """
 
 # electronic structure routines
-from routines.es.conformer import conformer_sampling
-from routines.es.conformer import run_conformers
-from routines.es.conformer import save_conformers
-from routines.es.conformer import int_sym_num_from_sampling
-from routines.es.conformer import symmetry_factor
-from routines.es.conformer import is_unique_stereo_dist_mat_energy
-from routines.es.conformer import are_torsions_same
-from routines.es.conformer import is_unique_tors_dist_mat_energy
-from routines.es.geom import reference_geometry
-from routines.es.geom import run_initial_geometry_opt
-from routines.es.geom import remove_imag
-from routines.es.geom import run_check_imaginary
-from routines.es.geom import run_kickoff_saddle
-from routines.es.geom import save_initial_geometry
-from routines.es.geom import projrot_frequencies
-from routines.es.scan import hindered_rotor_scans
-from routines.es.scan import run_scan
-from routines.es.scan import run_multiref_rscan
-from routines.es.scan import _run_1d_scan
-from routines.es.scan import _run_2d_scan
-from routines.es.scan import save_scan
-from routines.es.scan import infinite_separation_energy
-from routines.es.sp import run_energy
-from routines.es.sp import run_gradient
-from routines.es.sp import run_hessian
-from routines.es.sp import run_vpt2
-from routines.es.tau import tau_sampling
-from routines.es.tau import run_tau
-from routines.es.tau import save_tau
-from routines.es.ts import sadpt_reference_geometry
-from routines.es.ts import cas_options_1
-from routines.es.ts import cas_options_2
-from routines.es.ts import multiref_wavefunction_guess
-from routines.es.wells import find_vdw
-from routines.es.wells import fake_conf
-from routines.es.wells import fake_geo_gen
-from routines.es.find import find_ts
-from routines.es.util import nsamp_init
+from routines.es import conformer
+from routines.es import geom
+from routines.es import scan
+from routines.es import sp
+from routines.es import tau
+from routines.es import ts
+from routines.es import wells
+from routines.es import find
 from lib.phydat import phycon
 from lib.runner import par as runpar
 from lib.filesystem import minc as fsmin
@@ -47,44 +17,14 @@ from lib.filesystem import inf as finf
 
 
 __all__ = [
-    'conformer_sampling',
-    'run_conformers',
-    'save_conformers',
-    'int_sym_num_from_sampling',
-    'symmetry_factor',
-    'is_unique_stereo_dist_mat_energy',
-    'are_torsions_same',
-    'is_unique_tors_dist_mat_energy',
-    'reference_geometry',
-    'run_initial_geometry_opt',
-    'remove_imag',
-    'run_check_imaginary',
-    'run_kickoff_saddle',
-    'save_initial_geometry',
-    'projrot_frequencies',
-    'hindered_rotor_scans',
-    'run_scan',
-    'run_multiref_rscan',
-    '_run_1d_scan',
-    '_run_2d_scan',
-    'save_scan',
-    'infinite_separation_energy',
-    'run_energy',
-    'run_gradient',
-    'run_hessian',
-    'run_vpt2',
-    'tau_sampling',
-    'run_tau',
-    'save_tau',
-    'reference_geometry',
-    'cas_options_1',
-    'cas_options_2',
-    'multiref_wavefunction_guess',
-    'find_vdw',
-    'fake_conf',
-    'fake_geo_gen',
-    'find_ts',
-    'nsamp_init'
+    'conformer',
+    'geom',
+    'scan',
+    'sp',
+    'tau',
+    'ts',
+    'wells',
+    'find'
 ]
 
 
@@ -122,21 +62,21 @@ def run_ene(params, kwargs):
     """ energy for geometry in fiven fs directory
     """
     print('running task {}'.format('energy'))
-    run_energy(**params, **kwargs)
+    sp.run_energy(**params, **kwargs)
 
 
 def run_grad(params, kwargs):
     """ gradient for geometry in given fs directory
     """
     print('running task {}'.format('gradient'))
-    run_gradient(**params, **kwargs)
+    sp.run_gradient(**params, **kwargs)
 
 
 def run_hess(params, kwargs):
     """ hessian for geometry in given fs directory
     """
     print('running task {}'.format('hessian'))
-    run_hessian(**params, **kwargs)
+    sp.run_hessian(**params, **kwargs)
 
 
 def run_conf_samp(filesys, params, opt_kwargs):
@@ -153,7 +93,7 @@ def run_conf_samp(filesys, params, opt_kwargs):
     params['thy_save_fs'] = filesys[3]
     params['cnf_run_fs'] = filesys[4]
     params['cnf_save_fs'] = filesys[5]
-    conformer_sampling(**params, **opt_kwargs)
+    conformer.conformer_sampling(**params, **opt_kwargs)
 
 
 def run_hr_scan(filesys, params, opt_kwargs):
@@ -162,7 +102,7 @@ def run_hr_scan(filesys, params, opt_kwargs):
     print('running task {}'.format('hr'))
     params['cnf_run_fs'] = filesys[4]
     params['cnf_save_fs'] = filesys[5]
-    hindered_rotor_scans(**params, **opt_kwargs)
+    scan.hindered_rotor_scans(**params, **opt_kwargs)
 
 
 def run_tau_samp(filesys, params, opt_kwargs):
@@ -174,7 +114,7 @@ def run_tau_samp(filesys, params, opt_kwargs):
     params['tau_run_fs'] = filesys[6]
     params['tau_save_fs'] = filesys[7]
     params['thy_save_fs'] = filesys[3]
-    tau_sampling(**params, **opt_kwargs)
+    tau.tau_sampling(**params, **opt_kwargs)
     # del params['thy_save_fs']
     # del params['nsamp_par']
     # moldr.tau.run_tau_gradients(**params, **opt_kwargs)
@@ -195,13 +135,13 @@ def geometry_generation(tsk, spc, mc_nsamp,
 
     # Get a reference geometry
     if not saddle:
-        geo = reference_geometry(
+        geo = geom.reference_geometry(
             spc, thy_level, ini_thy_level, filesys, ini_filesys,
             kickoff_size=kickoff_size,
             kickoff_backward=kickoff_backward,
             overwrite=overwrite)
     else:
-        geo = sadpt_reference_geometry(
+        geo = ts.sadpt_reference_geometry(
             spc, thy_level, ini_thy_level, filesys, ini_filesys,
             spc['dist_info'], overwrite)
 
