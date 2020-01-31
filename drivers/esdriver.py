@@ -21,6 +21,8 @@ def run(rxn_lst,
 
     # Pull stuff from dcts for now
     # Have to set to the model for the reaction
+    print('rxn_lst')
+    print(rxn_lst)
     model = rxn_lst['model']
     run_prefix = run_inp_dct['run_prefix']
     save_prefix = run_inp_dct['save_prefix']
@@ -41,11 +43,11 @@ def run(rxn_lst,
     # Species queue
     print('rxn_lst\n', rxn_lst)
     spc_queue = rxn_lst[0]['species']
-
-    print('driver: es tsk lst')
-    for x in es_tsk_lst:
-        print(x)
-    print('\n\n')
+    # Need different spc queue (remember that I don't need two channels like ktpdriver
+    # print('driver: es tsk lst')
+    # for x in es_tsk_lst:
+    #     print(x)
+    # print('\n\n')
 
     # Loop over Tasks
     for tsk_info in es_tsk_lst:

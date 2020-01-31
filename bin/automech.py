@@ -53,7 +53,7 @@ if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
         JOB_PATH,
         RUN_INP_DCT['mech'],
         SPC_DCT,
-        RUN_OBJ_DCT,
+        RUN_OBJ_DCT['pes'],
         sort_rxns=RUN_INP_DCT['sort_rxns']
     )
 elif RUN_OBJ_DCT['spc']:

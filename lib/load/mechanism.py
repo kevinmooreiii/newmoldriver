@@ -32,10 +32,10 @@ def parse_mechanism_file(job_path, mech_type, spc_dct, run_obj_dct,
     print_pes_channels(pes_dct)
 
     # Reduce the PES dct to only what the user requests
-    if run_obj_dct['pes']:
-        pesnums = [idx_pair[0] for idx_pair in run_obj_dct['pes']]
+    if run_obj_dct:
+        pesnums = [idx_pair[0] for idx_pair in run_obj_dct]
     else:
-        pesnums = [idx_pair[0] for idx_pair in run_obj_dct['pspc']]
+        pesnums = [idx_pair[0] for idx_pair in run_obj_dct]
     reduced_pes_dct = reduce_pes_dct_to_user_inp(pes_dct, pesnums)
 
     # Get a dct for all of the connected channels
@@ -205,6 +205,7 @@ def pes_dct_w_rxn_lsts(pes_dct, conn_chnls_dct, run_obj_dct):
     """ Form a new PES dictionary with the rxn_lst formatted to work
         with the drivers currently
     """
+    print(run_obj_dct)
     run_pes_dct = {}
     for pes_idx, formula in enumerate(pes_dct):
 
@@ -227,7 +228,7 @@ def pes_dct_w_rxn_lsts(pes_dct, conn_chnls_dct, run_obj_dct):
                     rct_names_lst.append(pes_rct_names_lst[chn_idx])
                     prd_names_lst.append(pes_prd_names_lst[chn_idx])
                     rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
-                    rxn_model_lst.append(run_obj_dct[(pes_idx, chn_idx)])
+                    rxn_model_lst.append(run_obj_dct[(pes_idx+1, chn_idx+1)])
                     print('running channel {}: {} = {}'.format(
                         str(chn_idx+1),
                         ' + '.join(pes_rct_names_lst[chn_idx]),

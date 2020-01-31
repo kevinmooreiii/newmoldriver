@@ -12,10 +12,9 @@ import autofile
 # New libs
 from lib.phydat import phycon
 from lib.runner import script
-from lib.filesystem import inf as finf
 from routines.pf.messf import blocks
-from routines.pf.messf import get_zpe
-from routines.pf.messf import get_high_level_energy
+from routines.pf.messf import get_fs_ene_zpe
+from routines.pf.messf import calc_shift_ene
 
 
 # Writer
@@ -55,42 +54,14 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
         spc_queue.extend(rxn['species'])
     full_queue = spc_queue + [spc for spc in spc_dct if 'ts_' in spc]
 
-    for spc in full_queue:
-        spc_info = (spc_dct[spc]['ich'],
-                    spc_dct[spc]['chg'],
-                    spc_dct[spc]['mul'])
-        print('SPC CHECK')
-        print(spc)
-        print(spc_dct)
-        if 'ts_' in spc:
-            # spc_dct[spc] = lmech.set_sadpt_info(
-            #     ts_tsk_lst, spc_dct, spc, thy_dct,
-            #     run_prefix, save_prefix,
-            #     kickoff=(0.1, False))
-            spc_save_path = spc_dct[spc]['rxn_fs'][3]
-            saddle = True
-            save_path = spc_save_path
-        else:
-            spc_save_fs.leaf.create(spc_info)
-            spc_save_path = spc_save_fs.leaf.path(spc_info)
-            saddle = False
-            save_path = save_prefix
+    # Get the elec+zpe energy for the reference species
+    first_ground_ene = get_fs_ene_zpe(species[0], saddle=False)
 
-        # Cacluate the ZPVE and set in the dict
-        spc_dct[spc]['zpe'], _ = get_zpe(
-            spc, spc_dct[spc], spc_save_path, pf_levels, spc_model)
-
-        # Set ene and string
-        spc_dct[spc]['ene'] = get_high_level_energy(
-            spc_info=spc_info,
-            thy_low_level=finf.get_thy_info(model_dct['geo'], thy_dct),
-            thy_high_level=finf.get_thy_info(model_dct['ene'], thy_dct),
-            save_prefix=save_path,
-            saddle=saddle)
-
-    first_ground_ene = 0.
+    # Write the MESS data strings for all the species; no ene
     species = make_all_species_data(
         rxn_lst, spc_dct, save_prefix, spc_model, pf_levels)
+
+    # Loop over all the channels and write the MESS strings
     for idx, rxn in enumerate(rxn_lst):
         tsname = 'ts_{:g}'.format(idx)
         tsform = automol.geom.formula(
@@ -100,7 +71,10 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
                   'energy surfaces: {} and {}'.format(tsform, pes_formula))
             print('Will proceed to construct only {}'.format(pes_formula))
             continue
-        mess_strs, first_ground_ene = make_channel_pfs(
+        # Get the ene+zpve of the first species which is the reference
+        # ref_ene, ref_model = get_rxn_ene(species_[0])
+        # in fxn below prob: get_spc_ene(ref_ene, ref_model, spc[i])
+        mess_strs = make_channel_pfs(
             tsname, rxn, species, spc_dct, idx_dct, mess_strs,
             first_ground_ene, spc_save_fs, spc_model, pf_levels,
             multi_info,
@@ -219,9 +193,22 @@ def make_channel_pfs(
     for reac in rxn['reacs']:
         spc_label.append(automol.inchi.smiles(spc_dct[reac]['ich']))
         well_data.append(species_data[reac])
-        reac_ene += (
-            (spc_dct[reac]['ene'] + spc_dct[reac]['zpe']/phycon.EH2KCAL) *
-            phycon.EH2KCAL)
+        # New way to get the energy by reading from dct with shifts
+        reac_ene += calc_shift_ene(
+            spc_dct, thy_dct, model_dct, rxn,
+            spc_tgt, spc_info_tgt, spc_save_fs_tgt,
+            pf_levels1, spc_model1, pf_levels2, spc_model2,
+            save_prefix_tgt, saddle_tgt)
+
+        # Old way to get energy, assuming it is in dct
+        # reac_ene += (
+        #     (spc_dct[reac]['ene'] + spc_dct[reac]['zpe']/phycon.EH2KCAL) *
+        #     phycon.EH2KCAL)
+    # Perform the shift if necessary
+    shift = bool(pf_levels1 == pf_levels2)
+    if shift:
+        reac_ene = calc_shift_ene()
+    # Wells and bimol stuff
     well_dct_key1 = '+'.join(rxn['reacs'])
     well_dct_key2 = '+'.join(rxn['reacs'][::-1])
     if well_dct_key1 not in idx_dct:
@@ -231,8 +218,8 @@ def make_channel_pfs(
             if bimol:
                 reac_label = 'P' + str(pidx)
                 pidx += 1
-                if not first_ground_ene:
-                    first_ground_ene = reac_ene
+                # if not first_ground_ene:
+                #    first_ground_ene = reac_ene
                 ground_energy = reac_ene - first_ground_ene
                 bim_str += ' \t ! {} + {} \n'.format(
                     rxn['reacs'][0], rxn['reacs'][1])
@@ -241,8 +228,8 @@ def make_channel_pfs(
                     well_data[1], ground_energy)
                 idx_dct[well_dct_key1] = reac_label
             else:
-                if not first_ground_ene:
-                    first_ground_ene = reac_ene
+                # if not first_ground_ene:
+                #     first_ground_ene = reac_ene
                 reac_label = 'W' + str(widx)
                 widx += 1
                 zero_energy = reac_ene - first_ground_ene
@@ -482,7 +469,7 @@ def make_channel_pfs(
             ts_label, reac_label, prod_label,
             species_data[tsname], zero_energy, tunnel_str)
 
-    return [well_str, bim_str, ts_str], first_ground_ene
+    return [well_str, bim_str, ts_str]
 
 
 # Readers

@@ -1,14 +1,6 @@
 """ test
 """
 
-def calc_ene():
-    """ """
-    if pf_levels1 != pf_levels2:
-        rel_ene = calc_shift_ene()
-
-    return rel_ene
-
-
 def calc_shift_ene(rxn_spc, rxn, pes_ref_spc, spc_dct):
     """ """
     # Calculate
