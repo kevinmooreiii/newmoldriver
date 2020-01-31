@@ -11,11 +11,14 @@ from lib.filesystem import orb as fsorb
 
 
 def run_rates(
-        header_str, energy_trans_str, well_str, bim_str, ts_str, tsdct,
-        thy_info, rxn_save_path):
+        header_str, energy_trans_str, well_str, bim_str, ts_str,
+        tsdct, rxn_save_path,
+        model_dct, thy_dct, run_model):
     """ Generate k(T,P) by first compiling all the MESS strings
         and then running MESS
     """
+    pf_levels = lmech.set_es_model_info(model_dct['es'], thy_dct)[0]
+
     ts_info = (tsdct['ich'], tsdct['chg'], tsdct['mul'])
     orb_restr = fsorb.orbital_restriction(ts_info, thy_info)
     ref_level = thy_info[1:3]

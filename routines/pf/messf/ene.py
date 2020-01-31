@@ -36,8 +36,6 @@ def get_zero_point_energy(spc, spc_dct_i, pf_levels, spc_model, save_prefix):
 
     # Prepare the sets of file systems
     [_, _, harm_levels, _, _, tors_levels] = pf_levels
-    print('spc_model')
-    print(spc_model)
     tors_model, vib_model, _ = spc_model
 
     # Set theory filesystem used throughout
@@ -238,11 +236,19 @@ def calc_shift_ene(spc_dct, thy_dct, model_dct, rxn,
     return tgt_ene_lvl1
 
 
-def get_fs_ene_zpe(spc_dct, spc, spc_info, spc_save_fs,
-                   thy_dct, model_dct, pf_levels, spc_model,
+def get_fs_ene_zpe(spc_dct, spc, spc_info,
+                   thy_dct, model_dct, model,
                    save_prefix, saddle=False):
     """ Get the energy for a species on a channel
     """
+    spc_save_fs = autofile.fs.species(save_prefix)
+    # Set the model and info for the reaction
+    rxn_model = rxn['model']
+    pf_levels = loadmech.set_es_model_info(
+        model_dct[rxn_model]['es'], thy_dct)
+    pf_model = loadmech.set_pf_model_info(
+        model_dct[rxn_model]['pf'])
+
     # Set paths
     if saddle:
         spc_save_path = spc_dct[spc]['rxn_fs'][3]

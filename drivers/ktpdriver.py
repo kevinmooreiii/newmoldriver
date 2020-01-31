@@ -4,7 +4,6 @@
 from routines.pf.fit import fit_rates
 from routines.pf import rates as messrates
 from lib.runner import rates as raterunner
-from lib.load import mechanism as loadmech
 from lib import printmsg
 
 
@@ -32,10 +31,6 @@ def run(pes_formula,
     assess_pdep = model_dct[model]['options']['assess_pdep']
     ene_coeff = model_dct[model]['options']['ene_coeff']
 
-    # Get the levels in lists from the user
-    pf_levels = loadmech.set_es_model_info(model_dct['es'], thy_dct)
-    pf_model = loadmech.set_pf_model_info(model_dct['pf'])
-
     # Run the rates
     if run_rates:
 
@@ -45,22 +40,23 @@ def run(pes_formula,
             rct_ichs, temps, pressures, **etrans)
 
         # Write the MESS strings for all the PES channels
-        print('Starting mess file preparation for {}:'.format(pes_formula))
+        print('Starting mess file preparation.')
         idx_dct = {}
         well_str, bim_str, ts_str = messrates.write_channel_mess_strs(
             spc_dct, rxn_lst, pes_formula,
-            pf_model, pf_levels, multi_info, pst_params,
-            spc_save_fs, save_prefix, idx_dct,
+            multi_info, pst_params,
+            save_prefix, idx_dct,
             model_dct, thy_dct)
 
         # Run mess to produce rate output
+        run_model = rxn_lst[0]['model']  # model for ts_0
         mess_path = raterunner.run_rates(
             header_str, energy_trans_str, well_str, bim_str, ts_str,
-            spc_dct['ts_0'], pf_levels[0],
-            spc_dct['ts_0']['rxn_fs'][3])
+            spc_dct['ts_0'], spc_dct['ts_0']['rxn_fs'][3],
+            model_dct, thy_dct, run_model)
 
     # Fit rate output to modified Arrhenius forms, print in ChemKin format
     if run_fits:
         fit_rates(spc_dct, pes_formula, idx_dct,
-                  pf_levels, pf_model, ene_coeff,
+                  model_dct, thy_dct, ene_coeff,
                   mess_path, assess_pdep)

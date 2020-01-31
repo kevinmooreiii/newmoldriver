@@ -12,6 +12,7 @@ import autofile
 # New libs
 from lib.phydat import phycon
 from lib.runner import script
+from lib.load import mechanism as loadmech
 from routines.pf.messf import blocks
 from routines.pf.messf import get_fs_ene_zpe
 from routines.pf.messf import calc_shift_ene
@@ -42,24 +43,29 @@ def rate_headers(
 
 
 def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
-                            spc_model, pf_levels, multi_info, pst_params,
-                            spc_save_fs, save_prefix, idx_dct,
+                            multi_info, pst_params,
+                            save_prefix, idx_dct,
                             model_dct, thy_dct):
     """ Write all the MESS input file strings for the reaction channels
     """
     mess_strs = ['', '', '']
 
-    spc_queue = []
-    for rxn in rxn_lst:
-        spc_queue.extend(rxn['species'])
-    full_queue = spc_queue + [spc for spc in spc_dct if 'ts_' in spc]
+    # Get the model for the first reference species
+    first_ground_model = rxn_lst[0]['model']
 
     # Get the elec+zpe energy for the reference species
-    first_ground_ene = get_fs_ene_zpe(species[0], saddle=False)
+    first_spc = rxn_lst[0]['species'][0]
+    first_spc_info = (spc_dct[first_spc]['ich'],
+                      spc_dct[first_spc]['chg'],
+                      spc_dct[first_spc]['mlt'])
+    first_ground_ene = get_fs_ene_zpe(
+        spc_dct, first_spc, first_spc_info, save_prefix,
+        thy_dct, model_dct, first_ground_model,
+        save_prefix, saddle=False)
 
     # Write the MESS data strings for all the species; no ene
     species = make_all_species_data(
-        rxn_lst, spc_dct, save_prefix, spc_model, pf_levels)
+        rxn_lst, spc_dct, save_prefix, model_dct, thy_dct)
 
     # Loop over all the channels and write the MESS strings
     for idx, rxn in enumerate(rxn_lst):
@@ -71,13 +77,10 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
                   'energy surfaces: {} and {}'.format(tsform, pes_formula))
             print('Will proceed to construct only {}'.format(pes_formula))
             continue
-        # Get the ene+zpve of the first species which is the reference
-        # ref_ene, ref_model = get_rxn_ene(species_[0])
-        # in fxn below prob: get_spc_ene(ref_ene, ref_model, spc[i])
         mess_strs = make_channel_pfs(
             tsname, rxn, species, spc_dct, idx_dct, mess_strs,
-            first_ground_ene, spc_save_fs, spc_model, pf_levels,
-            multi_info,
+            first_ground_ene, model_dct, thy_dct,
+            multi_info, first_ground_model,
             pst_params=pst_params)
     well_str, bim_str, ts_str = mess_strs
     ts_str += '\nEnd\n'
@@ -111,7 +114,8 @@ def make_all_species_data(rxn_lst, spc_dct, save_prefix,
     return species
 
 
-def make_species_data(spc, spc_dct_i, spc_save_fs, spc_model, pf_levels):
+def make_species_data(spc, spc_dct_i,
+                      spc_save_fs, spc_model, pf_levels):
     """ makes the main part of the MESS species block for a given species
     """
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
@@ -157,8 +161,9 @@ def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
 
 
 def make_channel_pfs(
-        tsname, rxn, species_data, spc_dct, idx_dct, strs, first_ground_ene,
-        spc_save_fs, spc_model, pf_levels, multi_info,
+        tsname, rxn, species_data, spc_dct, idx_dct, strs,
+        first_ground_ene, model_dct, thy_dct,
+        multi_info, first_ground_model,
         pst_params=(1.0, 6),
         rad_rad_ts='pst'):
     """ make the partition function strings for each of the channels
@@ -169,6 +174,13 @@ def make_channel_pfs(
     """
     projrot_script_str = script.PROJROT
     bim_str, well_str, ts_str = strs
+
+    # Set the model and info for the reaction
+    rxn_model = rxn['model']
+    pf_levels = loadmech.set_es_model_info(
+        model_dct[model]['es'], thy_dct)
+    pf_model = loadmech.set_pf_model_info(
+        model_dct[model]['pf'])
 
     # Find the number of uni and bimolecular wells already in the dictionary
     pidx = 1
@@ -205,8 +217,7 @@ def make_channel_pfs(
         #     (spc_dct[reac]['ene'] + spc_dct[reac]['zpe']/phycon.EH2KCAL) *
         #     phycon.EH2KCAL)
     # Perform the shift if necessary
-    shift = bool(pf_levels1 == pf_levels2)
-    if shift:
+    if first_ground_model != rxn_model:
         reac_ene = calc_shift_ene()
     # Wells and bimol stuff
     well_dct_key1 = '+'.join(rxn['reacs'])
