@@ -1,8 +1,6 @@
 """ drivers
 """
 import numpy
-from qcelemental import periodictable as ptab
-import automol
 import autofile
 import mess_io
 
@@ -69,10 +67,10 @@ def species_block(spc, spc_dct_i, spc_info, spc_model,
             dist_names.append(spc_dct_i['dist_info'][3])
 
     # Set TS information
-    frm_bnd_key, brk_bnd_key = get_bnd_keys(spc_dct_i, saddle)
+    frm_bnd_key, brk_bnd_key = messfutil.get_bnd_keys(spc_dct_i, saddle)
 
     # Initialize electronic energy levels
-    elec_levels = ini_elec_levels(spc_dct_i, spc_info)
+    elec_levels = messfutil.ini_elec_levels(spc_dct_i, spc_info)
 
     # Determine the species symmetry factor using the given model
     sym_factor = sym.symmetry_factor(
@@ -82,9 +80,9 @@ def species_block(spc, spc_dct_i, spc_info, spc_model,
         sym_cnf_save_fs, sym_min_cnf_locs)
 
     # Build the species string and get the imaginary frequency
-    if is_atom(harm_min_cnf_locs, harm_cnf_save_fs):
+    if messfutil.is_atom(harm_min_cnf_locs, harm_cnf_save_fs):
         # Get the mass needed for the MESS string; set imag to 0
-        mass = atom_mass(harm_min_cnf_locs, harm_cnf_save_fs)
+        mass = messfutil.atom_mass(harm_min_cnf_locs, harm_cnf_save_fs)
         imag = 0.0
         # Write the MESS string for an atom
         spc_str = mess_io.writer.atom(
@@ -371,7 +369,7 @@ def pst_block(spc_dct_i, spc_dct_j, spc_model, pf_levels,
     #      vpt2_min_cnf_locs_j, vpt2_save_path_j] = vpt2fs_j
 
     # Get the combined electronic energy levels
-    elec_levels = combine_elec_levels(spc_dct_i, spc_dct_j)
+    elec_levels = messfutil.combine_elec_levels(spc_dct_i, spc_dct_j)
 
     # Determine the species symmetry factor using the given model
     saddle = False
@@ -405,7 +403,7 @@ def pst_block(spc_dct_i, spc_dct_j, spc_model, pf_levels,
         hind_rot_str = ""
 
     if vib_model == 'harm' and tors_model == '1dhr':
-        if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
+        if messfutil.is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
             geo_i = harm_cnf_save_fs_i.leaf.file.geometry.read(
                 harm_min_cnf_locs_i)
             freqs_i = []
@@ -420,7 +418,7 @@ def pst_block(spc_dct_i, spc_dct_j, spc_model, pf_levels,
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_i, elec_levels,
                 saddle=False)
-        if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
+        if messfutil.is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
             geo_j = harm_cnf_save_fs_j.leaf.file.geometry.read(
                 harm_min_cnf_locs_j)
             freqs_j = []
@@ -507,7 +505,7 @@ def fake_species_block(
     spc_str = ''
 
     # Get the combined electronic energy levels
-    elec_levels = combine_elec_levels(spc_dct_i, spc_dct_j)
+    elec_levels = messfutil.combine_elec_levels(spc_dct_i, spc_dct_j)
 
     # Determine the species symmetry factor using the given model
     saddle = False
@@ -544,7 +542,7 @@ def fake_species_block(
         hind_rot_str = ""
 
     if vib_model == 'harm' and tors_model == '1dhr':
-        if is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
+        if messfutil.is_atom(harm_min_cnf_locs_i, harm_cnf_save_fs_i):
             freqs_i = []
             hr_str_i = ''
             symf_i = sym_factor_i
@@ -557,7 +555,7 @@ def fake_species_block(
                 frm_bnd_key, brk_bnd_key,
                 sym_factor_i, elec_levels,
                 saddle=False)
-        if is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
+        if messfutil.is_atom(harm_min_cnf_locs_j, harm_cnf_save_fs_j):
             freqs_j = []
             hr_str_j = ''
             symf_j = sym_factor_j
@@ -611,78 +609,3 @@ def set_model_filesys(thy_save_fs, spc_info, level, saddle=False):
         cnf_save_path = ''
 
     return cnf_save_fs, cnf_save_path, min_cnf_locs, save_path
-
-
-def ini_elec_levels(spc_dct, spc_info):
-    """ get initial elec levels
-    """
-    if 'elec_levs' in spc_dct:
-        elec_levels = spc_dct['elec_levs']
-    else:
-        elec_levels = [[0., spc_info[2]]]
-
-    return elec_levels
-
-
-def combine_elec_levels(spc_dct_i, spc_dct_j):
-    """ Put two elec levels together for two species
-    """
-
-    if 'elec_levs' in spc_dct_i:
-        elec_levels_i = spc_dct_i['elec_levs']
-    else:
-        elec_levels_i = [[0., spc_dct_i['mul']]]
-    if 'elec_levs' in spc_dct_j:
-        elec_levels_j = spc_dct_j['elec_levs']
-    else:
-        elec_levels_j = [[0., spc_dct_j['mul']]]
-
-    # Combine the energy levels
-    init_elec_levels = []
-    for _, elec_level_i in enumerate(elec_levels_i):
-        for _, elec_level_j in enumerate(elec_levels_j):
-            init_elec_levels.append(
-                [elec_level_i[0]+elec_level_j[0],
-                 elec_level_i[1]*elec_level_j[1]])
-
-    # See if any levels repeat and thus need to be added together
-    elec_levels = []
-    for level in init_elec_levels:
-        # Put level in in final list
-        if level not in elec_levels:
-            elec_levels.append(level)
-        # Add the level to the one in the list
-        else:
-            idx = elec_levels.index(level)
-            elec_levels[idx][1] += level[1]
-
-    return elec_levels
-
-
-def get_bnd_keys(spc_dct, saddle):
-    """ get bond broken and formed keys for a transition state
-    """
-    if saddle:
-        frm_bnd_key = spc_dct['frm_bnd_key']
-        brk_bnd_key = spc_dct['brk_bnd_key']
-    else:
-        frm_bnd_key = []
-        brk_bnd_key = []
-
-    return frm_bnd_key, brk_bnd_key
-
-
-def is_atom(har_min_cnf_locs, har_cnf_save_fs):
-    """ Check if species is an atom
-    """
-    if har_min_cnf_locs is not None:
-        har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-        print('This is an atom')
-    return automol.geom.is_atom(har_geo)
-
-
-def atom_mass(har_min_cnf_locs, har_cnf_save_fs):
-    """ write the atom string
-    """
-    har_geo = har_cnf_save_fs.leaf.file.geometry.read(har_min_cnf_locs)
-    return ptab.to_mass(har_geo[0][0])

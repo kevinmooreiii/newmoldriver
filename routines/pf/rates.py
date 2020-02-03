@@ -15,7 +15,7 @@ from lib.runner import script
 from lib.load import mechanism as loadmech
 from routines.pf.messf import blocks
 from routines.pf.messf import get_fs_ene_zpe
-from routines.pf.messf import calc_shift_ene
+from routines.pf.messf import calc_channel_enes
 
 
 # Writer
@@ -55,17 +55,14 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
 
     # Get the elec+zpe energy for the reference species
     first_spc = rxn_lst[0]['species'][0]
-    first_spc_info = (spc_dct[first_spc]['ich'],
-                      spc_dct[first_spc]['chg'],
-                      spc_dct[first_spc]['mlt'])
     first_ground_ene = get_fs_ene_zpe(
-        spc_dct, first_spc, first_spc_info, save_prefix,
+        spc_dct, first_spc,
         thy_dct, model_dct, first_ground_model,
         save_prefix, saddle=False)
 
     # Write the MESS data strings for all the species; no ene
     species = make_all_species_data(
-        rxn_lst, spc_dct, save_prefix, model_dct, thy_dct)
+        rxn_lst, spc_dct, model_dct, thy_dct, save_prefix)
 
     # Loop over all the channels and write the MESS strings
     for idx, rxn in enumerate(rxn_lst):
@@ -77,10 +74,15 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
                   'energy surfaces: {} and {}'.format(tsform, pes_formula))
             print('Will proceed to construct only {}'.format(pes_formula))
             continue
+        channel_enes = calc_channel_enes(
+            spc_dct, rxn, spc_tgt,
+            thy_dct, model_dct,
+            chn_model, first_ground_model,
+            save_prefix)
         mess_strs = make_channel_pfs(
             tsname, rxn, species, spc_dct, idx_dct, mess_strs,
-            first_ground_ene, model_dct, thy_dct,
-            multi_info, first_ground_model,
+            first_ground_ene, channel_enes,
+            model_dct, thy_dct, multi_info,
             pst_params=pst_params)
     well_str, bim_str, ts_str = mess_strs
     ts_str += '\nEnd\n'
@@ -91,8 +93,7 @@ def write_channel_mess_strs(spc_dct, rxn_lst, pes_formula,
     return well_str, bim_str, ts_str
 
 
-def make_all_species_data(rxn_lst, spc_dct, save_prefix,
-                          model_info, pf_info):
+def make_all_species_data(rxn_lst, spc_dct, model_info, pf_info, save_prefix):
     """ generate the MESS species blocks for all the species
     """
     species = {}
@@ -162,8 +163,8 @@ def make_fake_species_data(spc_dct_i, spc_dct_j, spc_save_fs,
 
 def make_channel_pfs(
         tsname, rxn, species_data, spc_dct, idx_dct, strs,
-        first_ground_ene, model_dct, thy_dct,
-        multi_info, first_ground_model,
+        first_ground_ene, channel_enes,
+        model_dct, thy_dct, multi_info,
         pst_params=(1.0, 6),
         rad_rad_ts='pst'):
     """ make the partition function strings for each of the channels
@@ -176,11 +177,11 @@ def make_channel_pfs(
     bim_str, well_str, ts_str = strs
 
     # Set the model and info for the reaction
-    rxn_model = rxn['model']
+    chn_model = rxn['model']
     pf_levels = loadmech.set_es_model_info(
-        model_dct[model]['es'], thy_dct)
-    pf_model = loadmech.set_pf_model_info(
-        model_dct[model]['pf'])
+        model_dct[chn_model]['es'], thy_dct)
+    spc_model = loadmech.set_pf_model_info(
+        model_dct[chn_model]['pf'])
 
     # Find the number of uni and bimolecular wells already in the dictionary
     pidx = 1
@@ -205,20 +206,6 @@ def make_channel_pfs(
     for reac in rxn['reacs']:
         spc_label.append(automol.inchi.smiles(spc_dct[reac]['ich']))
         well_data.append(species_data[reac])
-        # New way to get the energy by reading from dct with shifts
-        reac_ene += calc_shift_ene(
-            spc_dct, thy_dct, model_dct, rxn,
-            spc_tgt, spc_info_tgt, spc_save_fs_tgt,
-            pf_levels1, spc_model1, pf_levels2, spc_model2,
-            save_prefix_tgt, saddle_tgt)
-
-        # Old way to get energy, assuming it is in dct
-        # reac_ene += (
-        #     (spc_dct[reac]['ene'] + spc_dct[reac]['zpe']/phycon.EH2KCAL) *
-        #     phycon.EH2KCAL)
-    # Perform the shift if necessary
-    if first_ground_model != rxn_model:
-        reac_ene = calc_shift_ene()
     # Wells and bimol stuff
     well_dct_key1 = '+'.join(rxn['reacs'])
     well_dct_key2 = '+'.join(rxn['reacs'][::-1])
@@ -229,8 +216,6 @@ def make_channel_pfs(
             if bimol:
                 reac_label = 'P' + str(pidx)
                 pidx += 1
-                # if not first_ground_ene:
-                #    first_ground_ene = reac_ene
                 ground_energy = reac_ene - first_ground_ene
                 bim_str += ' \t ! {} + {} \n'.format(
                     rxn['reacs'][0], rxn['reacs'][1])
@@ -239,8 +224,6 @@ def make_channel_pfs(
                     well_data[1], ground_energy)
                 idx_dct[well_dct_key1] = reac_label
             else:
-                # if not first_ground_ene:
-                #     first_ground_ene = reac_ene
                 reac_label = 'W' + str(widx)
                 widx += 1
                 zero_energy = reac_ene - first_ground_ene

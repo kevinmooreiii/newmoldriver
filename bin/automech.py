@@ -3,7 +3,6 @@
    launch the desired drivers
 """
 
-import os
 import sys
 from drivers import esdriver
 from drivers import thermodriver
@@ -58,7 +57,7 @@ if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
     )
 elif RUN_OBJ_DCT['spc']:
     RUN_PES_DCT = {}
-    RUN_SPC_LST_DCT = loadspc.make_run_spc_dct(SPC_DCT, RUN_OBJ_DCT)
+    RUN_SPC_LST_DCT = loadspc.build_run_spc_dct(SPC_DCT, RUN_OBJ_DCT)
 else:
     print('No Proper Run object specified')
     sys.exit()
@@ -89,23 +88,24 @@ fbuild.prefix_filesystem(
 print('{}'.format(RUN_INP_DCT['run_prefix']))
 print('{}'.format(RUN_INP_DCT['save_prefix']))
 
-# Add models to the the pes and spc dct
-# pes
-# [ {'species': [('CH4', '')]}, {'reacs': []}, {'prods': []}, {'model': 'model_str'} ]
-# spc 
-# [ {'species': [('CH4', 'model_str'), ('C2H8', 'model_str)]}, {'reacs': []}, {'prods': []}, {'model': ''} ]
-
 # Run the requested drivers: es, thermo, ktp
 print('\n\nRunning the requested drivers...')
+# need_ts = bool('find_ts' in es_tsk_lst)
 if 'es' in RUN_JOBS_LST:
     if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
         # Call ESDriver for spc in each PES
         for pes, rxn_lst in RUN_PES_DCT.items():
+            # Get info for the transition states
+            ts_dct = loadspc.build_sadpt_dct(
+                rxn_lst, MODEL_DCT, THY_DCT, ES_TSK_STR,
+                RUN_INP_DCT, RUN_OPTIONS_DCT, SPC_DCT, {})
+            SPC_DCT.update(ts_dct)
             esdriver.run(
                 rxn_lst,
                 SPC_DCT,
                 ES_TSK_STR,
                 MODEL_DCT,
+                THY_DCT,
                 RUN_OPTIONS_DCT,
                 RUN_INP_DCT
             )
@@ -116,11 +116,12 @@ if 'es' in RUN_JOBS_LST:
             SPC_DCT,
             ES_TSK_STR,
             MODEL_DCT,
+            THY_DCT,
             RUN_OPTIONS_DCT,
             RUN_INP_DCT
         )
 
-if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
+if 'pf'in RUN_JOBS_LST or 'thermo' in RUN_JOBS_LST:
     if RUN_OBJ_DCT['pes'] or RUN_OBJ_DCT['pspc']:
         # Call ThermoDriver for spc in each PES
         for pes, rxn_lst in RUN_PES_DCT.items():
@@ -128,7 +129,7 @@ if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
                 SPC_DCT,
                 MODEL_DCT,
                 THY_DCT,
-                RUN_LST,
+                rxn_lst,
                 RUN_INP_DCT,
                 ref_scheme='basic',
                 run_pf=bool('pf' in RUN_JOBS_LST),
@@ -150,12 +151,18 @@ if 'thermo'in RUN_JOBS_LST or 'poly' in RUN_JOBS_LST:
 if 'rates' in RUN_JOBS_LST or 'params' in RUN_JOBS_LST:
     if RUN_OBJ_DCT['pes']:
         # Call kTPDriver for spc in each PES
-        for pes, rxn_lst in RUN_PES_DCT.items():
+        for pes_formula, rxn_lst in RUN_PES_DCT.items():
+            # Get info for the transition states
+            ts_dct = loadspc.build_sadpt_dct(
+                rxn_lst, MODEL_DCT, THY_DCT, ES_TSK_STR,
+                RUN_INP_DCT, RUN_OPTIONS_DCT, SPC_DCT, {})
+            SPC_DCT.update(ts_dct)
+            # Run the driver
             ktpdriver.run(
-                FORMULA,
+                pes_formula,
                 SPC_DCT,
                 THY_DCT,
-                RUN_LST,
+                rxn_lst,
                 MODEL_DCT,
                 RUN_INP_DCT,
                 run_rates=bool('rates' in RUN_JOBS_LST),

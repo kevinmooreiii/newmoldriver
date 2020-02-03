@@ -268,10 +268,10 @@ def run_sadpt_scan(typ, grid, dist_name, brk_name, ts_zma, ts_info, ref_level,
 
     # Find the structure at the maximum on the grid opt scan
     if 'elimination' in typ:
-        max_zma, max_ene = rxngrid.find_max_2D(
+        max_zma, max_ene = rxngrid.find_max_2d(
             grid1, grid2, dist_name, brk_name, scn_save_fs)
     else:
-        max_zma, max_ene = rxngrid.find_max_1D(
+        max_zma, max_ene = rxngrid.find_max_1d(
             typ, grid, ts_zma, dist_name, scn_save_fs)
     print('geometry for maximum along scan:', max_zma)
     print('energy for maximum along scan:', max_ene)
@@ -335,9 +335,20 @@ def find_sadpt_transition_state(
         vals = automol.zmatrix.values(zma)
         final_dist = vals[dist_name]
         dist_info[1] = final_dist
-        print('Test final distance for reactant coordinate', final_dist)
-        conformer.run_single_conformer(ts_info, ref_level, filesys, overwrite,
-                                       saddle=True, dist_info=dist_info)
+        conformer.conformer_sampling(
+            spc_info=ts_info,
+            thy_level=ref_level,
+            thy_save_fs=filesys[3],
+            cnf_run_fs=filesys[4],
+            cnf_save_fs=filesys[5],
+            script_str=opt_script_str,
+            overwrite=overwrite,
+            nsamp_par=[False, 0, 0, 0, 0, 1],
+            saddle=True,
+            dist_info=dist_info,
+            two_stage=True,
+            **opt_kwargs
+        )
     else:
         # Give up and return failed information
         geo = 'failed'

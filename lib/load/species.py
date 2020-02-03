@@ -7,8 +7,12 @@ import automol
 import autoparse.find as apf
 import autofile
 from lib.load import ptt
+from lib.load import run as loadrun
 from lib.phydat import symm, eleclvl
 from lib.reaction import rxnid
+from lib.filesystem import path as fpath
+from lib.filesystem import read as fread
+from lib.filesystem import inf as finf
 
 
 CSV_INP = 'inp/species.csv'
@@ -19,17 +23,19 @@ CLA_INP = 'inp/class.csv'
 def build_run_spc_dct(spc_dct, run_obj_dct):
     """ Get a dictionary of requested species matching the PES_DCT format
     """
-    spcnums = [idx for idx in run_obj_dct['spc']]
-    
-    run_lst = []
+    # Fix stuff, this function does not work right now
+
+    spc_nums = [idx for idx in run_obj_dct['spc']]
+
+    run_spc_lst = []
     for idx, spc in enumerate(spc_dct):
-        if idx in spcnums:
-            model = spcmods[idx]
-            run_lst.append((spc['name'], run_obj_dct['spc'][idx]))
+        if idx in spc_nums:
+            # model = spcmods[idx]
+            run_spc_lst.append((spc['name'], run_obj_dct['pspc'][idx]))
 
     # Build the run dct
     run_dct = {}
-    run_dct['all'] =  {
+    run_dct['all'] = {
         'species': run_spc_lst,
         'reacs': [],
         'prods': []
@@ -183,44 +189,6 @@ def read_class_dct(job_path):
     return cla_dct
 
 
-def build_spc_dct_for_sadpts(spc_dct, rxn_lst, rxn_name_lst,
-                             rct_names_lst, prd_names_lst, cla_dct):
-    """ build dct
-    """
-    ts_dct = {}
-    ts_idx = 0
-    for idx, rxn in enumerate(rxn_lst):
-        reacs = rxn['reacs']
-        prods = rxn['prods']
-        tsname = 'ts_{:g}'.format(ts_idx)
-        ts_dct[tsname] = {}
-        rname = rxn_name_lst[idx]
-        rname_eq = '='.join(rname.split('=')[::-1])
-        if rname in cla_dct:
-            ts_dct[tsname]['given_class'] = cla_dct[rname]
-        elif rname_eq in cla_dct:
-            ts_dct[tsname]['given_class'] = cla_dct[rname_eq]
-            reacs = rxn['prods']
-            prods = rxn['reacs']
-        else:
-            ts_dct[tsname]['given_class'] = None
-        if reacs and prods:
-            ts_dct[tsname]['reacs'] = reacs
-            ts_dct[tsname]['prods'] = prods
-        ts_dct[tsname]['ich'] = ''
-        ts_chg = 0
-        for rct in rct_names_lst[idx]:
-            ts_chg += spc_dct[rct]['chg']
-        ts_dct[tsname]['chg'] = ts_chg
-        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
-            rct_names_lst[idx], prd_names_lst[idx], spc_dct)
-        ts_dct[tsname]['mul'] = mul_low
-        ts_dct[tsname]['rad_rad'] = rad_rad
-        ts_idx += 1
-
-    return ts_dct
-
-
 def geometry_dictionary(job_path):
     """ read in dictionary of saved geometries
     """
@@ -239,79 +207,73 @@ def geometry_dictionary(job_path):
     return geom_dct
 
 
-def add_sadpt_dct():
-    """ sadpt dct stuff
+def build_sadpt_dct(rxn_lst, model_dct, thy_dct, es_tsk_str,
+                    run_inp_dct, run_options_dct, spc_dct, cla_dct):
+    """ build dct
     """
-    for formula in pes_dct:
+    run_prefix = run_inp_dct['run_prefix']
+    save_prefix = run_inp_dct['save_prefix']
+    kickoff = run_options_dct['kickoff']
+    print('Setting es tasks list...')
+    es_tsk_lst = loadrun.build_run_es_tsks_lst(
+        es_tsk_str, model_dct, thy_dct)
 
-        # Build the names list
-        pes_rct_names_lst = pes_dct[formula]['rct_names_lst']
-        pes_prd_names_lst = pes_dct[formula]['prd_names_lst']
-        pes_rxn_name_lst = pes_dct[formula]['rxn_name_lst']
+    print('\nBegin transition state prep')
+    ts_dct = {}
+    ts_idx = 0
+    for _, rxn in enumerate(rxn_lst):
+        reacs = rxn['reacs']
+        prods = rxn['prods']
+        tsname = 'ts_{:g}'.format(ts_idx)
+        ts_dct[tsname] = {}
+        # Fix this rname build and class dct stuff
+        # rname = rxn_name_lst[idx]
+        # rname_eq = '='.join(rname.split('=')[::-1])
+        # if rname in cla_dct:
+        #     ts_dct[tsname]['given_class'] = cla_dct[rname]
+        # elif rname_eq in cla_dct:
+        #     ts_dct[tsname]['given_class'] = cla_dct[rname_eq]
+        #     reacs = rxn['prods']
+        #     prods = rxn['reacs']
+        # else:
+        #    ts_dct[tsname]['given_class'] = None
+        ts_dct[tsname]['given_class'] = None
+        if reacs and prods:
+            ts_dct[tsname]['reacs'] = reacs
+            ts_dct[tsname]['prods'] = prods
+        ts_dct[tsname]['ich'] = ''
+        ts_chg = 0
+        for rct in reacs:  # rct_names_lst[idx]:
+            ts_chg += spc_dct[rct]['chg']
+        ts_dct[tsname]['chg'] = ts_chg
+        mul_low, _, rad_rad = rxnid.ts_mul_from_reaction_muls(
+            reacs, prods, spc_dct)
+        ts_dct[tsname]['mul'] = mul_low
+        ts_dct[tsname]['rad_rad'] = rad_rad
+        ts_dct[tsname] = set_sadpt_info(
+            es_tsk_lst, ts_dct, spc_dct, tsname,
+            run_prefix, save_prefix, kickoff)
+        ts_idx += 1
 
-        # Select names from the names list corresponding to chnls to run
-        # conn_chnls_dct[formula] = {sub_pes_idx: [channel_idxs]}
-        for cvals in conn_chnls_dct[formula].values():
-            run_pes = False
-            rct_names_lst = []
-            prd_names_lst = []
-            rxn_name_lst = []
-            for chn_idx, _ in enumerate(pes_rxn_name_lst):
-                if chn_idx in cvals:
-                    run_pes = True
-                    rct_names_lst.append(pes_rct_names_lst[chn_idx])
-                    prd_names_lst.append(pes_prd_names_lst[chn_idx])
-                    rxn_name_lst.append(pes_rxn_name_lst[chn_idx])
-                    print('running channel {}: {} = {}'.format(
-                        str(chn_idx+1),
-                        ' + '.join(pes_rct_names_lst[chn_idx]),
-                        ' + '.join(pes_prd_names_lst[chn_idx])))
-
-            # Call the Driver for the PES
-            if run_pes:
-
-                # Form the reaction list
-                rxn_lst = format_run_rxn_lst(rct_names_lst, prd_names_lst)
-
-                # Add the stationary points to the spc dcts
-                need_ts = bool(
-                    'find_ts' in es_tsk_lst or
-                    'rates' in run_jobs_lst or
-                    'params' in run_jobs_lst)
-                if need_ts:
-                    print('\nBegin transition state prep')
-                    ts_dct = loadspc.build_spc_dct_for_sadpts(
-                        spc_dct, rxn_lst, rxn_name_lst,
-                        rct_names_lst, prd_names_lst, cla_dct)
-                    for sadpt in ts_dct:
-                        ts_dct[sadpt] = set_sadpt_info(
-                            es_tsk_lst, ts_dct, spc_dct, sadpt,
-                            run_inp_dct['run_prefix'],
-                            run_inp_dct['save_prefix'],
-                            run_options_dct['kickoff'])
-                        print('loop dct\n', ts_dct[sadpt]['dist_info'])
-                    spc_dct.update(ts_dct)
-
-    return None
+    return ts_dct
 
 
 def set_sadpt_info(es_tsk_lst, ts_dct, spc_dct, sadpt,
                    run_prefix, save_prefix, kickoff):
     """ set the saddle point dct with info
     """
-    # Right now getting from tasks, need to get from model as well
     for tsk in es_tsk_lst:
         if 'find_ts' in tsk:
-            print(es_tsk_lst)
-            print(es_tsk_lst[0][1])
             ini_thy_info = es_tsk_lst[0][2]
             thy_info = es_tsk_lst[0][1]
             break
+
+    # Right now getting from tasks, need to get from model as well
     print('ini_thy_info', ini_thy_info)
     print('thy_info', thy_info)
     # Generate rxn data, reorder if necessary, and put in spc_dct for given ts
     rxn_ichs, rxn_chgs, rxn_muls, low_mul, high_mul = finf.rxn_info(
-        save_prefix, sadpt, ts_dct, spc_dct, thy_info, ini_thy_info)
+        save_prefix, sadpt, ts_dct, spc_dct, thy_info)
     ts_dct[sadpt]['rxn_ichs'] = rxn_ichs
     ts_dct[sadpt]['rxn_chgs'] = rxn_chgs
     ts_dct[sadpt]['rxn_muls'] = rxn_muls

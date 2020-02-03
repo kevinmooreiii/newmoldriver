@@ -54,8 +54,7 @@ def get_spc_info(spc_dct):
     return props
 
 
-def rxn_info(save_prefix, sadpt, ts_dct, spc_dct,
-             thy_info, ini_thy_info=None):
+def rxn_info(save_prefix, sadpt, ts_dct, spc_dct, thy_info):
     """ prepare rxn info and reverse the reactants and products
         if reaction is endothermic
     """
@@ -78,12 +77,12 @@ def rxn_info(save_prefix, sadpt, ts_dct, spc_dct,
         rxn_muls[1].append(spc_dct[spc]['mul'])
 
     # Check direction of reaction
-    try:
-        rxn_exo = fsread.reaction_energy(
-            save_prefix, rxn_ichs, rxn_chgs, rxn_muls, thy_info)
-    except IOError:
-        rxn_exo = fsread.reaction_energy(
-            save_prefix, rxn_ichs, rxn_chgs, rxn_muls, ini_thy_info)
+    # try:
+    rxn_exo = fsread.reaction_energy(
+        save_prefix, rxn_ichs, rxn_chgs, rxn_muls, thy_info)
+    # except IOError:
+    #     rxn_exo = fsread.reaction_energy(
+    #         save_prefix, rxn_ichs, rxn_chgs, rxn_muls, ini_thy_info)
     print('reaction is {:.2f} endothermic'.format(rxn_exo*phycon.EH2KCAL))
     if rxn_exo > 0 and not ts_dct[sadpt]['given_class']:
         rxn_ichs = rxn_ichs[::-1]

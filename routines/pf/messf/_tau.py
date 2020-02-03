@@ -89,8 +89,6 @@ def write_tau_data_str(
     evr = name+'\n'
     # cycle through saved tau geometries
     idx = 0
-    print('tau_save_fs test')
-    print(tau_save_fs.leaf.existing())
     for locs in tau_save_fs.leaf.existing():
         geo = tau_save_fs.leaf.file.geometry.read(locs)
         ene = tau_save_fs.leaf.file.energy.read(locs)

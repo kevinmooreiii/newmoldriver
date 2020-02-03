@@ -1,6 +1,7 @@
 """ calculates certain quantities of interest using MESS+filesytem
 """
 
+import os
 import automol
 import elstruct
 import autofile
@@ -10,8 +11,11 @@ from lib.phydat import phycon
 from lib.filesystem import minc as fsmin
 from lib.filesystem import orb as fsorb
 from lib.filesystem import inf as finf
+from lib.load import mechanism as loadmech
 import routines.pf.messf.models as pfmodels
 from routines.pf.messf.blocks import set_model_filesys
+from routines.pf.messf import _sym as sym
+from routines.pf.messf import _util as messfutil
 
 
 def get_zpe_str(spc_dct, zpe):
@@ -35,8 +39,8 @@ def get_zero_point_energy(spc, spc_dct_i, pf_levels, spc_model, save_prefix):
     spc_info = (spc_dct_i['ich'], spc_dct_i['chg'], spc_dct_i['mul'])
 
     # Prepare the sets of file systems
-    [_, _, harm_levels, _, _, tors_levels] = pf_levels
-    tors_model, vib_model, _ = spc_model
+    [_, _, harm_levels, _, sym_level, tors_levels] = pf_levels
+    tors_model, vib_model, sym_model = spc_model
 
     # Set theory filesystem used throughout
     thy_save_fs = autofile.fs.theory(save_prefix)
@@ -54,19 +58,42 @@ def get_zero_point_energy(spc, spc_dct_i, pf_levels, spc_model, save_prefix):
         thy_save_fs, spc_info, harm_levels, saddle=saddle)
     [harm_cnf_save_fs, _,
      harm_min_cnf_locs, _] = harmfs
+    if sym_level:
+        symfs = set_model_filesys(
+            thy_save_fs, spc_info, sym_level, saddle=('ts_' in spc))
+        [sym_cnf_save_fs, _,
+         sym_min_cnf_locs, _] = symfs
     if tors_levels and not rad_rad_ts:
         torsfs = set_model_filesys(
             thy_save_fs, spc_info, tors_levels[0], saddle=saddle)
         [tors_cnf_save_fs, tors_cnf_save_path,
          tors_min_cnf_locs, tors_save_path] = torsfs
 
-    # if saddle:
+    # Set additional info for a saddle point
+    saddle = False
+    dist_names = []
+    tors_names = []
     if 'ts_' in spc:
-        frm_bnd_key = spc_dct_i['frm_bnd_key']
-        brk_bnd_key = spc_dct_i['brk_bnd_key']
-    else:
-        frm_bnd_key = []
-        brk_bnd_key = []
+        saddle = True
+        tors_names = spc_dct_i['tors_names']
+        mig = 'migration' in spc_dct_i['class']
+        elm = 'elimination' in spc_dct_i['class']
+        if mig or elm:
+            dist_names.append(spc_dct_i['dist_info'][0])
+            dist_names.append(spc_dct_i['dist_info'][3])
+
+    # Set TS information
+    frm_bnd_key, brk_bnd_key = messfutil.get_bnd_keys(spc_dct_i, saddle)
+
+    # Initialize electronic energy levels
+    elec_levels = messfutil.ini_elec_levels(spc_dct_i, spc_info)
+
+    # Determine the species symmetry factor using the given model
+    sym_factor = sym.symmetry_factor(
+        sym_model, spc_dct_i, spc_info, dist_names,
+        saddle, frm_bnd_key, brk_bnd_key, tors_names,
+        tors_cnf_save_fs, tors_min_cnf_locs,
+        sym_cnf_save_fs, sym_min_cnf_locs)
 
     # Get reference harmonic
     harm_zpe = 0.0
@@ -96,9 +123,6 @@ def get_zero_point_energy(spc, spc_dct_i, pf_levels, spc_model, save_prefix):
         harm_zpe = sum(freqs)*phycon.WAVEN2KCAL/2.
 
         # Determine the ZPVE based on the model
-        print(vib_model)
-        print(tors_model)
-        print(rad_rad_ts)
         if (vib_model == 'harm' and tors_model == 'rigid') or rad_rad_ts:
             print('HARM_RIGID')
             zpe = harm_zpe
@@ -169,18 +193,77 @@ def get_high_level_energy(
     sp_save_fs = autofile.fs.single_point(cnf_save_path)
     sp_save_fs.leaf.create(thy_high_level)
 
-    print('test path')
-    print(thy_high_level)
-    print(sp_save_fs.leaf.path(thy_high_level))
-    min_ene = sp_save_fs.leaf.file.energy.read(thy_high_level)
+    if os.path.exists(sp_save_fs.leaf.path(thy_high_level)):
+        min_ene = sp_save_fs.leaf.file.energy.read(thy_high_level)
+    else:
+        print('No energy at path')
+        min_ene = None
 
     return min_ene
 
 
-def calc_shift_ene(spc_dct, thy_dct, model_dct, rxn,
-                   spc_tgt, spc_info_tgt, spc_save_fs_tgt,
-                   pf_levels1, spc_model1, pf_levels2, spc_model2,
-                   save_prefix_tgt, saddle_tgt):
+def calc_channel_enes(spc_dct, rxn,
+                      thy_dct, model_dct,
+                      chn_model, first_ground_model,
+                      save_prefix):
+    """ Get the energies for several points on the reaction channel.
+        The energy is determined by two different methods:
+            (1) Read from the file system if chn_model == first_ground_model
+            (2) Shift ene for the channel if chn_model != first_ground_model
+    """
+
+    reacs = rxn['reacs']
+    prods = rxn['prods']
+    trans_st = spc_dct['ts_n']
+    species = [reacs, prods, trans_st]
+
+    if chn_model == first_ground_model:
+        chn_enes = read_channel_energies(spc_dct, species,
+                                         thy_dct, model_dct,
+                                         first_ground_model,
+                                         save_prefix)
+    else:
+        chn_enes1 = read_channel_energies(spc_dct, species,
+                                          thy_dct, model_dct,
+                                          first_ground_model,
+                                          save_prefix)
+        chn_enes2 = read_channel_energies(spc_dct, species,
+                                          thy_dct, model_dct,
+                                          chn_model,
+                                          save_prefix)
+        chn_enes = calc_shift_ene(chn_enes1, chn_enes2)
+
+    return chn_enes
+
+
+def calc_shift_ene(chn_enes1, chn_enes2):
+    """ Another function to do the shifted energies
+    """
+
+    # Find a species that has enes with both methods to be used to scale
+    # I don't think we need to use any species, so I will use the first
+    for spc in chn_enes1:
+        if chn_enes1[spc] is not None and chn_enes2[spc] is not None:
+            scale_ref_spcs = spc
+            break
+    scale_ref_ene1 = chn_enes1[scale_ref_spcs]
+    scale_ref_ene2 = chn_enes2[scale_ref_spcs]
+
+    # Now return a dct with the lvl1 enes or the scaled lvl2 enes
+    fin_enes = {}
+    for spc in chn_enes1:
+        if chn_enes1[spc] is not None:
+            fin_enes[spc] = chn_enes1[spc]
+        else:
+            fin_enes[spc] = scale_ref_ene1 + (chn_enes2[spc] - scale_ref_ene2)
+
+    return fin_enes
+
+
+def calc_shift_ene2(spc_dct, spc_tgt, rxn,
+                    thy_dct, model_dct,
+                    chn_model, first_ground_model,
+                    save_prefix, saddle=False):
     """ Function to shift the energy of a species to allow mixing of
         channels calculated with two different methods.
         We consider two levels of theory:
@@ -197,26 +280,20 @@ def calc_shift_ene(spc_dct, thy_dct, model_dct, rxn,
 
     # Read the energy for the target species from the filesystem
     tgt_ene_lvl2 = get_fs_ene_zpe(spc_dct, spc_tgt,
-                                  spc_info_tgt, spc_save_fs_tgt,
-                                  thy_dct, model_dct, pf_levels2, spc_model2,
-                                  save_prefix_tgt, saddle=saddle_tgt)
+                                  thy_dct, model_dct, chn_model,
+                                  save_prefix, saddle=saddle)
 
     # Loop over the species in the channel and find one species
     # where the energy and ZPVE has been calculated at levels 1 and 2.
     chn_enes = {}
     for spc in rxn:
-        # Maybe get the spc and other stuff...
-        spc_info = 1
-        spc_save_fs = 1
-        save_prefix = 1
-        saddle = bool('ts_' in spc)
         # Try and read the energies from the filesystem
-        chn_ene1 = get_fs_ene_zpe(spc_dct, spc, spc_info, spc_save_fs,
-                                  thy_dct, model_dct, pf_levels1, spc_model1,
-                                  save_prefix, saddle=saddle)
-        chn_ene2 = get_fs_ene_zpe(spc_dct, spc, spc_info, spc_save_fs,
-                                  thy_dct, model_dct, pf_levels2, spc_model2,
-                                  save_prefix, saddle=saddle)
+        chn_ene1 = get_fs_ene_zpe(spc_dct, spc,
+                                  thy_dct, model_dct, first_ground_model,
+                                  save_prefix, saddle=bool('ts_' in spc))
+        chn_ene2 = get_fs_ene_zpe(spc_dct, spc,
+                                  thy_dct, model_dct, chn_model,
+                                  save_prefix, saddle=bool('ts_' in spc))
         # Only add the energies to both dcts if ene1 and ene2 were found
         if chn_ene1 and chn_ene2:
             chn_enes[spc] = (chn_ene1, chn_ene2)
@@ -236,18 +313,68 @@ def calc_shift_ene(spc_dct, thy_dct, model_dct, rxn,
     return tgt_ene_lvl1
 
 
-def get_fs_ene_zpe(spc_dct, spc, spc_info,
+def read_channel_energies(spc_dct, species,
+                          thy_dct, model_dct, model,
+                          save_prefix):
+    """ Read the energies for the channel
+    """
+    [reacs, prods, trans_st] = species
+
+    # Read the reactants energies
+    reac_ene = 0.0
+    for reac in reacs:
+        ene = get_fs_ene_zpe(spc_dct, reac,
+                             thy_dct, model_dct, model,
+                             save_prefix, saddle=False)
+        if ene is not None:
+            reac_ene += ene
+        else:
+            reac_ene = None
+            break
+
+    # Read the products energies
+    prod_ene = 0.0
+    for prod in prods:
+        ene = get_fs_ene_zpe(spc_dct, prod,
+                             thy_dct, model_dct, model,
+                             save_prefix, saddle=False)
+        if ene is not None:
+            prod_ene += ene
+        else:
+            prod_ene = None
+            break
+
+    # Read the transition state energy
+    ts_ene = get_fs_ene_zpe(spc_dct, trans_st,
+                            thy_dct, model_dct, model,
+                            save_prefix, saddle=True)
+
+    # Set energies into the dct
+    energy_dct = {}
+    energy_dct['reacs'] = reac_ene
+    energy_dct['prods'] = prod_ene
+    energy_dct['ts'] = ts_ene
+
+    return energy_dct
+
+
+def get_fs_ene_zpe(spc_dct, spc,
                    thy_dct, model_dct, model,
                    save_prefix, saddle=False):
     """ Get the energy for a species on a channel
     """
+
+    # Set the species save filesystem
     spc_save_fs = autofile.fs.species(save_prefix)
+
+    # Set the spc info object
+    spc_info = (spc_dct[spc]['ich'],
+                spc_dct[spc]['chg'],
+                spc_dct[spc]['mul'])
+
     # Set the model and info for the reaction
-    rxn_model = rxn['model']
-    pf_levels = loadmech.set_es_model_info(
-        model_dct[rxn_model]['es'], thy_dct)
-    pf_model = loadmech.set_pf_model_info(
-        model_dct[rxn_model]['pf'])
+    pf_levels = loadmech.set_es_model_info(model_dct[model]['es'], thy_dct)
+    pf_model = loadmech.set_pf_model_info(model_dct[model]['pf'])
 
     # Set paths
     if saddle:
@@ -266,7 +393,12 @@ def get_fs_ene_zpe(spc_dct, spc, spc_info,
         save_prefix=save_path,
         saddle=saddle)
     e_zpe = get_zero_point_energy(
-        spc, spc_dct, pf_levels, spc_model,
+        spc, spc_dct,
+        pf_levels, pf_model,
         save_prefix=spc_save_path)
 
-    return (e_elec + e_zpe) * phycon.EH2KCAL
+    ene = None
+    if e_elec is not None and e_zpe is not None:
+        ene = (e_elec + e_zpe) * phycon.EH2KCAL
+
+    return ene

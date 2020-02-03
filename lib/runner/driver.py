@@ -53,8 +53,6 @@ def run_job(
     assert job in JOB_ERROR_DCT
     assert job in JOB_SUCCESS_DCT
 
-    print('es job test', job)
-    print('path test', run_fs.leaf.path([job]))
     run_fs.leaf.create([job])
     run_path = run_fs.leaf.path([job])
     if overwrite:

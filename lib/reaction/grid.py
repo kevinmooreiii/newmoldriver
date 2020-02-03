@@ -96,12 +96,13 @@ def build_grid(rtype, rbktype, ts_bnd_len, ts_zma, dist_name, npoints=None):
 
     # Set the main type
     # if spin == 'high':
-    if 'beta_scission' in rtype:
+    if 'beta scission' in rtype:
         grid, update_guess = beta_scission_grid(npoints, ts_bnd_len)
     elif 'addition' in rtype:
         grid, update_guess = addition_grid(npoints, ts_bnd_len)
-    elif 'hydrogen_migration' in rtype:
-        grid, update_guess = hydrogen_migration_grid(npoints, ts_bnd_len)
+    elif 'hydrogen migration' in rtype:
+        grid, update_guess = hydrogen_migration_grid(npoints, ts_bnd_len,
+                                                     ts_zma, dist_name)
     elif 'unimolecular elimination' in rtype:
         grid, update_guess = unimolecular_elimination_grid(npoints, ts_bnd_len,
                                                            ts_zma, dist_name)

@@ -2,6 +2,7 @@
 """
 
 import routines
+from lib.load import run as loadrun
 from lib.filesystem import check as fcheck
 from lib.filesystem import path as fpath
 from lib import printmsg
@@ -11,43 +12,40 @@ def run(rxn_lst,
         spc_dct,
         es_tsk_str,
         model_dct,
+        thy_dct,
         run_options_dct,
         run_inp_dct):
     """ driver for all electronic structure tasks
     """
-   
+
     # Print the header message for the driver
     printmsg.program_header('es')
 
     # Pull stuff from dcts for now
-    # Have to set to the model for the reaction
-    print('rxn_lst')
-    print(rxn_lst)
-    model = rxn_lst['model']
     run_prefix = run_inp_dct['run_prefix']
     save_prefix = run_inp_dct['save_prefix']
     # vdw_params = model_dct['options']['vdw_params']
-    freeze_all_tors = model_dct[model]['options']['freeze_all_tors']
-    ndim_tors = model_dct[model]['pf']['tors']
-    rad_rad_ts = model_dct[model]['pf']['ts_barrierless']
+    # freeze_all_tors = model_dct[model]['options']['freeze_all_tors']
+    # ndim_tors = model_dct[model]['pf']['tors']
+    # rad_rad_ts = model_dct[model]['pf']['ts_barrierless']
+    freeze_all_tors = False
+    ndim_tors = 1
+    rad_rad_ts = 'pst'
     mc_nsamp = run_options_dct['mc_nsamp']
     kickoff = run_options_dct['kickoff']
 
     # Do some extra work to prepare the info to pass to the drivers
     print('Setting es tasks list...')
-    # right now this assumes one set of task lists for everything (one model)
-    # need to move this into esdriver
     es_tsk_lst = loadrun.build_run_es_tsks_lst(
         es_tsk_str, model_dct, thy_dct)
-    
+
     # Species queue
     print('rxn_lst\n', rxn_lst)
-    spc_queue = rxn_lst[0]['species']
-    # Need different spc queue (remember that I don't need two channels like ktpdriver
-    # print('driver: es tsk lst')
-    # for x in es_tsk_lst:
-    #     print(x)
-    # print('\n\n')
+    spc_queue = []
+    for _, rxn in enumerate(rxn_lst):
+        # model = rxn['model']
+        spc_queue.extend((reac for reac in rxn['reacs']))
+        spc_queue.extend((prod for prod in rxn['prods']))
 
     # Loop over Tasks
     for tsk_info in es_tsk_lst:
@@ -60,8 +58,8 @@ def run(rxn_lst,
         if tsk in ('find_ts', 'find_vdw'):
             for sadpt in spc_dct:
                 if 'ts_' in sadpt:
-                    printmsg.sadpt_tsk_printmsg(
-                        tsk, sadpt, spc_dct, thy_info, ini_thy_info)
+                    # printmsg.sadpt_tsk_printmsg(
+                    #     tsk, sadpt, spc_dct, thy_info, ini_thy_info)
                     if not spc_dct[sadpt]['class']:
                         print('skipping reaction because type =',
                               spc_dct[sadpt]['class'])

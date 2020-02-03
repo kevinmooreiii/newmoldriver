@@ -174,7 +174,7 @@ def run_conformers(
             tors_names = list(tors_range_dct.keys())
             if two_stage and tors_names:
                 print('Stage one beginning, holding the coordinates constant',
-                      tors_names, samp_zma)
+                      tors_names)
                 driver.run_job(
                     job=elstruct.Job.OPTIMIZATION,
                     script_str=script_str,

@@ -7,7 +7,8 @@ from routines.pf.messf import pfblock
 from routines.pf.messf.ene import get_zpe_str
 from routines.pf.messf.ene import get_zero_point_energy
 from routines.pf.messf.ene import get_high_level_energy
-from routines.pf.messf.ene import calc_shift_ene
+from routines.pf.messf.ene import calc_channel_enes
+from routines.pf.messf.ene import get_fs_ene_zpe
 
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     'get_zpe_str',
     'get_zero_point_energy',
     'get_high_level_energy',
-    'calc_shift_ene'
+    'calc_channel_enes',
+    'get_fs_ene_zpe',
 ]
